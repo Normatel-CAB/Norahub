@@ -210,15 +210,34 @@ function PainelProjeto() {
   // Fallback seguro
   const linkSolicitacao = projeto.urlForms || projeto.url || '#';
   const linkAprovacao = projeto.urlSharePoint || 'https://normatelce.sharepoint.com/';
-    const extras = Array.isArray(projeto.extras)
-        ? projeto.extras
-            .map((e, originalIndex) => ({ ...e, originalIndex }))
-            .filter((e) => {
-              // Apenas verifica se tem nome - todos os cards válidos precisam de nome
-              if (!e?.name?.trim()) return false;
-              return true; // Mantém todos os cards com nome válido
-            })
-        : [];
+  const extras = Array.isArray(projeto.extras)
+    ? projeto.extras
+        .map((e, originalIndex) => ({ ...e, originalIndex }))
+        .filter((e) => e?.name?.trim())
+    : [];
+
+  // Cards fixos derivados das URLs do projeto (sem hardcode no JSX)
+  const builtInCards = [
+    {
+      name: 'Nova Solicitação',
+      description: `Preencher formulário de requisição para ${projeto.nome}.`,
+      url: linkSolicitacao,
+      type: 'link',
+      builtInIcon: FileText,
+      isBuiltIn: true,
+    },
+    {
+      name: 'Aprovação / Painel',
+      description: 'Acessar lista de pedidos e aprovações desta base.',
+      url: linkAprovacao,
+      type: 'link',
+      builtInIcon: CheckCircle,
+      isBuiltIn: true,
+    },
+  ];
+
+  // Todos os cards: fixos primeiro, depois os extras dinâmicos
+  const allCards = [...builtInCards, ...extras];
 
   const openEditModal = () => {
     setEditedName(projeto.nome || '');
@@ -407,136 +426,81 @@ function PainelProjeto() {
                 )}
             </div>
 
-            <div className="flex flex-col md:flex-row gap-8 justify-center">
-                
-                {/* Card 1: Solicitação */}
-                <a 
-                    href={linkSolicitacao}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group bg-white/10 backdrop-blur-md p-4 md:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-white/20 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 w-full md:w-1/2 cursor-pointer min-h-[280px] md:h-[320px]"
-                >
-                    <div className="bg-green-500/20 p-4 md:p-6 rounded-full mb-4 md:mb-6 group-hover:scale-110 transition-transform text-green-400">
-                        <FileText size={36} className="md:w-12 md:h-12" />
-                    </div>
-                    <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">Nova Solicitação</h2>
-                    <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">
-                        Preencher formulário de requisição para {projeto.nome}.
-                    </p>
-                    <div className="mt-auto flex items-center gap-2 bg-[#57B952] hover:bg-green-600 text-white px-4 md:px-6 py-2 rounded-full font-bold transition-colors shadow-md text-sm md:text-base">
-                        Acessar Formulário <ExternalLink size={14} className="md:w-4 md:h-4" />
-                    </div>
-                </a>
+            {/* Grid dinâmico unificado — todos os cards via map() */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {allCards.map((card, idx) => {
+                const config = getCardConfig(card.type || 'link');
+                const CardIcon = card.builtInIcon || config.icon;
 
-                {/* Card 2: Aprovação */}
-                <a 
-                    href={linkAprovacao}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group bg-white/10 backdrop-blur-md p-4 md:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-white/20 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 w-full md:w-1/2 cursor-pointer min-h-[280px] md:h-[320px]"
-                >
-                    <div className="bg-green-500/20 p-4 md:p-6 rounded-full mb-4 md:mb-6 group-hover:scale-110 transition-transform text-green-400">
-                        <CheckCircle size={36} className="md:w-12 md:h-12" />
-                    </div>
-                    <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">Aprovação / Painel</h2>
-                    <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">
-                        Acessar lista de pedidos e aprovações desta base.
-                    </p>
-                    <div className="mt-auto flex items-center gap-2 bg-[#57B952] hover:bg-green-600 text-white px-4 md:px-6 py-2 rounded-full font-bold transition-colors shadow-md text-sm md:text-base">
-                        Acessar Painel <ExternalLink size={14} className="md:w-4 md:h-4" />
-                    </div>
-                </a>
+                const baseClass =
+                  'group bg-white/10 backdrop-blur-md p-4 md:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-white/20 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 min-h-[280px] md:h-[320px] w-full';
 
+                const cardInner = (
+                  <>
+                    <div className={`${config.bgColor} p-4 md:p-6 rounded-full mb-4 md:mb-6 group-hover:scale-110 transition-transform ${config.textColor}`}>
+                      <CardIcon size={36} className="md:w-12 md:h-12" />
+                    </div>
+                    <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">{card.name}</h2>
+                    <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">
+                      {card.description || 'Acesse este recurso.'}
+                    </p>
+                    <div className={`mt-auto flex items-center gap-2 ${config.btnColor} text-white px-4 md:px-6 py-2 rounded-full font-bold transition-colors shadow-md text-sm md:text-base`}>
+                      {config.label}
+                      {!config.needsUpload && !config.isCustomForm && card.type !== 'reports' && (
+                        <ExternalLink size={14} className="md:w-4 md:h-4" />
+                      )}
+                    </div>
+                  </>
+                );
+
+                return (
+                  <div key={idx} className="relative">
+                    {/* Botão excluir — apenas em cards não-fixos */}
+                    {!card.isBuiltIn && (canEdit || canEditCards) && (
+                      <button
+                        onClick={(e) => handleDeleteExtraCard(e, card.originalIndex)}
+                        className="absolute top-4 right-4 z-20 p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded-full transition-colors bg-white/10 backdrop-blur-md"
+                        title="Excluir Card"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+
+                    {config.isCustomForm ? (
+                      <div
+                        onClick={() => navigate('/construtor-formulario', { state: { card, projeto } })}
+                        className={`${baseClass} cursor-pointer`}
+                      >
+                        {cardInner}
+                      </div>
+                    ) : config.needsUpload ? (
+                      <div
+                        onClick={() => navigate('/gerenciamento-arquivos', { state: { card, projeto } })}
+                        className={`${baseClass} cursor-pointer`}
+                      >
+                        {cardInner}
+                      </div>
+                    ) : card.type === 'reports' ? (
+                      <div
+                        onClick={() => navigate('/visualizador-dashboard', { state: { dashboardUrl: card.url, dashboardName: card.name, projeto } })}
+                        className={`${baseClass} cursor-pointer`}
+                      >
+                        {cardInner}
+                      </div>
+                    ) : (
+                      <a
+                        href={card.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`${baseClass} block`}
+                      >
+                        {cardInner}
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-
-            {extras.length > 0 && (
-                <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {extras.map((extra, idx) => {
-                        const config = getCardConfig(extra.type || 'link');
-                        const CardIcon = config.icon;
-                        return (
-                        <div key={idx} className="relative">
-                            {(canEdit || canEditCards) && (
-                                <button 
-                                    onClick={(e) => handleDeleteExtraCard(e, extra.originalIndex)}
-                                    className="absolute top-4 right-4 z-20 p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/20 rounded-full transition-colors shadow-md bg-white/10 backdrop-blur-md"
-                                    title="Excluir Card"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            )}
-                            {config.isCustomForm ? (
-                                <div 
-                                    onClick={() => navigate('/construtor-formulario', { state: { card: extra, projeto } })}
-                                    className="group bg-white/10 backdrop-blur-md p-4 md:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-white/20 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 cursor-pointer min-h-[280px] md:h-[320px] w-full"
-                                >
-                                    <div className="bg-green-500/20 p-4 md:p-6 rounded-full mb-4 md:mb-6 group-hover:scale-110 transition-transform text-green-400">
-                                        <CardIcon size={36} className="md:w-12 md:h-12" />
-                                    </div>
-                                    <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">{extra.name}</h2>
-                                    <p className="text-gray-400 mb-6">
-                                        {extra.description || 'Criar e gerenciar formulário personalizado.'}
-                                    </p>
-                                    <div className="mt-auto flex items-center gap-2 bg-[#57B952] hover:bg-green-600 text-white px-6 py-2 rounded-full font-bold transition-colors shadow-md">
-                                        {config.label}
-                                    </div>
-                                </div>
-                            ) : config.needsUpload ? (
-                                <div 
-                                    onClick={() => navigate('/gerenciamento-arquivos', { state: { card: extra, projeto } })}
-                                    className="group bg-white/10 backdrop-blur-md p-4 md:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-white/20 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 cursor-pointer min-h-[280px] md:h-[320px] w-full"
-                                >
-                                    <div className={`${config.bgColor} p-4 md:p-6 rounded-full mb-4 md:mb-6 group-hover:scale-110 transition-transform ${config.textColor}`}>
-                                        <CardIcon size={36} className="md:w-12 md:h-12" />
-                                    </div>
-                                    <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">{extra.name}</h2>
-                                    <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">
-                                        {extra.description || 'Gerenciar arquivos deste card.'}
-                                    </p>
-                                    <div className={`mt-auto flex items-center gap-2 ${config.btnColor} text-white px-4 md:px-6 py-2 rounded-full font-bold transition-colors shadow-md text-sm md:text-base`}>
-                                        {config.label}
-                                    </div>
-                                </div>
-                            ) : extra.type === 'reports' ? (
-                                <div 
-                                    onClick={() => navigate('/visualizador-dashboard', { state: { dashboardUrl: extra.url, dashboardName: extra.name, projeto } })}
-                                    className="group bg-white/10 backdrop-blur-md p-4 md:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-white/20 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 cursor-pointer min-h-[280px] md:h-[320px] w-full"
-                                >
-                                    <div className={`${config.bgColor} p-4 md:p-6 rounded-full mb-4 md:mb-6 group-hover:scale-110 transition-transform ${config.textColor}`}>
-                                        <CardIcon size={36} className="md:w-12 md:h-12" />
-                                    </div>
-                                    <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">{extra.name}</h2>
-                                    <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">
-                                        {extra.description || 'Visualizar dashboard e relatórios.'}
-                                    </p>
-                                    <div className={`mt-auto flex items-center gap-2 ${config.btnColor} text-white px-4 md:px-6 py-2 rounded-full font-bold transition-colors shadow-md text-sm md:text-base`}>
-                                        {config.label}
-                                    </div>
-                                </div>
-                            ) : (
-                                <a 
-                                    href={extra.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="group bg-white/10 backdrop-blur-md p-4 md:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-white/20 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 cursor-pointer min-h-[280px] md:h-[320px] block w-full"
-                                >
-                                    <div className={`${config.bgColor} p-4 md:p-6 rounded-full mb-4 md:mb-6 group-hover:scale-110 transition-transform ${config.textColor}`}>
-                                        <CardIcon size={36} className="md:w-12 md:h-12" />
-                                    </div>
-                                    <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">{extra.name}</h2>
-                                    <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">
-                                        {extra.description || 'Acesse este recurso adicional.'}
-                                    </p>
-                                    <div className={`mt-auto flex items-center gap-2 ${config.btnColor} text-white px-4 md:px-6 py-2 rounded-full font-bold transition-colors shadow-md text-sm md:text-base`}>
-                                        {config.label} <ExternalLink size={14} className="md:w-4 md:h-4" />
-                                    </div>
-                                </a>
-                            )}
-                        </div>
-                        );
-                    })}
-                </div>
-            )}
         </div>
       </main>
       
@@ -665,16 +629,16 @@ function PainelProjeto() {
                       )}
                       
                       {getCardConfig(field.type || 'link').needsUpload && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <p className="text-xs text-blue-700">
+                        <div className="bg-blue-500/10 border border-blue-400/30 rounded-lg p-3">
+                          <p className="text-xs text-blue-300">
                             ℹ️ Este card permitirá upload de arquivos após ser criado
                           </p>
                         </div>
                       )}
-                      
+
                       {getCardConfig(field.type || 'link').isCustomForm && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                          <p className="text-xs text-yellow-700">
+                        <div className="bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-3">
+                          <p className="text-xs text-yellow-300">
                             📝 Este card abrirá um construtor de formulário personalizado
                           </p>
                         </div>
@@ -686,28 +650,28 @@ function PainelProjeto() {
                           e.stopPropagation();
                           removeExtraField(idx);
                         }}
-                        className="w-full py-2 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors font-semibold"
+                        className="w-full py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors font-semibold"
                       >
                         <Trash2 size={14} className="inline mr-1" /> Remover Card
                       </button>
                     </div>
                   ))}
                 </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
-                  <p className="text-xs text-blue-700 font-semibold mb-1">💡 Dicas de uso:</p>
-                  <ul className="text-xs text-blue-600 space-y-1 ml-4 list-disc">
-                    <li><strong>📁 Documentos / 📄 PDFs / 📊 Planilhas:</strong> Permite upload e gerenciamento de arquivos</li>
-                    <li><strong>🔗 Link / 📋 Formulários / 📈 Relatórios:</strong> Requer URL externa (Forms, Power BI, etc)</li>
-                    <li><strong>✅ Aprovações / 📦 Estoque / 💰 Financeiro:</strong> Link para sistema específico</li>
+                <div className="bg-white/5 border border-white/20 rounded-lg p-3 mt-3">
+                  <p className="text-xs text-gray-300 font-semibold mb-1">💡 Dicas de uso:</p>
+                  <ul className="text-xs text-gray-400 space-y-1 ml-4 list-disc">
+                    <li><strong className="text-gray-300">📁 Documentos / 📄 PDFs / 📊 Planilhas:</strong> Permite upload e gerenciamento de arquivos</li>
+                    <li><strong className="text-gray-300">🔗 Link / 📋 Formulários / 📈 Relatórios:</strong> Requer URL externa (Forms, Power BI, etc)</li>
+                    <li><strong className="text-gray-300">✅ Aprovações / 📦 Estoque / 💰 Financeiro:</strong> Link para sistema específico</li>
                   </ul>
                 </div>
               </div>
               </div>
-              <div className="p-6 pt-4 border-t border-gray-100 flex gap-3 flex-shrink-0">
+              <div className="p-6 pt-4 border-t border-white/10 flex gap-3 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="flex-1 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition-colors"
+                  className="flex-1 py-2 rounded-lg text-gray-300 hover:bg-white/10 font-medium transition-colors border border-white/10"
                 >
                   Cancelar
                 </button>
@@ -741,7 +705,7 @@ function PainelProjeto() {
             </div>
             <div>
               <p className="font-bold text-white">{toast.type === 'error' ? 'Erro!' : 'Sucesso!'}</p>
-              <p className="text-sm text-gray-600">{toast.message}</p>
+              <p className="text-sm text-gray-200">{toast.message}</p>
             </div>
           </div>
         </div>
@@ -752,7 +716,7 @@ function PainelProjeto() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
           <div className="bg-gray-800 rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4 border border-gray-700 text-white">
             <h3 className="text-lg font-bold text-white mb-2">Confirmar exclusão</h3>
-            <p className="text-sm text-gray-600 mb-6">Tem certeza que deseja remover este card adicional? Esta ação não pode ser desfeita.</p>
+            <p className="text-sm text-gray-300 mb-6">Tem certeza que deseja remover este card adicional? Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDelete({ open: false, cardIndex: null })}

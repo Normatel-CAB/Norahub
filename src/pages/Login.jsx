@@ -1,4 +1,4 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 // ThemeToggle removed: app forced to light mode
@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import Alert from '../components/Alert';
 import { useRecaptcha } from '../components/RecaptchaLoader';
 import { auth, db } from '../services/firebase';
-import { signInWithEmailAndPassword, signOut, OAuthProvider, signInWithPopup, signInWithRedirect, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, OAuthProvider, signInWithPopup, signInWithRedirect, updateProfile, getRedirectResult } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import ActivityLogger from '../services/activityLogger';
 
@@ -16,28 +16,13 @@ function Login() {
   const isDark = theme === 'dark';
   const { currentUser, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const { executeRecaptcha } = useRecaptcha();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [alertInfo, setAlertInfo] = useState(null);
 
-  // Removido signOut automático para não desconectar o usuário após um login
-  // useEffect intentionally left empty
-
-  // Redirecionamento Automático
-  useEffect(() => {
-    // Se já carregou e tem usuário válido
-    if (!authLoading && currentUser && userProfile) {
-        if (userProfile.statusAcesso === 'pendente') return;
-        
-        // TODOS (Inclusive Admin) vão para a seleção de projeto
-        navigate('/selecao-projeto');
-    }
-  }, [authLoading, currentUser, userProfile, navigate]);
-
-    const checkUserProfile = async (user) => {
+  const checkUserProfile = async (user) => {
       // Normaliza email vindo do auth ou dos dados do provedor
       const providerEmail = user.providerData?.[0]?.email;
       const effectiveEmail = user.email || providerEmail || null;
@@ -101,6 +86,44 @@ function Login() {
         navigate('/selecao-projeto');
       }
   };
+
+  // Lê o resultado do signInWithRedirect ao voltar da Microsoft
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          setLoading(true);
+          await checkUserProfile(result.user);
+        }
+      } catch (error) {
+        console.error('Erro no redirect Microsoft:', error);
+        if (error?.message === 'dominio-invalido') {
+          setAlertInfo({ message: 'Acesso restrito a @normatel.com.br', type: 'error' });
+        } else if (error?.message === 'email-indisponivel') {
+          setAlertInfo({ message: 'A Microsoft não retornou seu e-mail. Verifique as permissões.', type: 'error' });
+        } else if (error?.message === 'pendente') {
+          setAlertInfo({ message: 'Conta em análise. Aguarde aprovação.', type: 'error' });
+        } else if (error?.code === 'auth/account-exists-with-different-credential') {
+          setAlertInfo({ message: 'E-mail já existe com senha.', type: 'warning' });
+        } else if (error?.code) {
+          setAlertInfo({ message: `Erro Microsoft: ${error.code}`, type: 'error' });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    handleRedirectResult();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Redirecionamento automático se já está logado
+  useEffect(() => {
+    if (!authLoading && currentUser && userProfile) {
+      if (userProfile.statusAcesso === 'pendente') return;
+      navigate('/selecao-projeto');
+    }
+  }, [authLoading, currentUser, userProfile, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 

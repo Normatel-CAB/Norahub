@@ -191,9 +191,15 @@ function SelecaoProjeto() {
         if (!newProjectName || !urlForms || !urlSharePoint) return;
     setSaving(true);
     try {
+                // Tipos que não precisam de URL (usam upload ou navegação interna)
+                const semUrl = new Set(['documents', 'files', 'spreadsheets', 'forms']);
                 const extras = extraFields
-                    .filter(f => f.name.trim() && f.url.trim())
-                    .map(f => ({ name: f.name.trim(), description: f.description.trim(), url: f.url.trim(), type: f.type || 'link' }));
+                    .filter(f => {
+                      if (!f.name?.trim()) return false;
+                      if (!semUrl.has(f.type || 'link') && !f.url?.trim()) return false;
+                      return true;
+                    })
+                    .map(f => ({ name: f.name.trim(), description: (f.description || '').trim(), url: (f.url || '').trim(), type: f.type || 'link' }));
 
                 if (editingProject) {
                     await updateDoc(doc(db, 'projetos', editingProject.id), {
@@ -554,27 +560,25 @@ function SelecaoProjeto() {
                                     <button
                                         type="button"
                                         onClick={() => removeExtraField(idx)}
-                                        className="w-full py-2 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors font-semibold"
+                                        className="w-full py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors font-semibold"
                                     >
                                         <Trash2 size={14} className="inline mr-1" /> Remover Card
                                     </button>
                                 </div>
                             ))}
                         </div>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
-                            <p className="text-xs text-blue-700 font-semibold mb-1">💡 Dicas de uso:</p>
-                            <ul className="text-xs text-blue-600 space-y-1 ml-4 list-disc">
-                                <li><strong>Documentos:</strong> Link para OneDrive, SharePoint ou pasta compartilhada</li>
-                                <li><strong>Relatórios:</strong> Link para Power BI, Tableau ou dashboards</li>
-                                <li><strong>Planilhas:</strong> Excel Online, Google Sheets</li>
-                                <li><strong>Formulários:</strong> Microsoft Forms, Google Forms</li>
-                                <li><strong>Estoque:</strong> Sistema de controle de inventário</li>
-                                <li><strong>Financeiro:</strong> Sistema de gestão financeira/orçamento</li>
+                        <div className="bg-white/5 border border-white/20 rounded-lg p-3 mt-3">
+                            <p className="text-xs text-gray-300 font-semibold mb-1">💡 Dicas de uso:</p>
+                            <ul className="text-xs text-gray-400 space-y-1 ml-4 list-disc">
+                                <li><strong className="text-gray-300">📁 Documentos / 📄 PDFs / 📊 Planilhas:</strong> Upload e gerenciamento interno de arquivos</li>
+                                <li><strong className="text-gray-300">📈 Relatórios:</strong> Link para Power BI, Tableau ou dashboards</li>
+                                <li><strong className="text-gray-300">📝 Formulários:</strong> Construtor interno de formulário</li>
+                                <li><strong className="text-gray-300">✅ Aprovações / 📦 Estoque / 💰 Financeiro / 👥 RH:</strong> Link para sistema externo</li>
                             </ul>
                         </div>
                     </div>
                     <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition-colors">Cancelar</button>
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2 rounded-lg text-gray-300 hover:bg-white/10 font-medium transition-colors border border-white/10">Cancelar</button>
                         
                         <button type="submit" disabled={saving} className="flex-1 py-2 rounded-lg bg-[#57B952] hover:bg-green-600 text-white font-bold shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-70">{saving ? 'Salvando...' : <><Save size={18} /> {editingProject ? 'Salvar Alterações' : 'Salvar Base'}</>}</button>
                     </div>

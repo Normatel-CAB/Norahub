@@ -380,6 +380,7 @@ h4, h5, h6 {
 
 /* ===== INPUTS E FORMS MODERNOS ===== */
 
+/* Estilos base de inputs — não sobrepõem background definido via Tailwind */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -390,24 +391,35 @@ textarea,
 select {
   width: 100%;
   padding: 0.875rem 1rem;
-  border: 2px solid var(--border-color);
   border-radius: 10px;
   font-family: 'Outfit', 'Poppins', system-ui, sans-serif;
   font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Apenas aplica estilos visuais onde não há classe Tailwind de background/border */
+input[type="text"]:not([class*="bg-"]),
+input[type="email"]:not([class*="bg-"]),
+input[type="password"]:not([class*="bg-"]),
+input[type="number"]:not([class*="bg-"]),
+input[type="date"]:not([class*="bg-"]),
+input[type="time"]:not([class*="bg-"]),
+textarea:not([class*="bg-"]),
+select:not([class*="bg-"]) {
+  border: 2px solid var(--border-color);
   background: rgba(255, 255, 255, 0.9);
   color: var(--text-page);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
-.dark input[type="text"],
-.dark input[type="email"],
-.dark input[type="password"],
-.dark input[type="number"],
-.dark input[type="date"],
-.dark input[type="time"],
-.dark textarea,
-.dark select {
+.dark input[type="text"]:not([class*="bg-"]),
+.dark input[type="email"]:not([class*="bg-"]),
+.dark input[type="password"]:not([class*="bg-"]),
+.dark input[type="number"]:not([class*="bg-"]),
+.dark input[type="date"]:not([class*="bg-"]),
+.dark input[type="time"]:not([class*="bg-"]),
+.dark textarea:not([class*="bg-"]),
+.dark select:not([class*="bg-"]) {
   background: rgba(40, 40, 40, 0.6);
   border-color: rgba(255, 255, 255, 0.15);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -422,20 +434,7 @@ input[type="time"]:focus,
 textarea:focus,
 select:focus {
   outline: none;
-  border-color: #57B952;
-  box-shadow: 0 0 0 3px rgba(87, 185, 82, 0.1);
-  transform: translateY(-1px);
-}
-
-.dark input[type="text"]:focus,
-.dark input[type="email"]:focus,
-.dark input[type="password"]:focus,
-.dark input[type="number"]:focus,
-.dark input[type="date"]:focus,
-.dark input[type="time"]:focus,
-.dark textarea:focus,
-.dark select:focus {
-  box-shadow: 0 0 0 3px rgba(87, 185, 82, 0.2);
+  box-shadow: 0 0 0 3px rgba(87, 185, 82, 0.15);
 }
 
 /* Placeholder styles */

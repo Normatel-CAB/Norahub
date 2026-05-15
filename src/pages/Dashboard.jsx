@@ -119,15 +119,15 @@ function Dashboard() {
     }
   };
 
-  const StatCard = ({ icon: Icon, label, value, color, bgColor }) => (
-    <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-md border border-white/20 p-4 md:p-6 hover:shadow-lg transition-shadow">
+  const StatCard = ({ icon: Icon, label, value, accent }) => (
+    <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-md border border-white/20 p-4 md:p-6 hover:shadow-lg hover:border-white/30 transition-all">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-400 mb-1">{label}</p>
-          <p className={`text-2xl md:text-3xl font-bold ${color}`}>{value}</p>
+          <p className="text-xs md:text-sm text-gray-400 mb-1 uppercase tracking-wider font-medium">{label}</p>
+          <p className={`text-2xl md:text-3xl font-bold text-white`}>{value}</p>
         </div>
-        <div className={`${bgColor} p-3 md:p-4 rounded-xl`}>
-          <Icon size={24} className={`md:w-8 md:h-8 ${color}`} />
+        <div className={`${accent} bg-opacity-20 p-3 md:p-4 rounded-xl border border-white/10`}>
+          <Icon size={24} className={`md:w-8 md:h-8 ${accent}`} />
         </div>
       </div>
     </div>
@@ -203,47 +203,41 @@ function Dashboard() {
             <>
               {/* Cards de Estatísticas */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-                <StatCard 
+                <StatCard
                   icon={Users}
                   label="Total de Usuários"
                   value={stats.totalUsers}
-                  color="text-blue-600"
-                  bgColor="bg-blue-100"
+                  accent="text-blue-400"
                 />
-                <StatCard 
+                <StatCard
                   icon={FolderOpen}
                   label="Total de Projetos"
                   value={stats.totalProjects}
-                  color="text-green-600"
-                  bgColor="bg-green-100"
+                  accent="text-[#57B952]"
                 />
-                <StatCard 
+                <StatCard
                   icon={Activity}
                   label="Projetos Ativos"
                   value={stats.activeProjects}
-                  color="text-purple-600"
-                  bgColor="bg-purple-100"
+                  accent="text-purple-400"
                 />
-                <StatCard 
+                <StatCard
                   icon={FileText}
                   label="Total de Formulários"
                   value={stats.totalForms}
-                  color="text-orange-600"
-                  bgColor="bg-orange-100"
+                  accent="text-orange-400"
                 />
-                <StatCard 
+                <StatCard
                   icon={FolderOpen}
                   label="Total de Arquivos"
                   value={stats.totalFiles}
-                  color="text-indigo-600"
-                  bgColor="bg-indigo-100"
+                  accent="text-indigo-400"
                 />
-                <StatCard 
+                <StatCard
                   icon={TrendingUp}
                   label="Taxa de Atividade"
                   value={`${stats.totalProjects > 0 ? Math.round((stats.activeProjects / stats.totalProjects) * 100) : 0}%`}
-                  color="text-[#57B952]"
-                  bgColor="bg-green-100"
+                  accent="text-[#57B952]"
                 />
               </div>
 
