@@ -112,9 +112,7 @@ service cloud.firestore {
     match /rate_limits/{limitId} {
       allow read, write: if false; // Apenas Cloud Functions via Admin SDK
     }
-      allow delete: if isAdmin() || isManager();
-    }
-    
+
     // Coleção de arquivos
     match /arquivos/{fileId} {
       allow read: if isSignedIn();
