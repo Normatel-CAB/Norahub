@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
             let perfil = null;
             while (tentativas < 5 && !perfil) {
               try {
-                const docRef = doc(db, 'users', user.uid);
+                const docRef = doc(db, 'usuarios', user.uid);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                   setUserProfile(docSnap.data());

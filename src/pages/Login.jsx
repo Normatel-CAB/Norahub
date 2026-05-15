@@ -39,51 +39,40 @@ function Login() {
         }
       }
       
-      const docSnap = await getDoc(doc(db, 'users', user.uid));
-      
+      const docSnap = await getDoc(doc(db, 'usuarios', user.uid));
+
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.statusAcesso === 'pendente') { 
-            // Se for Microsoft, atualiza para ativo automaticamente para não travar
-            if (user.providerData[0]?.providerId === 'microsoft.com') {
-                await updateDoc(doc(db, 'users', user.uid), { statusAcesso: 'ativo', fotoURL: user.photoURL || null });
-                // Força atualização do Auth com a foto
-                if (user.photoURL) {
-                  await updateProfile(user, { photoURL: user.photoURL });
-                }
-                navigate('/selecao-projeto');
-                return;
-            }
-            await signOut(auth); 
-            throw new Error("pendente"); 
+        if (data.statusAcesso === 'pendente') {
+            await signOut(auth);
+            throw new Error("pendente");
         }
-        
+
         // Se for Microsoft e ativo, atualiza foto
         if (user.providerData[0]?.providerId === 'microsoft.com' && user.photoURL) {
-          await updateDoc(doc(db, 'users', user.uid), { fotoURL: user.photoURL });
+          await updateDoc(doc(db, 'usuarios', user.uid), { fotoURL: user.photoURL });
           await updateProfile(user, { photoURL: user.photoURL });
         }
-        
-        // Redireciona para seleção
+
         navigate('/selecao-projeto');
-        
-      } else { 
-        // Cria perfil se não existir (Primeiro acesso Microsoft -> Ativo)
-        await setDoc(doc(db, 'users', user.uid), {
+
+      } else {
+        // Cria perfil se não existir (Primeiro acesso Microsoft → pendente para aprovação)
+        await setDoc(doc(db, 'usuarios', user.uid), {
           nome: user.displayName || 'Usuário Microsoft',
           email: effectiveEmail,
           cargo: 'Colaborador',
-          funcao: 'colaborador', // Padrão seguro
-          statusAcesso: 'ativo', // Já entra aprovado
+          funcao: 'colaborador',
+          statusAcesso: 'pendente',
           uid: user.uid,
-          fotoURL: user.photoURL || null, // Salva a foto da conta Microsoft
+          fotoURL: user.photoURL || null,
           createdAt: new Date()
         });
-        // Força atualização do Auth com a foto
         if (user.photoURL) {
           await updateProfile(user, { photoURL: user.photoURL });
         }
-        navigate('/selecao-projeto');
+        await signOut(auth);
+        throw new Error("pendente");
       }
   };
 
@@ -146,27 +135,26 @@ function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, senha);
       
       // Verificação específica para senha (mantém a regra de pendente)
-      const docSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
+      const docSnap = await getDoc(doc(db, 'usuarios', userCredential.user.uid));
       if (docSnap.exists()) {
          if (docSnap.data().statusAcesso === 'pendente') {
             await signOut(auth);
             throw new Error("pendente");
          }
-         // Registrar login no dashboard
          const userData = docSnap.data();
          await ActivityLogger.userLogin(userCredential.user.uid, userData.nome || email.split('@')[0]);
-         // Se ativo, o useEffect lá em cima redireciona
       } else {
-         // Criar perfil básico caso não exista (usuário legado)
-         await setDoc(doc(db, 'users', userCredential.user.uid), {
+         // Usuário existe no Auth mas não no Firestore (conta legada)
+         await setDoc(doc(db, 'usuarios', userCredential.user.uid), {
            nome: userCredential.user.displayName || email.split('@')[0],
            email: userCredential.user.email,
-           funcao: 'usuario',
-           statusAcesso: 'ativo',
+           funcao: 'colaborador',
+           statusAcesso: 'pendente',
            fotoURL: userCredential.user.photoURL || null,
            createdAt: new Date()
          });
-         // Continua o login normalmente
+         await signOut(auth);
+         throw new Error("pendente");
       }
     } catch (error) {
       console.error("Erro:", error);

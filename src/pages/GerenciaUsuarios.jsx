@@ -72,7 +72,7 @@ function GerenciaUsuarios() {
   const handleApproveUser = async (userId) => {
     try {
       await updateDoc(doc(db, 'usuarios', userId), {
-        status: 'ativo'
+        statusAcesso: 'ativo'
       });
       showToast('Usuário aprovado com sucesso!', 'success');
       fetchData();
@@ -265,7 +265,7 @@ function GerenciaUsuarios() {
                           {usuario.funcao}
                         </span>
                         <p className="text-xs text-gray-500 mt-1">
-                          {usuario.status === 'ativo' ? '✓ Ativo' : '⏳ Pendente'}
+                          {usuario.statusAcesso === 'ativo' ? '✓ Ativo' : '⏳ Pendente'}
                         </p>
                       </div>
                     </div>
@@ -323,7 +323,7 @@ function GerenciaUsuarios() {
                         )}
 
                         {/* Aprovar/Rejeitar */}
-                        {usuario.status === 'pendente' && (
+                        {usuario.statusAcesso === 'pendente' && (
                           <div className="flex gap-3">
                             <button
                               onClick={() => handleApproveUser(usuario.id)}
@@ -341,7 +341,7 @@ function GerenciaUsuarios() {
                         )}
 
                         {/* Deletar */}
-                        {usuario.status === 'ativo' && (
+                        {usuario.statusAcesso === 'ativo' && (
                           <button
                             onClick={() => handleDeleteUser(usuario.id)}
                             className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"

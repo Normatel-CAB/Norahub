@@ -45,23 +45,23 @@ function Cadastro() {
 
   // Cria perfil no Firestore após autenticação Microsoft
   const saveMicrosoftUser = async (user) => {
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
     if (userDoc.exists()) {
       setAlertInfo({ message: 'Este usuário já está cadastrado. Faça login.', type: 'error' });
       await signOut(auth);
       return;
     }
-    await setDoc(doc(db, 'users', user.uid), {
+    await setDoc(doc(db, 'usuarios', user.uid), {
       nome: user.displayName || '',
       email: user.email || '',
       cpfMatricula: '',
       cargo: '',
       funcao: 'colaborador',
-      statusAcesso: 'ativo',
+      statusAcesso: 'pendente',
       uid: user.uid,
       createdAt: new Date(),
     });
-    setAlertInfo({ message: 'Cadastro realizado! Redirecionando...', type: 'success' });
+    setAlertInfo({ message: 'Cadastro realizado! Aguarde aprovação do administrador.', type: 'success' });
     setTimeout(() => navigate('/login', { replace: true }), 1200);
   };
 
@@ -150,7 +150,7 @@ function Cadastro() {
         cpfMatricula,
         cargo: funcao,
         funcao: 'colaborador',
-        statusAcesso: 'ativo',
+        statusAcesso: 'pendente',
         uid: user.uid,
         createdAt: new Date(),
       };
@@ -159,7 +159,7 @@ function Cadastro() {
       let lastError = null;
       for (let i = 0; i < 3; i++) {
         try {
-          await setDoc(doc(db, 'users', user.uid), userData);
+          await setDoc(doc(db, 'usuarios', user.uid), userData);
           success = true;
           break;
         } catch (err) {
@@ -170,7 +170,7 @@ function Cadastro() {
       if (!success) throw lastError;
 
       await signOut(auth);
-      setAlertInfo({ message: 'Cadastro realizado com sucesso! Redirecionando...', type: 'success' });
+      setAlertInfo({ message: 'Cadastro realizado! Aguarde aprovação do administrador.', type: 'success' });
       setTimeout(() => navigate('/login', { replace: true }), 1200);
     } catch (error) {
       console.error('Erro no cadastro:', error);
