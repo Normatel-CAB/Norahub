@@ -1,597 +1,466 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Users, Search, CheckCircle, XCircle, AlertTriangle, ArrowLeft, Trash2, X, Briefcase } from 'lucide-react';
-// ThemeToggle removed: app forced to light mode
-import { useTheme } from '../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
+import {
+  Users, Search, CheckCircle, XCircle, AlertTriangle,
+  ArrowLeft, Trash2, X, Briefcase, Shield,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import Alert from '../components/Alert';
+import { db } from '../services/firebase';
+import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
-import { auth, db } from '../services/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore'; 
+function StatusBadge({ status }) {
+  if (status === 'ativo') return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-500/15 text-green-400 border border-green-500/25">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+      Ativo
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-yellow-500/15 text-yellow-400 border border-yellow-500/25">
+      <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+      Pendente
+    </span>
+  );
+}
+
+function Toast({ toast }) {
+  if (!toast.show) return null;
+  return (
+    <div className={`fixed top-5 right-5 z-[300] flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl border backdrop-blur-xl transition-all ${
+      toast.type === 'success'
+        ? 'bg-green-500/20 border-green-500/40 text-green-300'
+        : 'bg-red-500/20 border-red-500/40 text-red-300'
+    }`}>
+      {toast.type === 'success' ? <CheckCircle size={16} /> : <X size={16} />}
+      <span className="font-medium text-sm">{toast.message}</span>
+    </div>
+  );
+}
 
 function AdminDashboard() {
-  const { theme } = useTheme();
   const { userProfile } = useAuth();
   const navigate = useNavigate();
-  const isDark = theme === 'dark';
+  const isAdmin = userProfile?.funcao === 'admin';
 
   const [users, setUsers] = useState([]);
   const [projetos, setProjetos] = useState([]);
   const [cargos, setCargos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [alertInfo, setAlertInfo] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmDelete, setConfirmDelete] = useState({ open: false, userId: null, userName: '' });
   const [modalProjetos, setModalProjetos] = useState({ open: false, userId: null, userName: '', projetosAtuais: [] });
   const [searchProjetos, setSearchProjetos] = useState('');
-  const [cargoPermitidos, setCargoPermitidos] = useState([]);
 
-  const isAdmin = userProfile?.funcao === 'admin';
-  const isGerenteProjeto = userProfile?.funcao === 'gerente-projeto';
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3500);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
+      const canAccess = isAdmin || userProfile?.funcao?.toLowerCase().includes('gerente');
+      if (!canAccess) { navigate('/selecao-projeto'); return; }
+
       try {
-        // Se for gerente de projeto, redireciona (não tem acesso a admin)
-        if (userProfile?.funcao === 'gerente-projeto') {
-          navigate('/');
-          return;
-        }
+        const [userSnap, projetoSnap, cargosSnap] = await Promise.all([
+          getDocs(collection(db, 'usuarios')),
+          getDocs(collection(db, 'projetos')),
+          getDocs(collection(db, 'cargos')),
+        ]);
 
-        // Se for gerente de usuário, verifica permissão
-        if (userProfile?.funcao === 'gerente-usuario') {
-          const cargosQuery = query(
-            collection(db, 'cargos'),
-            where('nome', '==', userProfile.funcao)
-          );
-          const cargosSnapshot = await getDocs(cargosQuery);
-          if (cargosSnapshot.empty || (!cargosSnapshot.docs[0].data().canManageUsers && !cargosSnapshot.docs[0].data().canManagePermissions)) {
-            navigate('/');
-            return;
-          }
-        }
+        let userList = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (!isAdmin) userList = userList.filter(u => u.funcao !== 'admin');
+        userList.sort((a, b) => (a.statusAcesso === 'pendente' ? -1 : 1));
+        setUsers(userList);
+        setProjetos(projetoSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-        // Se não for admin e não tiver permissão, redireciona
-        if (!isAdmin && userProfile?.funcao !== 'gerente-usuario') {
-          navigate('/');
-          return;
-        }
-
-        // Buscar cargos permitidos para gerente de projeto
-        if (userProfile?.funcao === 'gerente-projeto') {
-          const cargosQuery = query(
-            collection(db, 'cargos'),
-            where('nome', '==', userProfile.funcao)
-          );
-          const cargosSnapshot = await getDocs(cargosQuery);
-          if (!cargosSnapshot.empty) {
-            const cargoData = cargosSnapshot.docs[0].data();
-            setCargoPermitidos(cargoData.projetos || []);
-          }
-        }
-
-        const userSnapshot = await getDocs(collection(db, 'usuarios'));
-        let userLista = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Gerente de usuário só vê usuários que não são admin
-        if (userProfile?.funcao === 'gerente-usuario' && !isAdmin) {
-          userLista = userLista.filter(u => u.funcao !== 'admin');
-        }
-        
-        userLista.sort((a, b) => (a.statusAcesso === 'pendente' ? -1 : 1));
-        setUsers(userLista);
-
-        const projetoSnapshot = await getDocs(collection(db, 'projetos'));
-        const projetoLista = projetoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setProjetos(projetoLista);
-
-        const cargosSnapshot = await getDocs(collection(db, 'cargos'));
-        const cargosList = cargosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        console.log('Cargos carregados:', cargosList);
-        
-        // Garantir que sempre tenha opções de cargo
-        if (cargosList.length === 0) {
-          setCargos([
-            { id: 'default-colaborador', nome: 'Colaborador' },
-            { id: 'default-gerente', nome: 'Gerente' }
-          ]);
-        } else {
-          // Ordenar cargos por quantidade de permissões (decrescente)
-          const cargosOrdenados = cargosList.sort((a, b) => {
-            const permissoesA = [
-              a.canManageUsers,
-              a.canManagePermissions,
-              a.canCreateCargos,
-              a.canCreateProjetos,
-              a.canEditCardsProjetos
-            ].filter(Boolean).length;
-            
-            const permissoesB = [
-              b.canManageUsers,
-              b.canManagePermissions,
-              b.canCreateCargos,
-              b.canCreateProjetos,
-              b.canEditCardsProjetos
-            ].filter(Boolean).length;
-            
-            return permissoesB - permissoesA; // Ordem decrescente
-          });
-          
-          setCargos(cargosOrdenados);
-        }
-      } catch (error) {
-        console.error("Erro:", error);
-        setAlertInfo({ message: "Erro ao carregar dados.", type: "error" });
+        let cargosList = cargosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (cargosList.length === 0) cargosList = [{ id: 'default', nome: 'Colaborador' }];
+        setCargos(cargosList);
+      } catch {
+        showToast('Erro ao carregar dados.', 'error');
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    if (userProfile) fetchData();
   }, [isAdmin, userProfile, navigate]);
 
   const handleApprove = async (user, newRole) => {
     try {
-        // Apenas admin pode aprovar como admin
-        if (!isAdmin && newRole === 'admin') {
-          setAlertInfo({ message: "Você não tem permissão para criar um administrador.", type: "error" });
-          return;
-        }
-        
-        const userRef = doc(db, 'usuarios', user.id);
-        const finalRole = newRole || user.funcao;
-        
-        await updateDoc(userRef, { 
-            statusAcesso: 'ativo',
-            funcao: finalRole 
-        });
-        
-        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, statusAcesso: 'ativo', funcao: finalRole } : u));
-        setAlertInfo({ message: `Usuário aprovado como ${finalRole}!`, type: "success" });
-    } catch (error) {
-        setAlertInfo({ message: "Erro ao aprovar.", type: "error" });
+      if (!isAdmin && newRole === 'admin') { showToast('Sem permissão para este cargo.', 'error'); return; }
+      await updateDoc(doc(db, 'usuarios', user.id), { statusAcesso: 'ativo', funcao: newRole || user.funcao });
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, statusAcesso: 'ativo', funcao: newRole || u.funcao } : u));
+      showToast(`${user.nome} aprovado com sucesso!`);
+    } catch {
+      showToast('Erro ao aprovar usuário.', 'error');
     }
   };
-
-  const handleReject = async (userId) => {
-        // Abre modal de confirmação mais atraente
-        const user = users.find(u => u.id === userId);
-        setConfirmDelete({ open: true, userId, userName: user?.nome || user?.email || 'Usuário' });
-  };
-
-    const cancelDelete = () => setConfirmDelete({ open: false, userId: null, userName: '' });
-
-    const deleteUser = async (userId) => {
-        try {
-            // Impedir exclusão de administradores por não-admins
-            const user = users.find(u => u.id === userId);
-            if (!isAdmin && user?.funcao === 'admin') {
-              setAlertInfo({ message: "Você não pode excluir um administrador.", type: "error" });
-              cancelDelete();
-              return;
-            }
-            
-            // Remove o perfil do Firestore
-            await deleteDoc(doc(db, 'usuarios', userId));
-            
-            setUsers(prev => prev.filter(u => u.id !== userId));
-            setAlertInfo({ message: 'Usuário removido do Firebase!', type: 'success' });
-        } catch (error) {
-            console.error('Erro ao remover usuário:', error);
-            setAlertInfo({ message: 'Erro ao remover usuário.', type: 'error' });
-        } finally {
-            cancelDelete();
-        }
-    };
 
   const handleRoleChange = async (userId, newRole) => {
     try {
-        // Gerente de projeto não pode alterar cargos
-        if (isGerenteProjeto) {
-          setAlertInfo({ message: "Você não tem permissão para alterar cargos.", type: "error" });
-          return;
-        }
-
-        // Gerente de usuário não pode alterar para ou de admin
-        if (!isAdmin && newRole === 'admin') {
-          setAlertInfo({ message: "Você não tem permissão para atribuir cargo de administrador.", type: "error" });
-          return;
-        }
-
-        const user = users.find(u => u.id === userId);
-        if (!isAdmin && user.funcao === 'admin') {
-          setAlertInfo({ message: "Você não pode modificar um administrador.", type: "error" });
-          return;
-        }
-        
-        await updateDoc(doc(db, 'usuarios', userId), { funcao: newRole });
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, funcao: newRole } : u));
-        setAlertInfo({ message: "Função alterada.", type: "success" });
-    } catch (error) { setAlertInfo({ message: "Erro ao alterar.", type: "error" }); }
-  };
-
-  const handleAssignProject = async (userId, projetoId) => {
-    try {
-        // Gerente de projeto só pode atribuir seus próprios projetos
-        if (isGerenteProjeto && !cargoPermitidos.includes(projetoId)) {
-          setAlertInfo({ message: "Você não tem permissão para atribuir este projeto.", type: "error" });
-          return;
-        }
-
-        const user = users.find(u => u.id === userId);
-        const projetosPorUsuario = user.projetos || [];
-        
-        // Se já está na lista, remove; se não, adiciona
-        let novosProjetos;
-        if (projetosPorUsuario.includes(projetoId)) {
-            novosProjetos = projetosPorUsuario.filter(p => p !== projetoId);
-        } else {
-            novosProjetos = [...projetosPorUsuario, projetoId];
-        }
-        
-        await updateDoc(doc(db, 'usuarios', userId), { projetos: novosProjetos });
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, projetos: novosProjetos } : u));
-        
-        const projeto = projetos.find(p => p.id === projetoId);
-        const acao = projetosPorUsuario.includes(projetoId) ? 'removido de' : 'adicionado a';
-        setAlertInfo({ message: `Usuário ${acao} "${projeto?.nome}"!`, type: "success" });
-    } catch (error) { 
-        console.error('Erro:', error);
-        setAlertInfo({ message: "Erro ao atribuir projeto.", type: "error" }); 
+      const user = users.find(u => u.id === userId);
+      if (!isAdmin && newRole === 'admin') { showToast('Sem permissão.', 'error'); return; }
+      if (!isAdmin && user?.funcao === 'admin') { showToast('Não pode modificar administradores.', 'error'); return; }
+      await updateDoc(doc(db, 'usuarios', userId), { funcao: newRole });
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, funcao: newRole } : u));
+      showToast('Cargo atualizado.');
+    } catch {
+      showToast('Erro ao atualizar cargo.', 'error');
     }
   };
 
-  const abrirModalProjetos = (userId) => {
-    const user = users.find(u => u.id === userId);
-    setModalProjetos({
-      open: true,
-      userId,
-      userName: user?.nome || user?.email || 'Usuário',
-      projetosAtuais: user?.projetos || []
-    });
-    setSearchProjetos('');
-  };
-
-  const fecharModalProjetos = () => {
-    setModalProjetos({ open: false, userId: null, userName: '', projetosAtuais: [] });
-    setSearchProjetos('');
-  };
-
-  const salvarProjetosModal = async () => {
+  const deleteUser = async () => {
+    const { userId, userName } = confirmDelete;
     try {
-      // Gerente de projeto só pode atribuir seus próprios projetos
-      if (isGerenteProjeto) {
-        const projetosInvalidos = modalProjetos.projetosAtuais.filter(p => !cargoPermitidos.includes(p));
-        if (projetosInvalidos.length > 0) {
-          setAlertInfo({ message: "Você não tem permissão para atribuir alguns desses projetos.", type: "error" });
-          return;
-        }
-      }
+      const user = users.find(u => u.id === userId);
+      if (!isAdmin && user?.funcao === 'admin') { showToast('Não pode excluir administradores.', 'error'); return; }
+      await deleteDoc(doc(db, 'usuarios', userId));
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      showToast(`${userName} removido.`);
+    } catch {
+      showToast('Erro ao remover usuário.', 'error');
+    } finally {
+      setConfirmDelete({ open: false, userId: null, userName: '' });
+    }
+  };
 
+  const salvarProjetos = async () => {
+    try {
       await updateDoc(doc(db, 'usuarios', modalProjetos.userId), { projetos: modalProjetos.projetosAtuais });
       setUsers(prev => prev.map(u => u.id === modalProjetos.userId ? { ...u, projetos: modalProjetos.projetosAtuais } : u));
-      setAlertInfo({ message: `${modalProjetos.userName} agora tem ${modalProjetos.projetosAtuais.length} projeto(s)!`, type: "success" });
-      fecharModalProjetos();
-    } catch (error) {
-      console.error('Erro:', error);
-      setAlertInfo({ message: "Erro ao salvar projetos.", type: "error" });
+      showToast('Projetos salvos!');
+      setModalProjetos({ open: false, userId: null, userName: '', projetosAtuais: [] });
+    } catch {
+      showToast('Erro ao salvar projetos.', 'error');
     }
   };
 
-  const toggleProjetoModal = (projetoId) => {
-    // Gerente de projeto não pode selecionar projetos que não são seus
-    if (isGerenteProjeto && !cargoPermitidos.includes(projetoId)) {
-      return;
-    }
+  const filteredUsers = users.filter(u => {
+    const matchSearch =
+      (u.nome?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (u.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    const matchStatus = statusFilter === 'all' || u.statusAcesso === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
-    const novosProjetos = modalProjetos.projetosAtuais.includes(projetoId)
-      ? modalProjetos.projetosAtuais.filter(p => p !== projetoId)
-      : [...modalProjetos.projetosAtuais, projetoId];
-    
-    setModalProjetos({ ...modalProjetos, projetosAtuais: novosProjetos });
+  const stats = {
+    total: users.length,
+    ativos: users.filter(u => u.statusAcesso === 'ativo').length,
+    pendentes: users.filter(u => u.statusAcesso === 'pendente').length,
   };
 
-  const projetosFiltrados = isGerenteProjeto
-    ? projetos.filter(p => 
-        cargoPermitidos.includes(p.id) && 
-        p.nome?.toLowerCase().includes(searchProjetos.toLowerCase())
-      )
-    : projetos.filter(p => 
-        p.nome?.toLowerCase().includes(searchProjetos.toLowerCase())
-      );
-
-  const filteredUsers = users.filter(user => 
-    (user.nome?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
+    </div>
   );
 
   return (
-        <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 transition-colors duration-200 relative text-white">
-          {/* Background decorativo */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl"></div>
+    <div className="min-h-screen bg-[#0a0a0f] text-white font-[Outfit,sans-serif]">
+      <Toast toast={toast} />
+
+      {/* Header */}
+      <header className="sticky top-0 z-20 border-b border-white/[0.08] bg-[#0a0a0f]/90 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/selecao-projeto')}
+              className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft size={16} />
+              <span className="hidden sm:inline">Voltar</span>
+            </button>
+            <div className="h-4 w-px bg-white/10" />
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-[#57B952]/20 flex items-center justify-center">
+                <Users size={14} className="text-[#57B952]" />
+              </div>
+              <span className="font-semibold text-sm">Gestão de Usuários</span>
+            </div>
           </div>
-            {alertInfo && <Alert message={alertInfo.message} type={alertInfo.type} onClose={() => setAlertInfo(null)} />}
-            {confirmDelete.open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-white/10 backdrop-blur-xl rounded-xl shadow-2xl max-w-md w-full p-6 border border-white/20">
-                        <div className="flex items-start gap-4">
-                            <div className="flex-shrink-0 bg-yellow-500/20 rounded-full p-2">
-                                <AlertTriangle size={28} className="text-yellow-400" />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="text-lg font-bold text-white">Confirmar exclusão</h3>
-                                <p className="text-sm text-gray-300 mt-1">Você tem certeza que deseja remover <span className="font-medium text-white">{confirmDelete.userName}</span>? Esta ação não pode ser desfeita.</p>
-                                <div className="mt-5 flex gap-3 justify-end">
-                                    <button onClick={cancelDelete} className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 transition-colors">Cancelar</button>
-                                    <button onClick={() => deleteUser(confirmDelete.userId)} className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors">Excluir</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-    {/* ThemeToggle removed */}
-
-      <header className="relative w-full flex items-center justify-center py-3 md:py-6 px-3 md:px-8 border-b border-gray-700 min-h-[56px] md:h-20 bg-gray-900/50 backdrop-blur-md z-20">
-        
-        {/* Esquerda: Botão Voltar + Badge Admin */}
-        <div className="absolute left-3 md:left-8 flex items-center gap-2 md:gap-4">
-            {/* MUDANÇA AQUI: Link aponta para /selecao-projeto */}
-            <Link to="/selecao-projeto" className="flex items-center gap-1 md:gap-2 text-gray-300 hover:text-[#57B952] hover:bg-white/5 px-4 py-2 rounded-lg transition-all font-semibold text-xs md:text-sm backdrop-blur-sm">
-                <ArrowLeft size={16} className="md:w-5 md:h-5" />
-                <span className="hidden sm:inline">Voltar</span>
-            </Link>
-            <span className="px-2 md:px-3 py-0.5 md:py-1 rounded-full bg-purple-500/20 text-purple-300 text-[10px] md:text-xs font-bold uppercase tracking-wider border border-purple-500/50">
-                Admin
-            </span>
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/admin-cargos')}
+              className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all"
+            >
+              <Shield size={13} />
+              Cargos
+            </button>
+          )}
         </div>
-        
-        {/* Centro: Logo */}
-        <div className="flex items-center justify-center">
-            <img 
-              src={isDark ? "/img/Normatel Engenharia_BRANCO.png" : "/img/Normatel Engenharia_PRETO.png"} 
-              alt="Logo" 
-              className="h-6 sm:h-8 md:h-10 w-auto object-contain drop-shadow-lg" 
-            />
-        </div>
-
       </header>
 
-      <main className="flex-grow flex flex-col items-center p-3 md:p-8">
-        <div className="w-full max-w-6xl">
-            
-            <div className="mb-4 md:mb-8 flex flex-col sm:flex-row gap-3 md:gap-4">
-                <button 
-                    onClick={() => navigate('/admin')}
-                    className="flex items-center justify-center gap-1.5 md:gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg font-semibold transition-colors text-sm md:text-base min-h-[44px] border border-blue-500/30"
-                >
-                    <Users size={16} className="md:w-[18px] md:h-[18px]" /> Usuários
-                </button>
-                <button 
-                    onClick={() => navigate('/admin-cargos')}
-                    className="flex items-center justify-center gap-1.5 md:gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg font-semibold transition-colors text-sm md:text-base min-h-[44px] border border-purple-500/30"
-                >
-                    <Briefcase size={16} className="md:w-[18px] md:h-[18px]" /> Gerenciar Cargos
-                </button>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-8">
+          {[
+            { label: 'Total', value: stats.total, color: 'text-white' },
+            { label: 'Ativos', value: stats.ativos, color: 'text-green-400' },
+            { label: 'Pendentes', value: stats.pendentes, color: 'text-yellow-400' },
+          ].map(s => (
+            <div key={s.label} className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-4 sm:p-5">
+              <p className="text-xs text-gray-500 mb-1">{s.label}</p>
+              <p className={`text-2xl sm:text-3xl font-bold ${s.color}`}>{s.value}</p>
             </div>
-            
-            <div className="flex flex-col md:flex-row justify-between items-end mb-4 md:mb-8 gap-4">
-                <div>
-                    <h1 className="text-xl md:text-3xl font-bold text-white flex items-center gap-2">
-                        <Users className="text-[#57B952]" size={20} /> Gestão de Usuários
-                    </h1>
-                    <p className="text-sm md:text-base text-gray-200 mt-1">Aprove cadastros pendentes e gerencie permissões.</p>
-                </div>
-                <div className="relative w-full md:w-72">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3"><Search className="h-5 w-5 text-gray-300" /></span>
-                    <input 
-                        type="text" 
-                        placeholder="Buscar usuário..." 
-                        value={searchTerm} 
-                        onChange={(e) => setSearchTerm(e.target.value)} 
-                        className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-[#57B952] outline-none backdrop-blur-sm"
-                    />
-                </div>
-            </div>
+          ))}
+        </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-lg border border-white/20 overflow-hidden -mx-4 md:mx-0">
-                <div className="overflow-x-auto">
-                    <div className="min-w-[900px]">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-white/5 border-b border-white/10">
-                                <th className="p-4 text-xs font-bold text-gray-100 uppercase">Status</th>
-                                <th className="p-4 text-xs font-bold text-gray-100 uppercase">Usuário</th>
-                                <th className="p-4 text-xs font-bold text-gray-100 uppercase">Cargo</th>
-                                <th className="p-4 text-xs font-bold text-gray-100 uppercase">Projeto</th>
-                                <th className="p-4 text-xs font-bold text-gray-100 uppercase">Email</th>
-                                <th className="p-4 text-xs font-bold text-gray-100 uppercase">Cargo / Permissão</th>
-                                <th className="p-4 text-xs font-bold text-gray-100 uppercase text-right">Excluir</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {loading ? (
-                                <tr><td colSpan="7" className="p-8 text-center text-gray-300">Carregando...</td></tr>
-                            ) : filteredUsers.length === 0 ? (
-                                <tr><td colSpan="7" className="p-8 text-center text-gray-300">Nenhum usuário encontrado.</td></tr>
-                            ) : (
-                                filteredUsers.map((user) => (
-                                    <tr key={user.id} className={`transition-colors ${user.statusAcesso === 'pendente' ? 'bg-yellow-500/10' : 'hover:bg-white/5'} border-white/5`}>
-                                        
-                                        <td className="p-4">
-                                            {user.statusAcesso === 'pendente' ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-yellow-500/20 text-yellow-300 text-xs font-bold border border-yellow-500/30">
-                                                    <AlertTriangle size={12} /> Pendente
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs font-bold border border-green-500/30">
-                                                    <CheckCircle size={12} /> Ativo
-                                                </span>
-                                            )}
-                                        </td>
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-5">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar por nome ou email..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#57B952]/50 focus:ring-1 focus:ring-[#57B952]/20 transition-all"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="px-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-gray-300 focus:outline-none focus:border-[#57B952]/50 transition-all"
+          >
+            <option value="all">Todos os status</option>
+            <option value="ativo">Somente ativos</option>
+            <option value="pendente">Somente pendentes</option>
+          </select>
+        </div>
 
-                                        <td className="p-4 font-medium text-white">{user.nome}</td>
-                                        <td className="p-4">
-                                          <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-semibold ${
-                                            user.funcao === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                                          }`}>
-                                            {user.funcao === 'admin' ? 'Administrador' : user.funcao || 'colaborador'}
-                                          </span>
-                                        </td>
-                                        <td className="p-4 text-sm text-gray-300">
-                                          <button 
-                                            onClick={() => abrirModalProjetos(user.id)}
-                                            className="px-3 py-1 bg-[#57B952]/20 hover:bg-[#57B952]/30 text-[#6BC962] rounded-lg text-xs font-semibold transition-colors border border-[#57B952]/30"
-                                          >
-                                            {(user.projetos || []).length > 0 ? `${user.projetos.length} projeto(s)` : 'Atribuir'}
-                                          </button>
-                                        </td>
-                                        <td className="p-4 text-sm text-gray-300">{user.email}</td>
-                                        
-                                        <td className="p-4">
-                                            {user.statusAcesso === 'pendente' ? (
-                                                <div className="flex items-center gap-2">
-                                                    <select 
-                                                        defaultValue={user.funcao || 'Colaborador'}
-                                                        id={`role-${user.id}`}
-                                                        className="text-sm p-2 rounded-lg border border-white/20 bg-white/10 text-white font-medium min-w-[160px] focus:ring-2 focus:ring-[#57B952]"
-                                                    >
-                                                        {cargos.length === 0 ? (
-                                                            <option value="Colaborador">Colaborador</option>
-                                                        ) : (
-                                                            cargos.map(cargo => (
-                                                                <option key={cargo.id} value={cargo.nome}>{cargo.nome}</option>
-                                                            ))
-                                                        )}
-                                                        <option value="admin">Administrador</option>
-                                                    </select>
-                                                    
-                                                    <button 
-                                                        onClick={() => handleApprove(user, document.getElementById(`role-${user.id}`).value)}
-                                                        className="p-1.5 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors border border-green-500/30" title="Aprovar"
-                                                    >
-                                                        <CheckCircle size={16} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleReject(user.id)}
-                                                        className="p-1.5 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors border border-red-500/30" title="Recusar"
-                                                    >
-                                                        <XCircle size={16} />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <select 
-                                                    value={user.funcao || 'Colaborador'} 
-                                                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                                    disabled={user.funcao === 'admin' && !isAdmin}
-                                                    className={`w-full px-3 py-2 rounded-lg text-sm border ${user.funcao === 'admin' && !isAdmin ? 'bg-gray-700/50 border-gray-600 cursor-not-allowed opacity-50 text-gray-400' : 'bg-white/10 border-white/20 text-white hover:bg-white/15 focus:ring-2 focus:ring-[#57B952] cursor-pointer'} outline-none font-medium transition-colors min-w-[160px]`}>
-                                                    {cargos.length === 0 ? (
-                                                        <option value="Colaborador">Colaborador</option>
-                                                    ) : (
-                                                        cargos.map(cargo => (
-                                                            <option key={cargo.id} value={cargo.nome}>{cargo.nome}</option>
-                                                        ))
-                                                    )}
-                                                    <option value="admin">Administrador</option>
-                                                </select>
-                                            )}
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <button 
-                                                onClick={() => handleReject(user.id)} 
-                                                disabled={user.funcao === 'admin' && !isAdmin}
-                                                className={`p-1.5 rounded-lg ${user.funcao === 'admin' && !isAdmin ? 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-50 text-gray-600' : 'bg-red-500/20 text-red-700 hover:bg-red-500/30 border border-red-500/30'} transition-colors`} 
-                                                title={user.funcao === 'admin' && !isAdmin ? 'Não pode excluir administrador' : 'Excluir'}
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+        {/* Table — desktop */}
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl overflow-hidden">
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/[0.06]">
+                  {['Status', 'Usuário', 'Cargo / Ação', 'Projetos', ''].map(h => (
+                    <th key={h} className={`p-4 text-xs font-medium text-gray-600 uppercase tracking-wider ${h === '' ? 'text-right' : 'text-left'}`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="p-14 text-center text-gray-600 text-sm">
+                      {users.length === 0 ? 'Nenhum usuário cadastrado ainda.' : 'Nenhum resultado para a busca.'}
+                    </td>
+                  </tr>
+                ) : filteredUsers.map(user => (
+                  <tr key={user.id} className={`transition-colors ${user.statusAcesso === 'pendente' ? 'bg-yellow-500/[0.04]' : 'hover:bg-white/[0.02]'}`}>
+
+                    <td className="p-4 w-32"><StatusBadge status={user.statusAcesso} /></td>
+
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#57B952] to-[#3d8c38] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                          {user.nome?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white leading-tight">{user.nome || '—'}</p>
+                          <p className="text-xs text-gray-600">{user.email}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="p-4">
+                      {user.statusAcesso === 'pendente' ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            id={`role-${user.id}`}
+                            defaultValue={user.funcao || 'colaborador'}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.12] text-white focus:outline-none focus:border-[#57B952]/50"
+                          >
+                            {cargos.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+                            {isAdmin && <option value="admin">Administrador</option>}
+                          </select>
+                          <button
+                            onClick={() => handleApprove(user, document.getElementById(`role-${user.id}`)?.value)}
+                            className="p-1.5 rounded-lg bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25 transition-colors"
+                            title="Aprovar"
+                          >
+                            <CheckCircle size={14} />
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete({ open: true, userId: user.id, userName: user.nome || user.email })}
+                            className="p-1.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition-colors"
+                            title="Rejeitar"
+                          >
+                            <XCircle size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <select
+                          value={user.funcao || 'colaborador'}
+                          onChange={e => handleRoleChange(user.id, e.target.value)}
+                          disabled={user.funcao === 'admin' && !isAdmin}
+                          className={`text-xs px-3 py-1.5 rounded-lg border focus:outline-none transition-colors ${
+                            user.funcao === 'admin' && !isAdmin
+                              ? 'bg-white/[0.02] border-white/5 text-gray-700 cursor-not-allowed'
+                              : 'bg-white/[0.06] border-white/[0.12] text-white hover:bg-white/[0.10] cursor-pointer focus:border-[#57B952]/50'
+                          }`}
+                        >
+                          {cargos.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+                          {isAdmin && <option value="admin">Administrador</option>}
+                        </select>
+                      )}
+                    </td>
+
+                    <td className="p-4">
+                      <button
+                        onClick={() => setModalProjetos({ open: true, userId: user.id, userName: user.nome, projetosAtuais: user.projetos || [] })}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20 hover:bg-[#57B952]/20 transition-colors font-medium"
+                      >
+                        {(user.projetos || []).length > 0 ? `${user.projetos.length} projeto(s)` : '+ Atribuir'}
+                      </button>
+                    </td>
+
+                    <td className="p-4 text-right">
+                      <button
+                        onClick={() => setConfirmDelete({ open: true, userId: user.id, userName: user.nome || user.email })}
+                        disabled={user.funcao === 'admin' && !isAdmin}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          user.funcao === 'admin' && !isAdmin
+                            ? 'opacity-20 cursor-not-allowed text-gray-500'
+                            : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
+                        }`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Cards — mobile */}
+          <div className="md:hidden divide-y divide-white/[0.06]">
+            {filteredUsers.length === 0 ? (
+              <p className="p-10 text-center text-gray-600 text-sm">Nenhum usuário encontrado.</p>
+            ) : filteredUsers.map(user => (
+              <div key={user.id} className={`p-4 space-y-3 ${user.statusAcesso === 'pendente' ? 'bg-yellow-500/[0.04]' : ''}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#57B952] to-[#3d8c38] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                      {user.nome?.charAt(0)?.toUpperCase() || '?'}
                     </div>
+                    <div>
+                      <p className="font-medium text-sm text-white">{user.nome || '—'}</p>
+                      <p className="text-xs text-gray-600">{user.email}</p>
+                    </div>
+                  </div>
+                  <StatusBadge status={user.statusAcesso} />
                 </div>
-            </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={user.funcao || 'colaborador'}
+                    onChange={e => user.statusAcesso !== 'pendente' && handleRoleChange(user.id, e.target.value)}
+                    className="flex-1 text-xs px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.12] text-white focus:outline-none"
+                  >
+                    {cargos.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+                    {isAdmin && <option value="admin">Administrador</option>}
+                  </select>
+                  {user.statusAcesso === 'pendente' && (
+                    <button onClick={() => handleApprove(user, user.funcao || 'colaborador')} className="p-2 rounded-lg bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25 transition-colors"><CheckCircle size={16} /></button>
+                  )}
+                  <button onClick={() => setModalProjetos({ open: true, userId: user.id, userName: user.nome, projetosAtuais: user.projetos || [] })} className="p-2 rounded-lg bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20 hover:bg-[#57B952]/20 transition-colors">
+                    <Briefcase size={16} />
+                  </button>
+                  <button onClick={() => setConfirmDelete({ open: true, userId: user.id, userName: user.nome || user.email })} className="p-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </main>
 
-      {/* MODAL DE ATRIBUIÇÃO DE PROJETOS */}
-      {modalProjetos.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white/10 backdrop-blur-xl rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col border border-white/20">
-            {/* Header */}
-            <div className="flex justify-between items-center p-6 border-b border-white/10">
-              <div>
-                <h2 className="text-xl font-bold text-white">Atribuir Projetos</h2>
-                <p className="text-sm text-gray-300 mt-1">{modalProjetos.userName}</p>
+      {/* Delete confirm modal */}
+      {confirmDelete.open && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#161618] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={18} className="text-red-400" />
               </div>
-              <button 
-                onClick={fecharModalProjetos} 
-                className="text-gray-600 hover:text-red-600 transition-colors"
-              >
-                <X size={24} />
+              <div>
+                <p className="font-semibold text-white text-sm">Confirmar exclusão</p>
+                <p className="text-xs text-gray-600">Esta ação não pode ser desfeita.</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-400 mb-5 pl-1">
+              Remover <span className="text-white font-medium">{confirmDelete.userName}</span> do sistema?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete({ open: false, userId: null, userName: '' })} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition-colors">Cancelar</button>
+              <button onClick={deleteUser} className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors">Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Projects modal */}
+      {modalProjetos.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#161618] border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-white/[0.08]">
+              <div>
+                <p className="font-semibold text-white text-sm">Atribuir Projetos</p>
+                <p className="text-xs text-gray-500 mt-0.5">{modalProjetos.userName}</p>
+              </div>
+              <button onClick={() => setModalProjetos({ open: false, userId: null, userName: '', projetosAtuais: [] })} className="p-1.5 rounded-lg hover:bg-white/8 text-gray-500 hover:text-white transition-colors">
+                <X size={16} />
               </button>
             </div>
-
-            {/* Barra de busca */}
-            <div className="px-6 pt-4 pb-2">
+            <div className="p-4 border-b border-white/[0.06]">
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Search className="h-5 w-5 text-gray-600" />
-                </span>
-                <input 
-                  type="text" 
-                  placeholder="Buscar projetos..." 
-                  value={searchProjetos} 
-                  onChange={(e) => setSearchProjetos(e.target.value)} 
-                  className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-[#57B952] outline-none"
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Buscar projetos..."
+                  value={searchProjetos}
+                  onChange={e => setSearchProjetos(e.target.value)}
+                  className="w-full pl-8 pr-4 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#57B952]/50"
                 />
               </div>
             </div>
-
-            {/* Lista de projetos */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              <div className="space-y-2">
-                {projetosFiltrados.length === 0 ? (
-                  <p className="text-center text-gray-400 py-8">Nenhum projeto encontrado</p>
-                ) : (
-                  projetosFiltrados.map(projeto => (
-                    <label 
-                      key={projeto.id} 
-                      className="flex items-center gap-3 p-3 rounded-lg border border-white/10 hover:bg-white/5 cursor-pointer transition-colors"
+            <div className="flex-1 overflow-y-auto p-4 space-y-1.5">
+              {projetos
+                .filter(p => p.nome?.toLowerCase().includes(searchProjetos.toLowerCase()))
+                .map(projeto => {
+                  const checked = modalProjetos.projetosAtuais.includes(projeto.id);
+                  return (
+                    <label
+                      key={projeto.id}
+                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors border ${
+                        checked ? 'bg-[#57B952]/10 border-[#57B952]/25' : 'border-transparent hover:bg-white/[0.04]'
+                      }`}
                     >
-                      <input 
-                        type="checkbox" 
-                        checked={modalProjetos.projetosAtuais.includes(projeto.id)} 
-                        onChange={() => toggleProjetoModal(projeto.id)}
-                        className="w-5 h-5 rounded border-white/20 text-[#57B952] focus:ring-[#57B952] accent-[#57B952] bg-white/5"
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          const updated = checked
+                            ? modalProjetos.projetosAtuais.filter(id => id !== projeto.id)
+                            : [...modalProjetos.projetosAtuais, projeto.id];
+                          setModalProjetos(prev => ({ ...prev, projetosAtuais: updated }));
+                        }}
+                        className="accent-[#57B952] w-4 h-4"
                       />
-                      <div className="flex-1">
-                        <p className="font-medium text-white">{projeto.nome}</p>
-                        <p className="text-xs text-gray-400">{projeto.descricao || '-'}</p>
-                      </div>
+                      <span className="text-sm font-medium text-white">{projeto.nome}</span>
                     </label>
-                  ))
-                )}
-              </div>
+                  );
+                })}
+              {projetos.length === 0 && <p className="text-center text-gray-600 text-sm py-6">Nenhum projeto cadastrado.</p>}
             </div>
-
-            {/* Footer */}
-            <div className="flex gap-3 p-6 border-t border-white/10 bg-white/5">
-              <button 
-                onClick={fecharModalProjetos}
-                className="flex-1 py-2 px-4 bg-white/10 hover:bg-white/20 text-gray-300 font-medium rounded-lg transition-colors border border-white/20"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={salvarProjetosModal}
-                className="flex-1 py-2 px-4 bg-[#57B952] hover:bg-[#3d8c38] text-white font-medium rounded-lg transition-colors"
-              >
+            <div className="p-4 border-t border-white/[0.08] flex gap-3">
+              <button onClick={() => setModalProjetos({ open: false, userId: null, userName: '', projetosAtuais: [] })} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-gray-300 font-medium hover:bg-white/10 transition-colors">Cancelar</button>
+              <button onClick={salvarProjetos} className="flex-1 py-2.5 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-semibold transition-colors">
                 Salvar ({modalProjetos.projetosAtuais.length})
               </button>
             </div>
