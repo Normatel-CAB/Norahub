@@ -515,16 +515,20 @@ function PainelProjeto() {
                           onChange={(e) => updateExtraField(idx, 'type', e.target.value)}
                           className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
                         >
-                          <option value="link">🔗 Link Externo</option>
-                          <option value="documents">📁 Pasta de Documentos</option>
-                          <option value="reports">📊 Relatórios e Dashboards</option>
-                          <option value="files">📄 Arquivos PDF</option>
-                          <option value="spreadsheets">📈 Planilhas Excel</option>
-                          <option value="forms">📝 Formulários</option>
-                          <option value="approvals">✅ Centro de Aprovações</option>
-                          <option value="inventory">📦 Controle de Estoque</option>
-                          <option value="financial">💰 Financeiro</option>
-                          <option value="hr">👥 Recursos Humanos</option>
+                          {[
+                            { v: 'link',         l: '🔗 Link Externo' },
+                            { v: 'documents',    l: '📁 Pasta de Documentos' },
+                            { v: 'reports',      l: '📊 Relatórios e Dashboards' },
+                            { v: 'files',        l: '📄 Arquivos PDF' },
+                            { v: 'spreadsheets', l: '📈 Planilhas Excel' },
+                            { v: 'forms',        l: '📝 Formulários' },
+                            { v: 'approvals',    l: '✅ Centro de Aprovações' },
+                            { v: 'inventory',    l: '📦 Controle de Estoque' },
+                            { v: 'financial',    l: '💰 Financeiro' },
+                            { v: 'hr',           l: '👥 Recursos Humanos' },
+                          ].map(t => (
+                            <option key={t.v} value={t.v} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{t.l}</option>
+                          ))}
                         </select>
                       </div>
                       
