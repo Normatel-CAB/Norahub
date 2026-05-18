@@ -430,182 +430,188 @@ function PainelProjeto() {
 
       {/* MODAL DE EDIÇÃO */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-white/20 animate-fade-in flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-center p-6 border-b border-white/10 flex-shrink-0">
-              <h2 className="text-xl font-bold text-white">Editar Base</h2>
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#111114] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl border border-white/[0.10] flex flex-col max-h-[95vh] sm:max-h-[88vh]">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.07] flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center flex-shrink-0">
+                  <Settings size={18} className="text-[#57B952]" />
+                </div>
+                <div>
+                  <p className="font-bold text-white text-base leading-tight">Editar Base</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{projeto.nome}</p>
+                </div>
+              </div>
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="text-gray-400 hover:text-red-500 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors"
               >
-                <X size={20} />
+                <X size={16} />
               </button>
             </div>
+
             <form onSubmit={handleSaveEdit} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 space-y-4 overflow-y-auto flex-1">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Nome do Projeto
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Projeto 743 - Facilities"
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#57B952] outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1 flex items-center gap-2">
-                  <FileText size={14} /> Link do Forms (Solicitação) <span className="text-gray-600 text-xs">(opcional)</span>
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://forms..."
-                  value={editedUrlForms}
-                  onChange={(e) => setEditedUrlForms(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#57B952] outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1 flex items-center gap-2">
-                  <CheckCircle size={14} /> Link do SharePoint (Aprovação) <span className="text-gray-600 text-xs">(opcional)</span>
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://sharepoint..."
-                  value={editedUrlSharePoint}
-                  onChange={(e) => setEditedUrlSharePoint(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#57B952] outline-none"
-                />
-              </div>
+              <div className="px-6 py-5 space-y-6 overflow-y-auto flex-1">
 
-              <div className="pt-2">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-300">
-                    Cards adicionais (opcional)
+                {/* Nome */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                    Nome da Base <span className="text-[#57B952]">*</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={addExtraField}
-                    className="text-sm text-[#57B952] hover:text-green-500 font-semibold flex items-center gap-1"
-                  >
-                    <Plus size={14} /> Adicionar card
-                  </button>
+                  <input
+                    type="text"
+                    placeholder="Ex: Projeto 743 — Facilities"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all"
+                  />
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  {editedExtras.length} card(s) configurado(s)
-                </p>
-                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 border border-white/20 rounded-lg p-4 bg-white/5">
-                  {editedExtras.map((field, idx) => (
-                    <div key={idx} className="border border-white/20 rounded-lg p-3 space-y-2 bg-white/5">
-                      <input
-                        type="text"
-                        placeholder="Nome do Card"
-                        value={field.name}
-                        onChange={(e) => updateExtraField(idx, 'name', e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
-                      />
-                      
-                      <div>
-                        <label className="block text-xs font-medium text-gray-400 mb-1">Tipo de Card</label>
-                        <select
-                          value={field.type || 'link'}
-                          onChange={(e) => updateExtraField(idx, 'type', e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
-                        >
-                          {[
-                            { v: 'link',         l: '🔗 Link Externo' },
-                            { v: 'documents',    l: '📁 Pasta de Documentos' },
-                            { v: 'reports',      l: '📊 Relatórios e Dashboards' },
-                            { v: 'files',        l: '📄 Arquivos PDF' },
-                            { v: 'spreadsheets', l: '📈 Planilhas Excel' },
-                            { v: 'forms',        l: '📝 Formulários' },
-                            { v: 'approvals',    l: '✅ Centro de Aprovações' },
-                            { v: 'inventory',    l: '📦 Controle de Estoque' },
-                            { v: 'financial',    l: '💰 Financeiro' },
-                            { v: 'hr',           l: '👥 Recursos Humanos' },
-                          ].map(t => (
-                            <option key={t.v} value={t.v} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{t.l}</option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      <input
-                        type="text"
-                        placeholder="Descrição (opcional)"
-                        value={field.description}
-                        onChange={(e) => updateExtraField(idx, 'description', e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none text-sm placeholder-gray-400"
-                      />
-                      
-                      {!getCardConfig(field.type || 'link').needsUpload && !getCardConfig(field.type || 'link').isCustomForm && (
-                        <input
-                          type="url"
-                          placeholder="URL (https://...)"
-                          value={field.url}
-                          onChange={(e) => updateExtraField(idx, 'url', e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none text-sm placeholder-gray-400"
-                        />
-                      )}
-                      
-                      {getCardConfig(field.type || 'link').needsUpload && (
-                        <div className="bg-blue-500/10 border border-blue-400/30 rounded-lg p-3">
-                          <p className="text-xs text-blue-300">
-                            ℹ️ Este card permitirá upload de arquivos após ser criado
-                          </p>
-                        </div>
-                      )}
 
-                      {getCardConfig(field.type || 'link').isCustomForm && (
-                        <div className="bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-3">
-                          <p className="text-xs text-yellow-300">
-                            📝 Este card abrirá um construtor de formulário personalizado
-                          </p>
-                        </div>
+                {/* Cards */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Cards</label>
+                      {editedExtras.length > 0 && (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#57B952]/20 text-[#57B952] text-[10px] font-bold">
+                          {editedExtras.length}
+                        </span>
                       )}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          removeExtraField(idx);
-                        }}
-                        className="w-full py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors font-semibold"
-                      >
-                        <Trash2 size={14} className="inline mr-1" /> Remover Card
-                      </button>
                     </div>
-                  ))}
-                </div>
-                <div className="bg-white/5 border border-white/20 rounded-lg p-3 mt-3">
-                  <p className="text-xs text-gray-300 font-semibold mb-1">💡 Dicas de uso:</p>
-                  <ul className="text-xs text-gray-400 space-y-1 ml-4 list-disc">
-                    <li><strong className="text-gray-300">📁 Documentos / 📄 PDFs / 📊 Planilhas:</strong> Permite upload e gerenciamento de arquivos</li>
-                    <li><strong className="text-gray-300">🔗 Link / 📋 Formulários / 📈 Relatórios:</strong> Requer URL externa (Forms, Power BI, etc)</li>
-                    <li><strong className="text-gray-300">✅ Aprovações / 📦 Estoque / 💰 Financeiro:</strong> Link para sistema específico</li>
-                  </ul>
+                    <button
+                      type="button"
+                      onClick={addExtraField}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20 hover:bg-[#57B952]/20 font-semibold transition-colors"
+                    >
+                      <Plus size={13} /> Novo card
+                    </button>
+                  </div>
+
+                  {editedExtras.length === 0 && (
+                    <button
+                      type="button"
+                      onClick={addExtraField}
+                      className="w-full flex flex-col items-center justify-center gap-2 py-8 border border-dashed border-white/[0.10] rounded-2xl hover:border-[#57B952]/30 hover:bg-[#57B952]/[0.03] transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white/[0.04] group-hover:bg-[#57B952]/10 flex items-center justify-center transition-colors">
+                        <Plus size={18} className="text-gray-600 group-hover:text-[#57B952] transition-colors" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">
+                        Clique para adicionar um card
+                      </p>
+                    </button>
+                  )}
+
+                  {editedExtras.length > 0 && (
+                    <div className="space-y-3">
+                      {editedExtras.map((field, idx) => (
+                        <div key={idx} className="group bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-4 space-y-3 transition-colors">
+                          {/* Card header */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-lg bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center text-[11px] font-bold text-[#57B952] flex-shrink-0">
+                                {idx + 1}
+                              </span>
+                              <span className="text-xs text-gray-500 font-medium">Card {idx + 1}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeExtraField(idx); }}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/15 text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+
+                          {/* Nome + Tipo em grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                            <input
+                              type="text"
+                              placeholder="Nome do card *"
+                              value={field.name}
+                              onChange={(e) => updateExtraField(idx, 'name', e.target.value)}
+                              className="sm:col-span-3 w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
+                            />
+                            <select
+                              value={field.type || 'link'}
+                              onChange={(e) => updateExtraField(idx, 'type', e.target.value)}
+                              className="sm:col-span-2 w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white focus:outline-none focus:border-[#57B952]/60 transition-all cursor-pointer"
+                            >
+                              {[
+                                { v: 'link',         l: '🔗 Link Externo' },
+                                { v: 'documents',    l: '📁 Documentos' },
+                                { v: 'reports',      l: '📊 Relatórios' },
+                                { v: 'files',        l: '📄 Arquivos PDF' },
+                                { v: 'spreadsheets', l: '📈 Planilhas' },
+                                { v: 'forms',        l: '📝 Formulários' },
+                                { v: 'approvals',    l: '✅ Aprovações' },
+                                { v: 'inventory',    l: '📦 Estoque' },
+                                { v: 'financial',    l: '💰 Financeiro' },
+                                { v: 'hr',           l: '👥 RH' },
+                              ].map(t => (
+                                <option key={t.v} value={t.v} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{t.l}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Descrição */}
+                          <input
+                            type="text"
+                            placeholder="Descrição (opcional)"
+                            value={field.description}
+                            onChange={(e) => updateExtraField(idx, 'description', e.target.value)}
+                            className="w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
+                          />
+
+                          {/* URL — só quando não usa upload nem form personalizado */}
+                          {!getCardConfig(field.type || 'link').needsUpload && !getCardConfig(field.type || 'link').isCustomForm && (
+                            <input
+                              type="url"
+                              placeholder="URL (https://...)"
+                              value={field.url}
+                              onChange={(e) => updateExtraField(idx, 'url', e.target.value)}
+                              className="w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
+                            />
+                          )}
+
+                          {getCardConfig(field.type || 'link').needsUpload && (
+                            <p className="flex items-center gap-2 text-xs text-blue-300 bg-blue-500/10 border border-blue-400/20 rounded-xl px-3 py-2">
+                              <span>📁</span> Permite upload de arquivos após criado
+                            </p>
+                          )}
+                          {getCardConfig(field.type || 'link').isCustomForm && (
+                            <p className="flex items-center gap-2 text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-400/20 rounded-xl px-3 py-2">
+                              <span>📝</span> Abrirá construtor de formulário personalizado
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-              </div>
-              <div className="p-6 pt-4 border-t border-white/10 flex gap-3 flex-shrink-0">
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-white/[0.07] flex gap-3 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="flex-1 py-2 rounded-lg text-gray-300 hover:bg-white/10 font-medium transition-colors border border-white/10"
+                  className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 py-2 rounded-lg bg-[#57B952] hover:bg-green-600 text-white font-bold shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                  className="flex-1 py-3 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
                 >
-                  {saving ? 'Salvando...' : (
-                    <>
-                      <Save size={18} /> Salvar Alterações
-                    </>
+                  {saving ? (
+                    <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Salvando...</>
+                  ) : (
+                    <><Save size={15} /> Salvar Alterações</>
                   )}
                 </button>
               </div>
