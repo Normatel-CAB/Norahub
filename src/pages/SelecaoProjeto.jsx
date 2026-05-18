@@ -371,11 +371,12 @@ function SelecaoProjeto() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none bg-white/10 text-white backdrop-blur-sm transition-all hover:bg-white/15"
+                    className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none transition-all"
+                    style={{ backgroundColor: '#ffffff', color: '#111827' }}
                   >
-                    <option value="all" className="bg-gray-900">Todos</option>
-                    <option value="active" className="bg-gray-900">Ativos</option>
-                    <option value="inactive" className="bg-gray-900">Inativos</option>
+                    <option value="all" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Todos</option>
+                    <option value="active" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Ativos</option>
+                    <option value="inactive" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Inativos</option>
                   </select>
                 </div>
                 <div>
@@ -383,12 +384,13 @@ function SelecaoProjeto() {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none bg-white/10 text-white backdrop-blur-sm transition-all hover:bg-white/15"
+                    className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none transition-all"
+                    style={{ backgroundColor: '#ffffff', color: '#111827' }}
                   >
-                    <option value="name" className="bg-gray-900">Nome (A-Z)</option>
-                    <option value="date" className="bg-gray-900">Data de Criação</option>
-                    <option value="recent" className="bg-gray-900">Modificados Recentemente</option>
-                    <option value="favorites" className="bg-gray-900">Favoritos</option>
+                    <option value="name" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Nome (A-Z)</option>
+                    <option value="date" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Data de Criação</option>
+                    <option value="recent" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Modificados Recentemente</option>
+                    <option value="favorites" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Favoritos</option>
                   </select>
                 </div>
               </div>
@@ -570,7 +572,8 @@ function SelecaoProjeto() {
                               <select
                                 value={field.type || 'link'}
                                 onChange={(e) => updateExtraField(idx, 'type', e.target.value)}
-                                className="sm:col-span-2 w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white focus:outline-none focus:border-[#57B952]/60 transition-all cursor-pointer"
+                                className="sm:col-span-2 w-full px-3 py-2.5 border border-white/[0.10] rounded-xl text-sm focus:outline-none focus:border-[#57B952]/60 transition-all cursor-pointer"
+                                style={{ backgroundColor: '#ffffff', color: '#111827' }}
                               >
                                 {[
                                   { v: 'link',         l: '🔗 Link Externo' },

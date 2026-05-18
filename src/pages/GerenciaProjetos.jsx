@@ -387,7 +387,7 @@ function GerenciaProjetos() {
 
                           <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
                             <input type="text" placeholder="Nome do card *" value={card.nome} onChange={e => updateCard(idx, 'nome', e.target.value)} className={`sm:col-span-3 ${inputCls}`} />
-                            <select value={card.tipo} onChange={e => updateCard(idx, 'tipo', e.target.value)} className={`sm:col-span-2 ${selectCls}`}>
+                            <select value={card.tipo} onChange={e => updateCard(idx, 'tipo', e.target.value)} className={`sm:col-span-2 ${selectCls}`} style={OPT}>
                               {CARD_TYPES.map(t => <option key={t.value} value={t.value} style={OPT}>{t.label}</option>)}
                             </select>
                           </div>
@@ -491,6 +491,7 @@ function GerenciaProjetos() {
                   value={cardForm.tipo}
                   onChange={e => setCardForm(prev => ({ ...prev, tipo: e.target.value }))}
                   className={selectCls}
+                  style={OPT}
                 >
                   {CARD_TYPES.map(t => <option key={t.value} value={t.value} style={OPT}>{t.label}</option>)}
                 </select>

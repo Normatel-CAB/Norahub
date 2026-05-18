@@ -503,9 +503,10 @@ function ConstrutorFormulario() {
                           value={field.type}
                           onChange={(e) => updateField(field.id, 'type', e.target.value)}
                           className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
+                          style={{ backgroundColor: '#ffffff', color: '#111827' }}
                         >
                           {fieldTypes.map(type => (
-                            <option key={type.value} value={type.value}>{type.label}</option>
+                            <option key={type.value} value={type.value} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{type.label}</option>
                           ))}
                         </select>
                       </div>
@@ -569,14 +570,15 @@ function ConstrutorFormulario() {
                         className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none"
                       />
                     ) : field.type === 'select' ? (
-                      <select 
+                      <select
                         value={currentResponse[field.id] || ''}
                         onChange={(e) => setCurrentResponse({...currentResponse, [field.id]: e.target.value})}
                         className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none"
+                        style={{ backgroundColor: '#ffffff', color: '#111827' }}
                       >
-                        <option value="">Selecione...</option>
+                        <option value="" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Selecione...</option>
                         {field.options.map((opt, i) => (
-                          <option key={i} value={opt}>{opt}</option>
+                          <option key={i} value={opt} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{opt}</option>
                         ))}
                       </select>
                     ) : field.type === 'radio' ? (

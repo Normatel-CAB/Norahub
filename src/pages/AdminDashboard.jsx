@@ -272,11 +272,12 @@ function AdminDashboard() {
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-gray-300 focus:outline-none focus:border-[#57B952]/50 transition-all"
+            className="px-4 py-2.5 border border-white/[0.08] rounded-xl text-sm focus:outline-none focus:border-[#57B952]/50 transition-all"
+            style={{ backgroundColor: '#ffffff', color: '#111827' }}
           >
-            <option value="all">Todos os status</option>
-            <option value="ativo">Somente ativos</option>
-            <option value="pendente">Somente pendentes</option>
+            <option value="all" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Todos os status</option>
+            <option value="ativo" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Somente ativos</option>
+            <option value="pendente" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Somente pendentes</option>
           </select>
         </div>
 
@@ -321,10 +322,11 @@ function AdminDashboard() {
                           <select
                             value={pendingRoles[user.id] ?? user.funcao ?? 'colaborador'}
                             onChange={e => setPendingRoles(prev => ({ ...prev, [user.id]: e.target.value }))}
-                            className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.12] text-white focus:outline-none focus:border-[#57B952]/50"
+                            className="text-xs px-3 py-1.5 rounded-lg border border-white/[0.12] focus:outline-none focus:border-[#57B952]/50"
+                            style={{ backgroundColor: '#ffffff', color: '#111827' }}
                           >
-                            {cargos.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
-                            {isAdmin && <option value="admin">Administrador</option>}
+                            {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{c.nome}</option>)}
+                            {isAdmin && <option value="admin" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Administrador</option>}
                           </select>
                           <button
                             onClick={() => handleApprove(user, pendingRoles[user.id] ?? user.funcao ?? 'colaborador')}
@@ -347,13 +349,12 @@ function AdminDashboard() {
                           onChange={e => handleRoleChange(user.id, e.target.value)}
                           disabled={user.funcao === 'admin' && !isAdmin}
                           className={`text-xs px-3 py-1.5 rounded-lg border focus:outline-none transition-colors ${
-                            user.funcao === 'admin' && !isAdmin
-                              ? 'bg-white/[0.02] border-white/5 text-gray-700 cursor-not-allowed'
-                              : 'bg-white/[0.06] border-white/[0.12] text-white hover:bg-white/[0.10] cursor-pointer focus:border-[#57B952]/50'
+                            user.funcao === 'admin' && !isAdmin ? 'border-white/5 cursor-not-allowed opacity-50' : 'border-white/[0.12] cursor-pointer focus:border-[#57B952]/50'
                           }`}
+                          style={{ backgroundColor: '#ffffff', color: '#111827' }}
                         >
-                          {cargos.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
-                          {isAdmin && <option value="admin">Administrador</option>}
+                          {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{c.nome}</option>)}
+                          {isAdmin && <option value="admin" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Administrador</option>}
                         </select>
                       )}
                     </td>
@@ -408,10 +409,11 @@ function AdminDashboard() {
                   <select
                     value={user.funcao || 'colaborador'}
                     onChange={e => user.statusAcesso !== 'pendente' && handleRoleChange(user.id, e.target.value)}
-                    className="flex-1 text-xs px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.12] text-white focus:outline-none"
+                    className="flex-1 text-xs px-3 py-2 rounded-lg border border-white/[0.12] focus:outline-none"
+                    style={{ backgroundColor: '#ffffff', color: '#111827' }}
                   >
-                    {cargos.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
-                    {isAdmin && <option value="admin">Administrador</option>}
+                    {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{c.nome}</option>)}
+                    {isAdmin && <option value="admin" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Administrador</option>}
                   </select>
                   {user.statusAcesso === 'pendente' && (
                     <button onClick={() => handleApprove(user, user.funcao || 'colaborador')} className="p-2 rounded-lg bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25 transition-colors"><CheckCircle size={16} /></button>

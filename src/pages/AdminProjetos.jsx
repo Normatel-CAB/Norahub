@@ -193,13 +193,14 @@ function AdminProjetos() {
                     console.log('Usuário selecionado:', e.target.value);
                     setUsuarioParaAdicionar(e.target.value);
                   }}
-                  className="flex-1 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white focus:ring-2 focus:ring-[#57B952] outline-none text-sm placeholder-gray-400"
+                  className="flex-1 px-3 py-2 rounded-lg border border-white/20 bg-white/10 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
+                  style={{ backgroundColor: '#ffffff', color: '#111827' }}
                 >
-                  <option value="">Selecione um usuário... ({usuarios.filter(u => !membrosAdicionados.includes(String(u.uid || u.id))).length} disponíveis)</option>
+                  <option value="" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Selecione um usuário... ({usuarios.filter(u => !membrosAdicionados.includes(String(u.uid || u.id))).length} disponíveis)</option>
                   {usuarios
                     .filter(u => !membrosAdicionados.includes(String(u.uid || u.id)))
                     .map(u => (
-                      <option key={u.uid || u.id} value={u.uid || u.id}>
+                      <option key={u.uid || u.id} value={u.uid || u.id} style={{ backgroundColor: '#ffffff', color: '#111827' }}>
                         {u.nome} ({u.email})
                       </option>
                     ))}
