@@ -1053,6 +1053,16 @@ body {
   }
 }
 
+/* ===== NATIVE SELECT: escuro fechado, branco aberto ===== */
+select {
+  background-color: #1a1a20;
+  color: #f9fafb;
+}
+select option {
+  background-color: #ffffff;
+  color: #111827;
+}
+
 /* ====================================
    reCAPTCHA Badge - Ocultar mas manter crédito
    ==================================== */

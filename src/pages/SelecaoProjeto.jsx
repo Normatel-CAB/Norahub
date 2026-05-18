@@ -372,7 +372,7 @@ function SelecaoProjeto() {
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none transition-all"
-                    style={{ backgroundColor: '#ffffff', color: '#111827' }}
+                    style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
                   >
                     <option value="all" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Todos</option>
                     <option value="active" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Ativos</option>
@@ -385,7 +385,7 @@ function SelecaoProjeto() {
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none transition-all"
-                    style={{ backgroundColor: '#ffffff', color: '#111827' }}
+                    style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
                   >
                     <option value="name" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Nome (A-Z)</option>
                     <option value="date" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Data de Criação</option>
@@ -573,7 +573,7 @@ function SelecaoProjeto() {
                                 value={field.type || 'link'}
                                 onChange={(e) => updateExtraField(idx, 'type', e.target.value)}
                                 className="sm:col-span-2 w-full px-3 py-2.5 border border-white/[0.10] rounded-xl text-sm focus:outline-none focus:border-[#57B952]/60 transition-all cursor-pointer"
-                                style={{ backgroundColor: '#ffffff', color: '#111827' }}
+                                style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
                               >
                                 {[
                                   { v: 'link',         l: '🔗 Link Externo' },

@@ -503,7 +503,7 @@ function ConstrutorFormulario() {
                           value={field.type}
                           onChange={(e) => updateField(field.id, 'type', e.target.value)}
                           className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
-                          style={{ backgroundColor: '#ffffff', color: '#111827' }}
+                          style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
                         >
                           {fieldTypes.map(type => (
                             <option key={type.value} value={type.value} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{type.label}</option>
@@ -574,7 +574,7 @@ function ConstrutorFormulario() {
                         value={currentResponse[field.id] || ''}
                         onChange={(e) => setCurrentResponse({...currentResponse, [field.id]: e.target.value})}
                         className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none"
-                        style={{ backgroundColor: '#ffffff', color: '#111827' }}
+                        style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
                       >
                         <option value="" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Selecione...</option>
                         {field.options.map((opt, i) => (

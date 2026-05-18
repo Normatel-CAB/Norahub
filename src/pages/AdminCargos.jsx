@@ -308,7 +308,7 @@ function AdminCargos() {
                     onChange={e => handleTemplate(e.target.value)}
                     defaultValue=""
                     className="w-full px-3 py-2.5 border border-white/[0.08] rounded-xl text-sm focus:outline-none focus:border-[#57B952]/50"
-                    style={{ backgroundColor: '#ffffff', color: '#111827' }}
+                    style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
                   >
                     <option value="" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Selecionar template...</option>
                     {Object.keys(TEMPLATES).map(t => <option key={t} value={t} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{t}</option>)}

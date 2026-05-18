@@ -273,7 +273,7 @@ function AdminDashboard() {
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
             className="px-4 py-2.5 border border-white/[0.08] rounded-xl text-sm focus:outline-none focus:border-[#57B952]/50 transition-all"
-            style={{ backgroundColor: '#ffffff', color: '#111827' }}
+            style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
           >
             <option value="all" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Todos os status</option>
             <option value="ativo" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Somente ativos</option>
@@ -323,7 +323,7 @@ function AdminDashboard() {
                             value={pendingRoles[user.id] ?? user.funcao ?? 'colaborador'}
                             onChange={e => setPendingRoles(prev => ({ ...prev, [user.id]: e.target.value }))}
                             className="text-xs px-3 py-1.5 rounded-lg border border-white/[0.12] focus:outline-none focus:border-[#57B952]/50"
-                            style={{ backgroundColor: '#ffffff', color: '#111827' }}
+                            style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
                           >
                             {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{c.nome}</option>)}
                             {isAdmin && <option value="admin" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Administrador</option>}
@@ -351,7 +351,7 @@ function AdminDashboard() {
                           className={`text-xs px-3 py-1.5 rounded-lg border focus:outline-none transition-colors ${
                             user.funcao === 'admin' && !isAdmin ? 'border-white/5 cursor-not-allowed opacity-50' : 'border-white/[0.12] cursor-pointer focus:border-[#57B952]/50'
                           }`}
-                          style={{ backgroundColor: '#ffffff', color: '#111827' }}
+                          style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
                         >
                           {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{c.nome}</option>)}
                           {isAdmin && <option value="admin" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Administrador</option>}
@@ -410,7 +410,7 @@ function AdminDashboard() {
                     value={user.funcao || 'colaborador'}
                     onChange={e => user.statusAcesso !== 'pendente' && handleRoleChange(user.id, e.target.value)}
                     className="flex-1 text-xs px-3 py-2 rounded-lg border border-white/[0.12] focus:outline-none"
-                    style={{ backgroundColor: '#ffffff', color: '#111827' }}
+                    style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
                   >
                     {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{c.nome}</option>)}
                     {isAdmin && <option value="admin" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Administrador</option>}
