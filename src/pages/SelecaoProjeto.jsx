@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Building2, ArrowLeft, Plus, Briefcase, X, Save, FileText, Share, Trash2, User, Shield, Upload, FolderOpen, FileSpreadsheet, File } from 'lucide-react';
+import { Building2, ArrowLeft, Plus, Briefcase, Settings, X, Save, Trash2, User, Shield } from 'lucide-react';
 // ThemeToggle removed: app forced to light mode
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
 import NotificationCenter from '../components/NotificationCenter';
+
+const NO_URL_TYPES = ['documents', 'files', 'spreadsheets'];
 import ActivityLogger from '../services/activityLogger';
 import FavoriteButton from '../components/FavoriteButton';
 import { getFavorites } from '../services/favorites';
@@ -178,11 +180,10 @@ function SelecaoProjeto() {
 
     const handleSaveProject = async (e) => {
     e.preventDefault();
-        if (!newProjectName || !urlForms || !urlSharePoint) return;
+        if (!newProjectName.trim()) return;
     setSaving(true);
     try {
-                // Tipos que não precisam de URL (usam upload ou navegação interna)
-                const semUrl = new Set(['documents', 'files', 'spreadsheets', 'forms']);
+                const semUrl = new Set(NO_URL_TYPES);
                 const extras = extraFields
                     .filter(f => {
                       if (!f.name?.trim()) return false;
@@ -277,7 +278,7 @@ function SelecaoProjeto() {
         setNewProjectName('');
         setUrlForms('');
         setUrlSharePoint('');
-        setExtraFields([{ name: '', description: '', url: '', type: 'link' }]);
+        setExtraFields([]);
         setIsModalOpen(true);
     };
 
@@ -286,7 +287,7 @@ function SelecaoProjeto() {
         setNewProjectName(projeto.nome || '');
         setUrlForms(projeto.urlForms || '');
         setUrlSharePoint(projeto.urlSharePoint || '');
-        setExtraFields(projeto.extras && projeto.extras.length > 0 ? projeto.extras.map(e => ({ name: e.name || '', description: e.description || '', url: e.url || '', type: e.type || 'link' })) : [{ name: '', description: '', url: '', type: 'link' }]);
+        setExtraFields(projeto.extras && projeto.extras.length > 0 ? projeto.extras.map(e => ({ name: e.name || '', description: e.description || '', url: e.url || '', type: e.type || 'link' })) : []);
         setIsModalOpen(true);
     };
 
@@ -473,107 +474,188 @@ function SelecaoProjeto() {
 
       {/* MODAL (criar/editar base) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-white/20 animate-fade-in my-8 max-h-[90vh] flex flex-col">
-                <div className="flex justify-between items-center p-6 border-b border-white/10 flex-shrink-0">
-                    <h2 className="text-xl font-bold text-white">
-                        {editingProject ? 'Editar Base' : 'Adicionar Nova Base'}
-                    </h2>
-                    <button onClick={() => setIsModalOpen(false)} className="text-gray-300 hover:text-red-400 transition-colors"><X size={20} /></button>
-                </div>
-                <form onSubmit={handleSaveProject} className="flex-1 overflow-y-auto p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-200 mb-1">Nome do Projeto</label>
-                        <input type="text" placeholder="Ex: Projeto 743 - Facilities" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none placeholder-gray-400 backdrop-blur-sm transition-all hover:bg-white/15" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-200 mb-1 flex items-center gap-2"><FileText size={14} /> Link do Forms (Solicitação)</label>
-                        <input type="url" placeholder="https://forms..." value={urlForms} onChange={(e) => setUrlForms(e.target.value)} className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none placeholder-gray-400 backdrop-blur-sm transition-all hover:bg-white/15" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-200 mb-1 flex items-center gap-2"><Share size={14} /> Link do SharePoint (Aprovação)</label>
-                        <input type="url" placeholder="https://sharepoint..." value={urlSharePoint} onChange={(e) => setUrlSharePoint(e.target.value)} className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none placeholder-gray-400 backdrop-blur-sm transition-all hover:bg-white/15" required />
-                    </div>
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#111114] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl border border-white/[0.10] flex flex-col max-h-[95vh] sm:max-h-[88vh]">
 
-                    <div className="pt-2">
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="block text-sm font-medium text-gray-300">Cards adicionais (opcional)</label>
-                            <button type="button" onClick={addExtraField} className="text-sm text-[#57B952] hover:text-green-700 font-semibold flex items-center gap-1">
-                                <Plus size={14} /> Adicionar card
-                            </button>
-                        </div>
-                        <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
-                            {extraFields.map((field, idx) => (
-                                <div key={idx} className="border border-white/20 rounded-lg p-3 space-y-2 bg-white/5 backdrop-blur-sm">
-                                    <input
-                                        type="text"
-                                        placeholder="Nome do Card"
-                                        value={field.name}
-                                        onChange={(e) => updateExtraField(idx, 'name', e.target.value)}
-                                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none text-sm placeholder-gray-400"
-                                    />
-                                    
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-300 mb-1">Tipo de Card</label>
-                                        <select
-                                            value={field.type || 'link'}
-                                            onChange={(e) => updateExtraField(idx, 'type', e.target.value)}
-                                            className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
-                                        >
-                                            <option value="link">🔗 Link Externo</option>
-                                            <option value="documents">📁 Pasta de Documentos</option>
-                                            <option value="reports">📊 Relatórios e Dashboards</option>
-                                            <option value="files">📄 Arquivos PDF</option>
-                                            <option value="spreadsheets">📈 Planilhas Excel</option>
-                                            <option value="forms">📝 Formulários</option>
-                                            <option value="approvals">✅ Centro de Aprovações</option>
-                                            <option value="inventory">📦 Controle de Estoque</option>
-                                            <option value="financial">💰 Financeiro</option>
-                                            <option value="hr">👥 Recursos Humanos</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <input
-                                        type="text"
-                                        placeholder="Descrição (opcional)"
-                                        value={field.description}
-                                        onChange={(e) => updateExtraField(idx, 'description', e.target.value)}
-                                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none text-sm placeholder-gray-400"
-                                    />
-                                    <input
-                                        type="url"
-                                        placeholder="URL (https://...)"
-                                        value={field.url}
-                                        onChange={(e) => updateExtraField(idx, 'url', e.target.value)}
-                                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:ring-2 focus:ring-[#57B952] outline-none text-sm placeholder-gray-400"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => removeExtraField(idx)}
-                                        className="w-full py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors font-semibold"
-                                    >
-                                        <Trash2 size={14} className="inline mr-1" /> Remover Card
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="bg-white/5 border border-white/20 rounded-lg p-3 mt-3">
-                            <p className="text-xs text-gray-300 font-semibold mb-1">💡 Dicas de uso:</p>
-                            <ul className="text-xs text-gray-400 space-y-1 ml-4 list-disc">
-                                <li><strong className="text-gray-300">📁 Documentos / 📄 PDFs / 📊 Planilhas:</strong> Upload e gerenciamento interno de arquivos</li>
-                                <li><strong className="text-gray-300">📈 Relatórios:</strong> Link para Power BI, Tableau ou dashboards</li>
-                                <li><strong className="text-gray-300">📝 Formulários:</strong> Construtor interno de formulário</li>
-                                <li><strong className="text-gray-300">✅ Aprovações / 📦 Estoque / 💰 Financeiro / 👥 RH:</strong> Link para sistema externo</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2 rounded-lg text-gray-300 hover:bg-white/10 font-medium transition-colors border border-white/10">Cancelar</button>
-                        
-                        <button type="submit" disabled={saving} className="flex-1 py-2 rounded-lg bg-[#57B952] hover:bg-green-600 text-white font-bold shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-70">{saving ? 'Salvando...' : <><Save size={18} /> {editingProject ? 'Salvar Alterações' : 'Salvar Base'}</>}</button>
-                    </div>
-                </form>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.07] flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center flex-shrink-0">
+                  {editingProject
+                    ? <Settings size={18} className="text-[#57B952]" />
+                    : <Briefcase size={18} className="text-[#57B952]" />}
+                </div>
+                <div>
+                  <p className="font-bold text-white text-base leading-tight">
+                    {editingProject ? 'Editar Base' : 'Adicionar Nova Base'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {editingProject ? editingProject.nome : 'Configure o projeto e adicione seus cards'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
             </div>
+
+            <form onSubmit={handleSaveProject} className="flex flex-col flex-1 overflow-hidden">
+              <div className="px-6 py-5 space-y-6 overflow-y-auto flex-1">
+
+                {/* Nome */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                    Nome da Base <span className="text-[#57B952]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Projeto 743 — Facilities"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all"
+                  />
+                </div>
+
+                {/* Cards */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Cards</label>
+                      {extraFields.filter(f => f.name?.trim()).length > 0 && (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#57B952]/20 text-[#57B952] text-[10px] font-bold">
+                          {extraFields.filter(f => f.name?.trim()).length}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addExtraField}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20 hover:bg-[#57B952]/20 font-semibold transition-colors"
+                    >
+                      <Plus size={13} /> Novo card
+                    </button>
+                  </div>
+
+                  {extraFields.length === 0 && (
+                    <button
+                      type="button"
+                      onClick={addExtraField}
+                      className="w-full flex flex-col items-center justify-center gap-2 py-8 border border-dashed border-white/[0.10] rounded-2xl hover:border-[#57B952]/30 hover:bg-[#57B952]/[0.03] transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white/[0.04] group-hover:bg-[#57B952]/10 flex items-center justify-center transition-colors">
+                        <Plus size={18} className="text-gray-600 group-hover:text-[#57B952] transition-colors" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">
+                        Clique para adicionar um card
+                      </p>
+                    </button>
+                  )}
+
+                  {extraFields.length > 0 && (
+                    <div className="space-y-3">
+                      {extraFields.map((field, idx) => (
+                        <div key={idx} className="group bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-4 space-y-3 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-lg bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center text-[11px] font-bold text-[#57B952] flex-shrink-0">
+                                {idx + 1}
+                              </span>
+                              <span className="text-xs text-gray-500 font-medium">Card {idx + 1}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeExtraField(idx)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/15 text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                            <input
+                              type="text"
+                              placeholder="Nome do card *"
+                              value={field.name || ''}
+                              onChange={(e) => updateExtraField(idx, 'name', e.target.value)}
+                              className="sm:col-span-3 w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
+                            />
+                            <select
+                              value={field.type || 'link'}
+                              onChange={(e) => updateExtraField(idx, 'type', e.target.value)}
+                              className="sm:col-span-2 w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white focus:outline-none focus:border-[#57B952]/60 transition-all cursor-pointer"
+                            >
+                              {[
+                                { v: 'link',         l: '🔗 Link Externo' },
+                                { v: 'documents',    l: '📁 Documentos' },
+                                { v: 'reports',      l: '📊 Relatórios' },
+                                { v: 'files',        l: '📄 Arquivos PDF' },
+                                { v: 'spreadsheets', l: '📈 Planilhas' },
+                                { v: 'inventory',    l: '📦 Estoque' },
+                                { v: 'financial',    l: '💰 Financeiro' },
+                                { v: 'hr',           l: '👥 RH' },
+                              ].map(t => (
+                                <option key={t.v} value={t.v} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{t.l}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <input
+                            type="text"
+                            placeholder="Descrição (opcional)"
+                            value={field.description || ''}
+                            onChange={(e) => updateExtraField(idx, 'description', e.target.value)}
+                            className="w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
+                          />
+
+                          {!NO_URL_TYPES.includes(field.type || 'link') && (
+                            <input
+                              type="text"
+                              placeholder="URL (https://...)"
+                              value={field.url || ''}
+                              onChange={(e) => updateExtraField(idx, 'url', e.target.value)}
+                              className="w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
+                            />
+                          )}
+
+                          {NO_URL_TYPES.includes(field.type || 'link') && (
+                            <p className="flex items-center gap-2 text-xs text-blue-300 bg-blue-500/10 border border-blue-400/20 rounded-xl px-3 py-2">
+                              <span>📁</span> Permite upload de arquivos após criado
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-white/[0.07] flex gap-3 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 py-3 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                >
+                  {saving ? (
+                    <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Salvando...</>
+                  ) : (
+                    <><Save size={15} /> {editingProject ? 'Salvar Alterações' : 'Criar Base'}</>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
