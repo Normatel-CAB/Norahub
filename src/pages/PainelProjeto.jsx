@@ -67,7 +67,7 @@ function PainelProjeto() {
   const [editedExtras, setEditedExtras] = useState([]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  const [confirmDelete, setConfirmDelete] = useState({ open: false, cardIndex: null });
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null });
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -139,13 +139,14 @@ function PainelProjeto() {
   // Fallback seguro
   const linkSolicitacao = projeto.urlForms || projeto.url || '#';
   const linkAprovacao = projeto.urlSharePoint || 'https://normatelce.sharepoint.com/';
+  const hiddenBuiltIns = Array.isArray(projeto.hiddenBuiltIns) ? projeto.hiddenBuiltIns : [];
   const extras = Array.isArray(projeto.extras)
     ? projeto.extras
         .map((e, originalIndex) => ({ ...e, originalIndex }))
         .filter((e) => e?.name?.trim())
     : [];
 
-  // Cards fixos derivados das URLs do projeto (sem hardcode no JSX)
+  // Cards fixos derivados das URLs do projeto — filtrados se o admin os ocultou
   const builtInCards = [
     {
       name: 'Nova Solicitação',
@@ -154,6 +155,7 @@ function PainelProjeto() {
       type: 'link',
       builtInIcon: FileText,
       isBuiltIn: true,
+      builtInKey: 'forms',
     },
     {
       name: 'Aprovação / Painel',
@@ -162,10 +164,11 @@ function PainelProjeto() {
       type: 'link',
       builtInIcon: CheckCircle,
       isBuiltIn: true,
+      builtInKey: 'sharepoint',
     },
-  ];
+  ].filter(c => !hiddenBuiltIns.includes(c.builtInKey));
 
-  // Todos os cards: fixos primeiro, depois os extras dinâmicos
+  // Todos os cards: fixos visíveis primeiro, depois os extras dinâmicos
   const allCards = [...builtInCards, ...extras];
 
   const openEditModal = () => {
@@ -194,66 +197,59 @@ function PainelProjeto() {
     setEditedExtras((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleDeleteExtraCard = async (e, cardIndex) => {
+  const handleDeleteExtraCard = (e, card) => {
     e.preventDefault();
     e.stopPropagation();
-    setConfirmDelete({ open: true, cardIndex });
+    if (card.isBuiltIn) {
+      setConfirmDelete({ open: true, cardIndex: null, isBuiltIn: true, builtInKey: card.builtInKey });
+    } else {
+      setConfirmDelete({ open: true, cardIndex: card.originalIndex, isBuiltIn: false, builtInKey: null });
+    }
   };
 
   const confirmDeleteCard = async () => {
     try {
-      const cardIndex = confirmDelete.cardIndex;
-      // Pega todos os extras originais do projeto
-      const allExtras = Array.isArray(projeto.extras) ? projeto.extras : [];
-      // Remove o card pelo índice
-      const updatedExtras = allExtras.filter((_, idx) => idx !== cardIndex);
-      
-      // Atualiza no Firebase
-      await updateDoc(doc(db, 'projetos', projeto.id), {
-        extras: updatedExtras,
-        updatedAt: new Date(),
-      });
-      
-      // Atualiza o projeto no estado
-      const updatedProjeto = { ...projeto, extras: updatedExtras };
+      let updatedProjeto;
+      if (confirmDelete.isBuiltIn) {
+        const current = Array.isArray(projeto.hiddenBuiltIns) ? projeto.hiddenBuiltIns : [];
+        const updated = [...current, confirmDelete.builtInKey];
+        await updateDoc(doc(db, 'projetos', projeto.id), { hiddenBuiltIns: updated });
+        updatedProjeto = { ...projeto, hiddenBuiltIns: updated };
+      } else {
+        const allExtras = Array.isArray(projeto.extras) ? projeto.extras : [];
+        const updatedExtras = allExtras.filter((_, idx) => idx !== confirmDelete.cardIndex);
+        await updateDoc(doc(db, 'projetos', projeto.id), { extras: updatedExtras, updatedAt: new Date() });
+        updatedProjeto = { ...projeto, extras: updatedExtras };
+      }
       setProjeto(updatedProjeto);
       localStorage.setItem('currentProjeto', JSON.stringify(updatedProjeto));
-      
       showToast('Card removido com sucesso!', 'success');
-      setConfirmDelete({ open: false, cardIndex: null });
+      setConfirmDelete({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null });
     } catch (error) {
-      console.error('Erro ao excluir card:', error);
       showToast('Erro ao excluir card: ' + error.message, 'error');
-      setConfirmDelete({ open: false, cardIndex: null });
+      setConfirmDelete({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null });
     }
   };
 
   const handleSaveEdit = async (e) => {
     e.preventDefault();
-    if (!editedName || !editedUrlForms || !editedUrlSharePoint) return;
+    if (!editedName) return;
     setSaving(true);
     try {
       // Buscar os extras originais do banco para preservar dados existentes
       const projetoDoc = await getDoc(doc(db, 'projetos', projeto.id));
       const projetoData = projetoDoc.data();
       const extrasOriginais = Array.isArray(projetoData.extras) ? projetoData.extras : [];
-      
-      // Filtrar e processar os extras editados
+
       const filteredExtras = editedExtras
-        .filter((f) => {
-          // Apenas precisa ter nome válido
-          return f.name && f.name.trim() !== '';
-        })
+        .filter((f) => f.name && f.name.trim() !== '')
         .map((f) => {
-          // Encontrar o card original pelo nome para preservar dados
           const cardOriginal = extrasOriginais.find(e => e.name === f.name);
-          
-          return { 
-            name: f.name.trim(), 
-            description: (f.description || '').trim(), 
-            url: (f.url || '').trim(), 
+          return {
+            name: f.name.trim(),
+            description: (f.description || '').trim(),
+            url: (f.url || '').trim(),
             type: f.type || 'link',
-            // Preservar dados existentes do card original
             files: cardOriginal?.files || f.files || [],
             formFields: cardOriginal?.formFields || f.formFields || [],
             formResponses: cardOriginal?.formResponses || [],
@@ -262,8 +258,6 @@ function PainelProjeto() {
           };
         });
 
-      console.log(`💾 Salvando ${filteredExtras.length} cards no projeto`);
-      
       await updateDoc(doc(db, 'projetos', projeto.id), {
         nome: editedName,
         urlForms: editedUrlForms,
@@ -271,10 +265,7 @@ function PainelProjeto() {
         extras: filteredExtras,
         updatedAt: new Date(),
       });
-      
-      console.log(`✅ ${filteredExtras.length} cards salvos com sucesso!`);
 
-      // Atualizar o projeto no estado
       const updatedProjeto = {
         ...projeto,
         nome: editedName,
@@ -384,10 +375,10 @@ function PainelProjeto() {
 
                 return (
                   <div key={idx} className="relative">
-                    {/* Botão excluir — apenas em cards não-fixos */}
-                    {!card.isBuiltIn && (canEdit || canEditCards) && (
+                    {/* Botão excluir — disponível em todos os cards para quem pode editar */}
+                    {(canEdit || canEditCards) && (
                       <button
-                        onClick={(e) => handleDeleteExtraCard(e, card.originalIndex)}
+                        onClick={(e) => handleDeleteExtraCard(e, card)}
                         className="absolute top-4 right-4 z-20 p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded-full transition-colors bg-white/10 backdrop-blur-md"
                         title="Excluir Card"
                       >
@@ -467,7 +458,7 @@ function PainelProjeto() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1 flex items-center gap-2">
-                  <FileText size={14} /> Link do Forms (Solicitação)
+                  <FileText size={14} /> Link do Forms (Solicitação) <span className="text-gray-600 text-xs">(opcional)</span>
                 </label>
                 <input
                   type="url"
@@ -475,12 +466,11 @@ function PainelProjeto() {
                   value={editedUrlForms}
                   onChange={(e) => setEditedUrlForms(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#57B952] outline-none"
-                  required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1 flex items-center gap-2">
-                  <CheckCircle size={14} /> Link do SharePoint (Aprovação)
+                  <CheckCircle size={14} /> Link do SharePoint (Aprovação) <span className="text-gray-600 text-xs">(opcional)</span>
                 </label>
                 <input
                   type="url"
@@ -488,7 +478,6 @@ function PainelProjeto() {
                   value={editedUrlSharePoint}
                   onChange={(e) => setEditedUrlSharePoint(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#57B952] outline-none"
-                  required
                 />
               </div>
 
@@ -648,7 +637,7 @@ function PainelProjeto() {
             <p className="text-sm text-gray-300 mb-6">Tem certeza que deseja remover este card adicional? Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button
-                onClick={() => setConfirmDelete({ open: false, cardIndex: null })}
+                onClick={() => setConfirmDelete({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null })}
                 className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-semibold transition-colors"
               >
                 Cancelar

@@ -20,8 +20,22 @@ function Toast({ toast }) {
   );
 }
 
-const EMPTY_PROJECT = { nome: '', urlForms: '', urlSharePoint: '' };
-const EMPTY_CARD    = { nome: '', descricao: '', url: '' };
+const EMPTY_PROJECT = { nome: '' };
+const EMPTY_CARD    = { nome: '', descricao: '', url: '', tipo: 'link' };
+
+const CARD_TYPES = [
+  { value: 'link',         label: '🔗 Link Externo' },
+  { value: 'documents',    label: '📁 Pasta de Documentos' },
+  { value: 'reports',      label: '📊 Relatórios e Dashboards' },
+  { value: 'files',        label: '📄 Arquivos PDF' },
+  { value: 'spreadsheets', label: '📈 Planilhas Excel' },
+  { value: 'forms',        label: '📝 Formulários' },
+  { value: 'approvals',    label: '✅ Centro de Aprovações' },
+  { value: 'inventory',    label: '📦 Controle de Estoque' },
+  { value: 'financial',    label: '💰 Financeiro' },
+  { value: 'hr',           label: '👥 Recursos Humanos' },
+];
+const NO_URL_TYPES = ['documents', 'files', 'spreadsheets', 'forms'];
 
 function GerenciaProjetos() {
   const { userProfile } = useAuth();
@@ -39,6 +53,7 @@ function GerenciaProjetos() {
   // Create project modal
   const [createModal, setCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({ ...EMPTY_PROJECT });
+  const [createExtras, setCreateExtras] = useState([]);
   const [creating, setCreating] = useState(false);
 
   // Edit project modal
@@ -83,14 +98,25 @@ function GerenciaProjetos() {
     if (!createForm.nome.trim()) return;
     setCreating(true);
     try {
+      const extras = createExtras
+        .filter(c => c.nome.trim())
+        .map(c => ({
+          name: c.nome.trim(),
+          description: c.descricao.trim(),
+          url: c.url.trim(),
+          type: c.tipo || 'link',
+          files: [],
+          formFields: [],
+          formResponses: [],
+        }));
       await addDoc(collection(db, 'projetos'), {
         nome: createForm.nome.trim(),
-        urlForms: createForm.urlForms.trim(),
-        urlSharePoint: createForm.urlSharePoint.trim(),
+        extras,
         criadoEm: new Date(),
       });
       setCreateModal(false);
       setCreateForm({ ...EMPTY_PROJECT });
+      setCreateExtras([]);
       showToast('Projeto criado!');
       fetchProjetos();
     } catch {
@@ -142,7 +168,15 @@ function GerenciaProjetos() {
       const projeto = projetos.find(p => p.id === cardModal.projetoId);
       const extras = projeto?.extras || [];
       await updateDoc(doc(db, 'projetos', cardModal.projetoId), {
-        extras: [...extras, { name: cardForm.nome.trim(), description: cardForm.descricao.trim(), url: cardForm.url.trim() }],
+        extras: [...extras, {
+          name: cardForm.nome.trim(),
+          description: cardForm.descricao.trim(),
+          url: cardForm.url.trim(),
+          type: cardForm.tipo || 'link',
+          files: [],
+          formFields: [],
+          formResponses: [],
+        }],
       });
       setCardModal({ open: false, projetoId: null });
       setCardForm({ ...EMPTY_CARD });
@@ -298,31 +332,100 @@ function GerenciaProjetos() {
       {/* Create Project Modal */}
       {createModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#161618] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md">
+          <div className="bg-[#161618] border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-white/[0.08]">
               <p className="font-semibold text-white">Novo Projeto</p>
-              <button onClick={() => setCreateModal(false)} className="p-1.5 rounded-lg hover:bg-white/8 text-gray-500 hover:text-white transition-colors"><X size={16} /></button>
+              <button onClick={() => { setCreateModal(false); setCreateExtras([]); }} className="p-1.5 rounded-lg hover:bg-white/8 text-gray-500 hover:text-white transition-colors"><X size={16} /></button>
             </div>
-            <form onSubmit={handleCreate} className="p-5 space-y-4">
-              {[
-                { label: 'Nome do Projeto *', key: 'nome', placeholder: 'Ex: Projeto 741', required: true },
-                { label: 'URL Forms', key: 'urlForms', placeholder: 'https://forms.microsoft.com/...', required: false },
-                { label: 'URL SharePoint', key: 'urlSharePoint', placeholder: 'https://...sharepoint.com/...', required: false },
-              ].map(({ label, key, placeholder, required }) => (
-                <div key={key}>
-                  <label className="block text-xs text-gray-500 mb-1.5 font-medium uppercase tracking-wider">{label}</label>
+            <form onSubmit={handleCreate} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-5 space-y-5 overflow-y-auto flex-1">
+                {/* Nome */}
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1.5 font-medium uppercase tracking-wider">Nome do Projeto *</label>
                   <input
                     type="text"
-                    value={createForm[key]}
-                    onChange={e => setCreateForm(prev => ({ ...prev, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    required={required}
+                    value={createForm.nome}
+                    onChange={e => setCreateForm(prev => ({ ...prev, nome: e.target.value }))}
+                    placeholder="Ex: Projeto 741"
+                    required
                     className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#57B952]/50"
                   />
                 </div>
-              ))}
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setCreateModal(false)} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition-colors">Cancelar</button>
+
+                {/* Cards */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Cards do Projeto</label>
+                    <button
+                      type="button"
+                      onClick={() => setCreateExtras(prev => [...prev, { nome: '', descricao: '', url: '', tipo: 'link' }])}
+                      className="flex items-center gap-1 text-xs text-[#57B952] hover:text-green-400 font-semibold"
+                    >
+                      <Plus size={13} /> Adicionar card
+                    </button>
+                  </div>
+                  {createExtras.length === 0 ? (
+                    <div className="border border-dashed border-white/[0.10] rounded-xl p-6 text-center">
+                      <p className="text-xs text-gray-600">Nenhum card ainda. Clique em "Adicionar card" para começar.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {createExtras.map((card, idx) => (
+                        <div key={idx} className="border border-white/[0.08] rounded-xl p-4 bg-white/[0.02] space-y-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-600 font-medium">Card {idx + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => setCreateExtras(prev => prev.filter((_, i) => i !== idx))}
+                              className="p-1 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                            >
+                              <X size={13} />
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Nome do card *"
+                            value={card.nome}
+                            onChange={e => setCreateExtras(prev => prev.map((c, i) => i === idx ? { ...c, nome: e.target.value } : c))}
+                            className="w-full px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#57B952]/50"
+                          />
+                          <select
+                            value={card.tipo}
+                            onChange={e => setCreateExtras(prev => prev.map((c, i) => i === idx ? { ...c, tipo: e.target.value } : c))}
+                            className="w-full px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white focus:outline-none focus:border-[#57B952]/50"
+                          >
+                            {CARD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="Descrição (opcional)"
+                            value={card.descricao}
+                            onChange={e => setCreateExtras(prev => prev.map((c, i) => i === idx ? { ...c, descricao: e.target.value } : c))}
+                            className="w-full px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#57B952]/50"
+                          />
+                          {!NO_URL_TYPES.includes(card.tipo) && (
+                            <input
+                              type="text"
+                              placeholder="URL (https://...)"
+                              value={card.url}
+                              onChange={e => setCreateExtras(prev => prev.map((c, i) => i === idx ? { ...c, url: e.target.value } : c))}
+                              className="w-full px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#57B952]/50"
+                            />
+                          )}
+                          {['documents','files','spreadsheets'].includes(card.tipo) && (
+                            <p className="text-xs text-blue-300 bg-blue-500/10 border border-blue-400/20 rounded-lg px-3 py-2">Permite upload de arquivos após criado</p>
+                          )}
+                          {card.tipo === 'forms' && (
+                            <p className="text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-400/20 rounded-lg px-3 py-2">Abrirá construtor de formulário personalizado</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3 p-5 border-t border-white/[0.08] flex-shrink-0">
+                <button type="button" onClick={() => { setCreateModal(false); setCreateExtras([]); }} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition-colors">Cancelar</button>
                 <button type="submit" disabled={creating} className="flex-1 py-2.5 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-semibold transition-colors disabled:opacity-60">
                   {creating ? 'Criando...' : 'Criar Projeto'}
                 </button>
@@ -375,28 +478,60 @@ function GerenciaProjetos() {
           <div className="bg-[#161618] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between p-5 border-b border-white/[0.08]">
               <p className="font-semibold text-white">Adicionar Card</p>
-              <button onClick={() => setCardModal({ open: false, projetoId: null })} className="p-1.5 rounded-lg hover:bg-white/8 text-gray-500 hover:text-white transition-colors"><X size={16} /></button>
+              <button onClick={() => { setCardModal({ open: false, projetoId: null }); setCardForm({ ...EMPTY_CARD }); }} className="p-1.5 rounded-lg hover:bg-white/8 text-gray-500 hover:text-white transition-colors"><X size={16} /></button>
             </div>
-            <form onSubmit={handleAddCard} className="p-5 space-y-4">
-              {[
-                { label: 'Nome do Card *', key: 'nome', placeholder: 'Ex: Relatório Mensal', required: true },
-                { label: 'Descrição', key: 'descricao', placeholder: 'Breve descrição', required: false },
-                { label: 'URL', key: 'url', placeholder: 'https://...', required: false },
-              ].map(({ label, key, placeholder, required }) => (
-                <div key={key}>
-                  <label className="block text-xs text-gray-500 mb-1.5 font-medium uppercase tracking-wider">{label}</label>
+            <form onSubmit={handleAddCard} className="p-5 space-y-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5 font-medium uppercase tracking-wider">Nome do Card *</label>
+                <input
+                  type="text"
+                  value={cardForm.nome}
+                  onChange={e => setCardForm(prev => ({ ...prev, nome: e.target.value }))}
+                  placeholder="Ex: Relatório Mensal"
+                  required
+                  className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#57B952]/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5 font-medium uppercase tracking-wider">Tipo</label>
+                <select
+                  value={cardForm.tipo}
+                  onChange={e => setCardForm(prev => ({ ...prev, tipo: e.target.value }))}
+                  className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white focus:outline-none focus:border-[#57B952]/50"
+                >
+                  {CARD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5 font-medium uppercase tracking-wider">Descrição</label>
+                <input
+                  type="text"
+                  value={cardForm.descricao}
+                  onChange={e => setCardForm(prev => ({ ...prev, descricao: e.target.value }))}
+                  placeholder="Breve descrição"
+                  className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#57B952]/50"
+                />
+              </div>
+              {!NO_URL_TYPES.includes(cardForm.tipo) && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1.5 font-medium uppercase tracking-wider">URL</label>
                   <input
                     type="text"
-                    value={cardForm[key]}
-                    onChange={e => setCardForm(prev => ({ ...prev, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    required={required}
+                    value={cardForm.url}
+                    onChange={e => setCardForm(prev => ({ ...prev, url: e.target.value }))}
+                    placeholder="https://..."
                     className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#57B952]/50"
                   />
                 </div>
-              ))}
+              )}
+              {['documents','files','spreadsheets'].includes(cardForm.tipo) && (
+                <p className="text-xs text-blue-300 bg-blue-500/10 border border-blue-400/20 rounded-lg px-3 py-2">Permite upload de arquivos após criado</p>
+              )}
+              {cardForm.tipo === 'forms' && (
+                <p className="text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-400/20 rounded-lg px-3 py-2">Abrirá construtor de formulário personalizado</p>
+              )}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setCardModal({ open: false, projetoId: null })} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => { setCardModal({ open: false, projetoId: null }); setCardForm({ ...EMPTY_CARD }); }} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition-colors">Cancelar</button>
                 <button type="submit" disabled={savingCard} className="flex-1 py-2.5 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-semibold transition-colors disabled:opacity-60">
                   {savingCard ? 'Adicionando...' : 'Adicionar Card'}
                 </button>
