@@ -8,7 +8,6 @@ import { db } from '../services/firebase';
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
 import NotificationCenter from '../components/NotificationCenter';
 
-const NO_URL_TYPES = ['documents', 'files', 'spreadsheets'];
 import ActivityLogger from '../services/activityLogger';
 import FavoriteButton from '../components/FavoriteButton';
 import { getFavorites } from '../services/favorites';
@@ -36,8 +35,7 @@ function SelecaoProjeto() {
   const [urlSharePoint, setUrlSharePoint] = useState(''); 
   const [saving, setSaving] = useState(false);
     const [editingProject, setEditingProject] = useState(null);
-    const [extraFields, setExtraFields] = useState([{ label: '', value: '' }]);
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmDelete, setConfirmDelete] = useState({ open: false, projetoId: null });
   
   // Filtros e Ordenação
@@ -183,60 +181,32 @@ function SelecaoProjeto() {
         if (!newProjectName.trim()) return;
     setSaving(true);
     try {
-                const semUrl = new Set(NO_URL_TYPES);
-                const extras = extraFields
-                    .filter(f => {
-                      if (!f.name?.trim()) return false;
-                      if (!semUrl.has(f.type || 'link') && !f.url?.trim()) return false;
-                      return true;
-                    })
-                    .map(f => ({ name: f.name.trim(), description: (f.description || '').trim(), url: (f.url || '').trim(), type: f.type || 'link' }));
-
                 if (editingProject) {
                     await updateDoc(doc(db, 'projetos', editingProject.id), {
                         nome: newProjectName,
                         urlForms,
                         urlSharePoint,
                         descricao: editingProject.descricao || 'Base ativa',
-                        extras,
                         updatedAt: new Date()
                     });
-                    // Registrar atividade
                     await ActivityLogger.projectEdited(newProjectName, currentUser.uid, primeiroNome);
                 } else {
                     await addDoc(collection(db, 'projetos'), {
-                            nome: newProjectName,
-                            urlForms,
-                            urlSharePoint,
-                            descricao: 'Base ativa',
-                            extras,
-                            createdAt: new Date()
+                        nome: newProjectName,
+                        extras: [],
+                        createdAt: new Date()
                     });
-                    // Registrar atividade
                     await ActivityLogger.projectCreated(newProjectName, currentUser.uid, primeiroNome);
                 }
 
                 setNewProjectName('');
                 setUrlForms('');
                 setUrlSharePoint('');
-                setExtraFields([{ name: '', description: '', url: '', type: 'link' }]);
                 setEditingProject(null);
                 setIsModalOpen(false);
-                fetchProjetos(); 
+                fetchProjetos();
     } catch (e) { showToast('Erro ao salvar projeto.', 'error'); } finally { setSaving(false); }
   };
-
-    const addExtraField = () => {
-        setExtraFields(prev => [...prev, { name: '', description: '', url: '', type: 'link' }]);
-    };
-
-    const updateExtraField = (index, key, newValue) => {
-        setExtraFields(prev => prev.map((item, i) => i === index ? { ...item, [key]: newValue } : item));
-    };
-
-    const removeExtraField = (index) => {
-        setExtraFields(prev => prev.filter((_, i) => i !== index));
-    };
 
   const canEditProject = (projetoId) => {
     if (isAdmin) return true;
@@ -278,7 +248,6 @@ function SelecaoProjeto() {
         setNewProjectName('');
         setUrlForms('');
         setUrlSharePoint('');
-        setExtraFields([]);
         setIsModalOpen(true);
     };
 
@@ -287,7 +256,6 @@ function SelecaoProjeto() {
         setNewProjectName(projeto.nome || '');
         setUrlForms(projeto.urlForms || '');
         setUrlSharePoint(projeto.urlSharePoint || '');
-        setExtraFields(projeto.extras && projeto.extras.length > 0 ? projeto.extras.map(e => ({ name: e.name || '', description: e.description || '', url: e.url || '', type: e.type || 'link' })) : []);
         setIsModalOpen(true);
     };
 
@@ -520,117 +488,6 @@ function SelecaoProjeto() {
                   />
                 </div>
 
-                {/* Cards */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Cards</label>
-                      {extraFields.filter(f => f.name?.trim()).length > 0 && (
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#57B952]/20 text-[#57B952] text-[10px] font-bold">
-                          {extraFields.filter(f => f.name?.trim()).length}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addExtraField}
-                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20 hover:bg-[#57B952]/20 font-semibold transition-colors"
-                    >
-                      <Plus size={13} /> Novo card
-                    </button>
-                  </div>
-
-                  {extraFields.length === 0 && (
-                    <button
-                      type="button"
-                      onClick={addExtraField}
-                      className="w-full flex flex-col items-center justify-center gap-2 py-8 border border-dashed border-white/[0.10] rounded-2xl hover:border-[#57B952]/30 hover:bg-[#57B952]/[0.03] transition-all group"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-white/[0.04] group-hover:bg-[#57B952]/10 flex items-center justify-center transition-colors">
-                        <Plus size={18} className="text-gray-600 group-hover:text-[#57B952] transition-colors" />
-                      </div>
-                      <p className="text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">
-                        Clique para adicionar um card
-                      </p>
-                    </button>
-                  )}
-
-                  {extraFields.length > 0 && (
-                    <div className="space-y-3">
-                      {extraFields.map((field, idx) => (
-                        <div key={idx} className="group bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-4 space-y-3 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-lg bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center text-[11px] font-bold text-[#57B952] flex-shrink-0">
-                                {idx + 1}
-                              </span>
-                              <span className="text-xs text-gray-500 font-medium">Card {idx + 1}</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeExtraField(idx)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/15 text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                            <input
-                              type="text"
-                              placeholder="Nome do card *"
-                              value={field.name || ''}
-                              onChange={(e) => updateExtraField(idx, 'name', e.target.value)}
-                              className="sm:col-span-3 w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
-                            />
-                            <select
-                              value={field.type || 'link'}
-                              onChange={(e) => updateExtraField(idx, 'type', e.target.value)}
-                              className="sm:col-span-2 w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white focus:outline-none focus:border-[#57B952]/60 transition-all cursor-pointer"
-                            >
-                              {[
-                                { v: 'link',         l: '🔗 Link Externo' },
-                                { v: 'documents',    l: '📁 Documentos' },
-                                { v: 'reports',      l: '📊 Relatórios' },
-                                { v: 'files',        l: '📄 Arquivos PDF' },
-                                { v: 'spreadsheets', l: '📈 Planilhas' },
-                                { v: 'inventory',    l: '📦 Estoque' },
-                                { v: 'financial',    l: '💰 Financeiro' },
-                                { v: 'hr',           l: '👥 RH' },
-                              ].map(t => (
-                                <option key={t.v} value={t.v} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{t.l}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <input
-                            type="text"
-                            placeholder="Descrição (opcional)"
-                            value={field.description || ''}
-                            onChange={(e) => updateExtraField(idx, 'description', e.target.value)}
-                            className="w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
-                          />
-
-                          {!NO_URL_TYPES.includes(field.type || 'link') && (
-                            <input
-                              type="text"
-                              placeholder="URL (https://...)"
-                              value={field.url || ''}
-                              onChange={(e) => updateExtraField(idx, 'url', e.target.value)}
-                              className="w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
-                            />
-                          )}
-
-                          {NO_URL_TYPES.includes(field.type || 'link') && (
-                            <p className="flex items-center gap-2 text-xs text-blue-300 bg-blue-500/10 border border-blue-400/20 rounded-xl px-3 py-2">
-                              <span>📁</span> Permite upload de arquivos após criado
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
 
               {/* Footer */}
