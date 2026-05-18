@@ -27,6 +27,10 @@ function GerenciaProjetos() {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
 
+  const isAuthorized =
+    userProfile?.funcao === 'admin' ||
+    (typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente'));
+
   const [projetos, setProjetos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
@@ -66,7 +70,13 @@ function GerenciaProjetos() {
     }
   };
 
-  useEffect(() => { fetchProjetos(); }, []);
+  useEffect(() => {
+    if (userProfile && !isAuthorized) {
+      navigate('/selecao-projeto', { replace: true });
+      return;
+    }
+    if (userProfile) fetchProjetos();
+  }, [userProfile, isAuthorized]);
 
   const handleCreate = async (e) => {
     e.preventDefault();

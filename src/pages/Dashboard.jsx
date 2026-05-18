@@ -27,6 +27,7 @@ function Dashboard() {
   
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.displayName?.split(' ')[0] || 'Usuário';
   const fotoURL = currentUser?.photoURL || userProfile?.fotoURL;
@@ -98,7 +99,7 @@ function Dashboard() {
       setRecentActivity(activities);
       setLoading(false);
     } catch (error) {
-      console.error('Erro ao buscar dados do dashboard:', error);
+      setError('Erro ao carregar os dados do dashboard. Tente novamente.');
       setLoading(false);
     }
   };
@@ -199,6 +200,16 @@ function Dashboard() {
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952] mx-auto"></div>
               <p className="text-gray-400 mt-4">Carregando dados...</p>
             </div>
+          ) : error ? (
+            <div className="text-center py-20 bg-red-500/10 border border-red-500/20 rounded-xl">
+              <p className="text-red-400 font-medium">{error}</p>
+              <button
+                onClick={fetchDashboardData}
+                className="mt-4 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg text-sm font-medium transition-colors border border-red-500/30"
+              >
+                Tentar novamente
+              </button>
+            </div>
           ) : (
             <>
               {/* Cards de Estatísticas */}
@@ -258,15 +269,15 @@ function Dashboard() {
                         className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors text-white"
                       >
                         <div className={`p-2 rounded-lg ${
-                          activity.type === 'form_response' ? 'bg-blue-100' :
-                          activity.type === 'file_upload' ? 'bg-green-100' :
-                          activity.type === 'approval' ? 'bg-purple-100' :
-                          'bg-gray-100'
+                          activity.type === 'form_response' ? 'bg-blue-500/15' :
+                          activity.type === 'file_upload' ? 'bg-green-500/15' :
+                          activity.type === 'approval' ? 'bg-purple-500/15' :
+                          'bg-white/10'
                         }`}>
-                          {activity.type === 'form_response' ? <FileText size={18} className="text-blue-600" /> :
-                           activity.type === 'file_upload' ? <FolderOpen size={18} className="text-green-600" /> :
-                           activity.type === 'approval' ? <CheckCircle size={18} className="text-purple-600" /> :
-                           <Activity size={18} className="text-gray-600" />}
+                          {activity.type === 'form_response' ? <FileText size={18} className="text-blue-400" /> :
+                           activity.type === 'file_upload' ? <FolderOpen size={18} className="text-green-400" /> :
+                           activity.type === 'approval' ? <CheckCircle size={18} className="text-purple-400" /> :
+                           <Activity size={18} className="text-gray-400" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-white">{activity.title || activity.action || 'Atividade'}</p>

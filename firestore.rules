@@ -129,6 +129,12 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Configurações do sistema (ex: aprovação automática)
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Coleção de favoritos
     match /favorites/{userId} {
       allow read: if isSignedIn() && request.auth.uid == userId;

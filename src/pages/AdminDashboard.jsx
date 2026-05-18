@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Search, CheckCircle, XCircle, AlertTriangle,
-  ArrowLeft, Trash2, X, Briefcase, Shield,
+  ArrowLeft, Trash2, X, Briefcase, Shield, Zap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
 
 function StatusBadge({ status }) {
   if (status === 'ativo') return (
@@ -52,6 +52,9 @@ function AdminDashboard() {
   const [confirmDelete, setConfirmDelete] = useState({ open: false, userId: null, userName: '' });
   const [modalProjetos, setModalProjetos] = useState({ open: false, userId: null, userName: '', projetosAtuais: [] });
   const [searchProjetos, setSearchProjetos] = useState('');
+  const [pendingRoles, setPendingRoles] = useState({});
+  const [autoApproval, setAutoApproval] = useState(false);
+  const [togglingApproval, setTogglingApproval] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -64,11 +67,13 @@ function AdminDashboard() {
       if (!canAccess) { navigate('/selecao-projeto'); return; }
 
       try {
-        const [userSnap, projetoSnap, cargosSnap] = await Promise.all([
+        const [userSnap, projetoSnap, cargosSnap, settingSnap] = await Promise.all([
           getDocs(collection(db, 'usuarios')),
           getDocs(collection(db, 'projetos')),
           getDocs(collection(db, 'cargos')),
+          getDoc(doc(db, 'settings', 'autoApproval')),
         ]);
+        setAutoApproval(settingSnap.exists() ? settingSnap.data().enabled === true : false);
 
         let userList = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         if (!isAdmin) userList = userList.filter(u => u.funcao !== 'admin');
@@ -135,6 +140,21 @@ function AdminDashboard() {
       setModalProjetos({ open: false, userId: null, userName: '', projetosAtuais: [] });
     } catch {
       showToast('Erro ao salvar projetos.', 'error');
+    }
+  };
+
+  const toggleAutoApproval = async () => {
+    if (!isAdmin) return;
+    setTogglingApproval(true);
+    try {
+      const novo = !autoApproval;
+      await setDoc(doc(db, 'settings', 'autoApproval'), { enabled: novo }, { merge: true });
+      setAutoApproval(novo);
+      showToast(novo ? 'Aprovação automática ativada.' : 'Aprovação manual reativada.');
+    } catch {
+      showToast('Erro ao alterar configuração.', 'error');
+    } finally {
+      setTogglingApproval(false);
     }
   };
 
@@ -208,6 +228,35 @@ function AdminDashboard() {
           ))}
         </div>
 
+        {/* Auto-Approval Toggle — admin only */}
+        {isAdmin && (
+          <div className="mb-6 flex items-center justify-between gap-4 px-5 py-4 rounded-xl border bg-white/[0.03] border-white/[0.08]">
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${autoApproval ? 'bg-[#57B952]/20' : 'bg-white/[0.06]'}`}>
+                <Zap size={16} className={autoApproval ? 'text-[#57B952]' : 'text-gray-500'} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Aprovação automática de novos usuários</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {autoApproval
+                    ? 'Novos cadastros são ativados automaticamente'
+                    : 'Novos cadastros aguardam aprovação manual'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleAutoApproval}
+              disabled={togglingApproval}
+              title={autoApproval ? 'Desativar aprovação automática' : 'Ativar aprovação automática'}
+              className={`relative w-12 h-6 rounded-full transition-colors duration-300 flex-shrink-0 focus:outline-none ${
+                autoApproval ? 'bg-[#57B952]' : 'bg-white/20'
+              } ${togglingApproval ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-300 ${autoApproval ? 'translate-x-6' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-5">
           <div className="relative flex-1">
@@ -270,15 +319,15 @@ function AdminDashboard() {
                       {user.statusAcesso === 'pendente' ? (
                         <div className="flex items-center gap-2">
                           <select
-                            id={`role-${user.id}`}
-                            defaultValue={user.funcao || 'colaborador'}
+                            value={pendingRoles[user.id] ?? user.funcao ?? 'colaborador'}
+                            onChange={e => setPendingRoles(prev => ({ ...prev, [user.id]: e.target.value }))}
                             className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.12] text-white focus:outline-none focus:border-[#57B952]/50"
                           >
                             {cargos.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
                             {isAdmin && <option value="admin">Administrador</option>}
                           </select>
                           <button
-                            onClick={() => handleApprove(user, document.getElementById(`role-${user.id}`)?.value)}
+                            onClick={() => handleApprove(user, pendingRoles[user.id] ?? user.funcao ?? 'colaborador')}
                             className="p-1.5 rounded-lg bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25 transition-colors"
                             title="Aprovar"
                           >

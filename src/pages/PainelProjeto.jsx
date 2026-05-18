@@ -8,94 +8,22 @@ import { db } from '../services/firebase';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import NotificationCenter from '../components/NotificationCenter';
 
+const CARD_CONFIGS = {
+  link:        { icon: ExternalLink,  bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Acessar',             needsUpload: false },
+  documents:   { icon: FolderOpen,    bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver Arquivos',        needsUpload: true  },
+  reports:     { icon: BarChart3,     bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver Relatório',       needsUpload: false },
+  files:       { icon: File,          bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver PDFs',            needsUpload: true  },
+  spreadsheets:{ icon: FileSpreadsheet,bgColor: 'bg-green-500/20',textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver Planilhas',       needsUpload: true  },
+  forms:       { icon: ClipboardList, bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Acessar Formulário',  needsUpload: false, isCustomForm: true },
+  approvals:   { icon: CheckCircle,   bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver Aprovações',      needsUpload: false },
+  inventory:   { icon: PackageCheck,  bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Acessar Estoque',     needsUpload: false },
+  financial:   { icon: DollarSign,    bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver Financeiro',      needsUpload: false },
+  hr:          { icon: Users,         bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Acessar RH',          needsUpload: false },
+};
+
+const getCardConfig = (type) => CARD_CONFIGS[type] ?? CARD_CONFIGS.link;
+
 function PainelProjeto() {
-  // Função que retorna configuração visual e funcional baseada no tipo de card
-  const getCardConfig = (type) => {
-    const configs = {
-      link: { 
-        icon: ExternalLink, 
-        bgColor: 'bg-green-500/20', 
-        textColor: 'text-green-400', 
-        btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]',
-        label: 'Acessar',
-        needsUpload: false
-      },
-      documents: { 
-        icon: FolderOpen, 
-        bgColor: 'bg-green-500/20', 
-        textColor: 'text-green-400', 
-        btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]',
-        label: 'Ver Arquivos',
-        needsUpload: true
-      },
-      reports: { 
-        icon: BarChart3, 
-        bgColor: 'bg-green-500/20', 
-        textColor: 'text-green-400', 
-        btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]',
-        label: 'Ver Relatório',
-        needsUpload: false
-      },
-      files: { 
-        icon: File, 
-        bgColor: 'bg-green-500/20', 
-        textColor: 'text-green-400', 
-        btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]',
-        label: 'Ver PDFs',
-        needsUpload: true
-      },
-      spreadsheets: { 
-        icon: FileSpreadsheet, 
-        bgColor: 'bg-green-500/20', 
-        textColor: 'text-green-400', 
-        btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]',
-        label: 'Ver Planilhas',
-        needsUpload: true
-      },
-      forms: { 
-        icon: ClipboardList, 
-        bgColor: 'bg-green-500/20', 
-        textColor: 'text-green-400', 
-        btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]',
-        label: 'Acessar Formulário',
-        needsUpload: false,
-        isCustomForm: true
-      },
-      approvals: { 
-        icon: CheckCircle, 
-        bgColor: 'bg-green-500/20', 
-        textColor: 'text-green-400', 
-        btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]',
-        label: 'Ver Aprovações',
-        needsUpload: false
-      },
-      inventory: { 
-        icon: PackageCheck, 
-        bgColor: 'bg-green-500/20', 
-        textColor: 'text-green-400', 
-        btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]',
-        label: 'Acessar Estoque',
-        needsUpload: false
-      },
-      financial: { 
-        icon: DollarSign, 
-        bgColor: 'bg-green-500/20', 
-        textColor: 'text-green-400', 
-        btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]',
-        label: 'Ver Financeiro',
-        needsUpload: false
-      },
-      hr: { 
-        icon: Users, 
-        bgColor: 'bg-green-500/20', 
-        textColor: 'text-green-400', 
-        btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]',
-        label: 'Acessar RH',
-        needsUpload: false
-      }
-    };
-    return configs[type] || configs.link;
-  };
   const { theme } = useTheme();
   const { currentUser, userProfile } = useAuth(); // Pegar usuário
   const isDark = theme === 'dark';
@@ -104,20 +32,21 @@ function PainelProjeto() {
   
   // Usar useState para o projeto para permitir atualizações sem reload
   const [projeto, setProjeto] = useState(() => {
-    // Buscar projeto do location.state ou localStorage
     let initialProjeto = location.state?.projeto;
-    
-    // Se não tiver no location.state, buscar do localStorage
     if (!initialProjeto) {
-      const savedProjeto = localStorage.getItem('currentProjeto');
-      if (savedProjeto) {
-        initialProjeto = JSON.parse(savedProjeto);
+      try {
+        const savedProjeto = localStorage.getItem('currentProjeto');
+        if (savedProjeto) initialProjeto = JSON.parse(savedProjeto);
+      } catch {
+        localStorage.removeItem('currentProjeto');
       }
     } else {
-      // Se veio do location.state, salvar no localStorage para futuras recargas
-      localStorage.setItem('currentProjeto', JSON.stringify(initialProjeto));
+      try {
+        localStorage.setItem('currentProjeto', JSON.stringify(initialProjeto));
+      } catch {
+        // storage pode estar cheio ou bloqueado — ignora silenciosamente
+      }
     }
-    
     return initialProjeto;
   });
 
@@ -696,7 +625,7 @@ function PainelProjeto() {
       {toast.show && (
         <div className="fixed top-8 right-8 z-[200] animate-fade-in">
           <div className={`border-l-4 ${toast.type === 'error' ? 'bg-red-500/20 border-red-500' : 'bg-green-500/20 border-[#57B952]'} rounded-lg shadow-2xl p-4 flex items-center gap-3 min-w-[300px] text-white`}>
-            <div className={`${toast.type === 'error' ? 'bg-red-100' : 'bg-green-100'} p-2 rounded-full`}>
+            <div className={`${toast.type === 'error' ? 'bg-red-500/20' : 'bg-green-500/20'} p-2 rounded-full`}>
               {toast.type === 'error' ? (
                 <X size={24} className="text-red-500" />
               ) : (

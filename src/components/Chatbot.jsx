@@ -821,7 +821,7 @@ ${conversationHistory || 'Nenhuma mensagem anterior.'}
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
                 <div className={`flex gap-2 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm ${msg.role === 'user' ? 'bg-green-100 text-green-600' : 'bg-white/20 backdrop-blur-md border border-white/30 p-1'}`}>
+                  <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm ${msg.role === 'user' ? 'bg-green-500/20 text-green-400' : 'bg-white/20 backdrop-blur-md border border-white/30 p-1'}`}>
                     {msg.role === 'user' ? <User size={16} /> : <img src="/img/Simbolo.png" alt="Nora" className="w-full h-full object-contain" />}
                   </div>
                   <div className={`p-3 rounded-2xl shadow-sm text-sm leading-relaxed ${msg.role === 'user' ? 'bg-[#57B952] text-white rounded-tr-none' : 'bg-white/10 border border-white/20 text-gray-100 rounded-tl-none backdrop-blur-sm'}`}>
@@ -875,7 +875,7 @@ ${conversationHistory || 'Nenhuma mensagem anterior.'}
               <button
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
-                className="w-10 h-10 bg-[#57B952] hover:bg-green-600 disabled:bg-gray-200 text-white rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95 disabled:cursor-not-allowed"
+                className="w-10 h-10 bg-[#57B952] hover:bg-green-600 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95 disabled:cursor-not-allowed text-white"
               >
                 <Send size={20} />
               </button>

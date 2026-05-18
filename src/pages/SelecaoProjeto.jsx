@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Building2, ArrowLeft, Plus, Briefcase, X, Save, FileText, Share, Trash2, User, Shield, Upload, FolderOpen, FileSpreadsheet, File } from 'lucide-react';
 // ThemeToggle removed: app forced to light mode
@@ -49,52 +49,42 @@ function SelecaoProjeto() {
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
   };
   
-  // Função para filtrar e ordenar projetos
-  const getFilteredAndSortedProjects = () => {
+  const filteredAndSortedProjects = useMemo(() => {
     let filtered = [...projetos];
-    
-    // Filtro por busca
+
     if (searchFilter.trim()) {
       const term = searchFilter.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.nome?.toLowerCase().includes(term) || 
+      filtered = filtered.filter(p =>
+        p.nome?.toLowerCase().includes(term) ||
         p.descricao?.toLowerCase().includes(term)
       );
     }
-    
-    // Filtro por status
+
     if (statusFilter === 'active') {
       filtered = filtered.filter(p => p.ativa !== false);
     } else if (statusFilter === 'inactive') {
       filtered = filtered.filter(p => p.ativa === false);
     }
-    
-    // Ordenação
+
     if (sortBy === 'name') {
       filtered.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     } else if (sortBy === 'date') {
-      filtered.sort((a, b) => {
-        const dateA = a.createdAt?.toDate?.() || new Date(0);
-        const dateB = b.createdAt?.toDate?.() || new Date(0);
-        return dateB - dateA;
-      });
+      filtered.sort((a, b) => (b.createdAt?.toDate?.() || new Date(0)) - (a.createdAt?.toDate?.() || new Date(0)));
     } else if (sortBy === 'recent') {
       filtered.sort((a, b) => {
-        const dateA = a.updatedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
-        const dateB = b.updatedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
-        return dateB - dateA;
+        const da = a.updatedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
+        const db_ = b.updatedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
+        return db_ - da;
       });
     } else if (sortBy === 'favorites') {
       filtered.sort((a, b) => {
-        const af = favIds.has(a.id) ? 1 : 0;
-        const bf = favIds.has(b.id) ? 1 : 0;
-        if (bf !== af) return bf - af;
-        return (a.nome || '').localeCompare(b.nome || '');
+        const diff = (favIds.has(b.id) ? 1 : 0) - (favIds.has(a.id) ? 1 : 0);
+        return diff !== 0 ? diff : (a.nome || '').localeCompare(b.nome || '');
       });
     }
-    
+
     return filtered;
-  };
+  }, [projetos, searchFilter, statusFilter, sortBy, favIds]);
 
   useEffect(() => {
     fetchProjetos();
@@ -350,9 +340,9 @@ function SelecaoProjeto() {
                 <div className="flex gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end">
                     {/* BOTÃO ADMIN - Apenas para Administrador */}
                     {isAdmin && (
-                        <Link 
-                            to="/admin" 
-                            className="bg-purple-100 text-purple-700 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-transform hover:scale-105 text-xs sm:text-sm border border-purple-200"
+                        <Link
+                            to="/admin"
+                            className="bg-purple-500/20 text-purple-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-purple-500/30 text-xs sm:text-sm border border-purple-500/30"
                         >
                           <Shield size={16} className="sm:w-[18px] sm:h-[18px]" />
                           <span className="hidden sm:inline">Administrador</span>
@@ -362,9 +352,9 @@ function SelecaoProjeto() {
 
                     {/* BOTÃO GERÊNCIA */}
                     {(isAdmin || canAccessAdmin) && (
-                        <Link 
-                            to="/gerencia" 
-                            className="bg-orange-100 text-orange-700 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-transform hover:scale-105 text-xs sm:text-sm border border-orange-200"
+                        <Link
+                            to="/gerencia"
+                            className="bg-orange-500/20 text-orange-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-orange-500/30 text-xs sm:text-sm border border-orange-500/30"
                         >
                           <Shield size={16} className="sm:w-[18px] sm:h-[18px]" />
                           <span className="hidden sm:inline">Gerência</span>
@@ -424,7 +414,7 @@ function SelecaoProjeto() {
 
             {loading ? (
                 <div className="text-center py-20 text-gray-300">Carregando bases...</div>
-            ) : getFilteredAndSortedProjects().length === 0 ? (
+            ) : filteredAndSortedProjects.length === 0 ? (
                 <div className="text-center py-20 bg-white/10 backdrop-blur-md rounded-xl shadow border border-white/20">
                     <p className="text-gray-200 mb-4">
                       {projetos.length === 0 ? 'Nenhuma base cadastrada ainda.' : 'Nenhum projeto encontrado com os filtros aplicados.'}
@@ -437,7 +427,7 @@ function SelecaoProjeto() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                    {getFilteredAndSortedProjects().map((projeto) => (
+                    {filteredAndSortedProjects.map((projeto) => (
                         <div 
                             key={projeto.id} 
                             onClick={() => handleSelectProject(projeto)} 
@@ -591,7 +581,7 @@ function SelecaoProjeto() {
       {toast.show && (
         <div className="fixed top-8 right-8 z-[200] animate-fade-in">
           <div className={`border-l-4 ${toast.type === 'error' ? 'bg-red-500/20 border-red-500' : 'bg-green-500/20 border-[#57B952]'} rounded-lg shadow-2xl p-4 flex items-center gap-3 min-w-[300px] text-white`}>
-            <div className={`${toast.type === 'error' ? 'bg-red-100' : 'bg-green-100'} p-2 rounded-full`}>
+            <div className={`${toast.type === 'error' ? 'bg-red-500/20' : 'bg-green-500/20'} p-2 rounded-full`}>
               {toast.type === 'error' ? (
                 <X size={24} className="text-red-500" />
               ) : (

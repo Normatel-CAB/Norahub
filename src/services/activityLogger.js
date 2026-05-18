@@ -25,9 +25,8 @@ export const logActivity = async (action, title, description, userId, userName, 
       createdAt: serverTimestamp(),
       metadata
     });
-    console.log('✅ Atividade registrada:', action);
-  } catch (error) {
-    console.error('❌ Erro ao registrar atividade:', error);
+  } catch {
+    // falhas de log não devem quebrar o fluxo principal
   }
 };
 

@@ -27,10 +27,22 @@ import GlobalSearch from './components/GlobalSearch';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
 import Chatbot from './components/Chatbot';
 import PageTransition from './components/PageTransition';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function App() {
   const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(prev => !prev);
+      }
+      if (e.key === 'Escape') setSearchOpen(false);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
 
   return (
     <BrowserRouter>

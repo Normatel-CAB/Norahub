@@ -53,7 +53,7 @@ function KeyboardShortcuts() {
         className="fixed bottom-4 right-4 p-3 bg-white/10 backdrop-blur-xl rounded-full shadow-lg hover:shadow-xl transition-all border border-white/20 z-50 group"
         title="Atalhos de teclado (?)"
       >
-        <Keyboard size={20} className="text-gray-600 group-hover:text-[#57B952]" />
+        <Keyboard size={20} className="text-gray-400 group-hover:text-[#57B952]" />
       </button>
     );
   }
@@ -64,8 +64,8 @@ function KeyboardShortcuts() {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Keyboard size={20} className="text-blue-600" />
+            <div className="w-10 h-10 bg-blue-500/15 rounded-lg flex items-center justify-center">
+              <Keyboard size={20} className="text-blue-400" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Atalhos de Teclado</h2>
@@ -74,7 +74,7 @@ function KeyboardShortcuts() {
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
           >
             <X size={20} className="text-gray-400" />
           </button>
@@ -92,7 +92,7 @@ function KeyboardShortcuts() {
                   {category.items.map((shortcut, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-white/[0.05] transition-colors"
                     >
                       <span className="text-gray-300">{shortcut.description}</span>
                       <div className="flex items-center gap-1">

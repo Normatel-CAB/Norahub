@@ -67,7 +67,7 @@ function PrivateRoute({ children, requiredRole }) {
     checkAdminPermission();
   }, [userProfile, location.pathname]);
 
-  if (loading || permissionLoading) return <div className="min-h-screen w-full flex items-center justify-center bg-gray-100"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952]"></div></div>;
+  if (loading || permissionLoading) return <div className="min-h-screen w-full flex items-center justify-center bg-gray-900"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952]"></div></div>;
 
   if (!currentUser) return <Navigate to="/login" replace />;
 

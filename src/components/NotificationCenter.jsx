@@ -132,10 +132,10 @@ const NotificationCenter = () => {
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-1 hover:bg-white/10 rounded"
                 aria-label="Fechar"
               >
-                <X size={18} className="text-gray-500" />
+                <X size={18} className="text-gray-400" />
               </button>
             </div>
           </div>
@@ -148,15 +148,15 @@ const NotificationCenter = () => {
                 <p className="text-sm">Nenhuma notificação</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-white/[0.06]">
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
                     className={`p-4 cursor-pointer transition-colors ${
-                      !notification.read 
-                        ? 'bg-blue-50 hover:bg-blue-100' 
-                        : 'hover:bg-gray-50'
+                      !notification.read
+                        ? 'bg-blue-500/10 hover:bg-blue-500/15'
+                        : 'hover:bg-white/[0.04]'
                     }`}
                   >
                     <div className="flex gap-3">

@@ -43,6 +43,15 @@ function Cadastro() {
     return r;
   };
 
+  const getAutoApprovalStatus = async () => {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'autoApproval'));
+      return snap.exists() && snap.data().enabled === true;
+    } catch {
+      return false;
+    }
+  };
+
   // Cria perfil no Firestore após autenticação Microsoft
   const saveMicrosoftUser = async (user) => {
     const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
@@ -51,17 +60,23 @@ function Cadastro() {
       await signOut(auth);
       return;
     }
+    const autoApprove = await getAutoApprovalStatus();
     await setDoc(doc(db, 'usuarios', user.uid), {
       nome: user.displayName || '',
       email: user.email || '',
       cpfMatricula: '',
       cargo: '',
       funcao: 'colaborador',
-      statusAcesso: 'pendente',
+      statusAcesso: autoApprove ? 'ativo' : 'pendente',
       uid: user.uid,
       createdAt: new Date(),
     });
-    setAlertInfo({ message: 'Cadastro realizado! Aguarde aprovação do administrador.', type: 'success' });
+    setAlertInfo({
+      message: autoApprove
+        ? 'Cadastro realizado! Você já pode fazer login.'
+        : 'Cadastro realizado! Aguarde aprovação do administrador.',
+      type: 'success',
+    });
     setTimeout(() => navigate('/login', { replace: true }), 1200);
   };
 
@@ -144,13 +159,14 @@ function Cadastro() {
       const user = userCredential.user;
       if (!user?.uid) throw new Error('Usuário não autenticado após cadastro.');
 
+      const autoApprove = await getAutoApprovalStatus();
       const userData = {
         nome,
         email,
         cpfMatricula,
         cargo: funcao,
         funcao: 'colaborador',
-        statusAcesso: 'pendente',
+        statusAcesso: autoApprove ? 'ativo' : 'pendente',
         uid: user.uid,
         createdAt: new Date(),
       };
@@ -170,7 +186,12 @@ function Cadastro() {
       if (!success) throw lastError;
 
       await signOut(auth);
-      setAlertInfo({ message: 'Cadastro realizado! Aguarde aprovação do administrador.', type: 'success' });
+      setAlertInfo({
+        message: autoApprove
+          ? 'Cadastro realizado! Você já pode fazer login.'
+          : 'Cadastro realizado! Aguarde aprovação do administrador.',
+        type: 'success',
+      });
       setTimeout(() => navigate('/login', { replace: true }), 1200);
     } catch (error) {
       console.error('Erro no cadastro:', error);

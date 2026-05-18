@@ -21,22 +21,21 @@ export function AuthProvider({ children }) {
             let tentativas = 0;
             let perfil = null;
             while (tentativas < 5 && !perfil) {
+              if (!user) break;
+              tentativas++;
               try {
                 const docRef = doc(db, 'usuarios', user.uid);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                   setUserProfile(docSnap.data());
                   perfil = docSnap.data();
-                } else {
-                  tentativas++;
+                } else if (tentativas < 5) {
                   await new Promise(res => setTimeout(res, 1000));
                 }
               } catch (error) {
                 if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
-                  tentativas++;
-                  await new Promise(res => setTimeout(res, 1000));
+                  if (tentativas < 5) await new Promise(res => setTimeout(res, 1000));
                 } else {
-                  console.error("Erro ao buscar perfil:", error);
                   break;
                 }
               }

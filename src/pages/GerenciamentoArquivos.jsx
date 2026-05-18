@@ -404,7 +404,7 @@ function GerenciamentoArquivos() {
           <ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" /> 
           <span className="hidden sm:inline">Voltar</span>
         </button>
-        <h1 className="text-base md:text-2xl font-bold text-gray-800 truncate px-2">{card.name}</h1>
+        <h1 className="text-base md:text-2xl font-bold text-white truncate px-2">{card.name}</h1>
         <div className="w-12 md:w-20 shrink-0"></div>
       </header>
 
@@ -416,7 +416,7 @@ function GerenciamentoArquivos() {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={handleNavigateToRoot}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm ${!currentPath ? 'bg-blue-100 text-blue-700 font-semibold' : 'hover:bg-gray-100'}`}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm ${!currentPath ? 'bg-blue-500/20 text-blue-300 font-semibold' : 'hover:bg-white/10 text-gray-300'}`}
                 title="Voltar para raiz"
               >
                 <Home size={16} />
@@ -465,14 +465,14 @@ function GerenciamentoArquivos() {
               />
             </label>
 
-            <div className="flex-1 min-w-[200px] h-32 border-2 border-dashed border-blue-300 rounded-xl bg-blue-50">
+            <div className="flex-1 min-w-[200px] h-32 border-2 border-dashed border-blue-500/40 rounded-xl bg-blue-500/10">
               {!isCreatingFolder ? (
                 <button
                   onClick={() => setIsCreatingFolder(true)}
-                  className="w-full h-full flex flex-col items-center justify-center hover:bg-blue-100 transition-colors"
+                  className="w-full h-full flex flex-col items-center justify-center hover:bg-blue-500/20 transition-colors rounded-xl"
                 >
-                  <FolderPlus className="w-8 h-8 mb-2 text-blue-600" />
-                  <p className="text-xs text-blue-600 font-semibold">Nova Pasta</p>
+                  <FolderPlus className="w-8 h-8 mb-2 text-blue-400" />
+                  <p className="text-xs text-blue-400 font-semibold">Nova Pasta</p>
                 </button>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center p-4 gap-2">
@@ -512,7 +512,7 @@ function GerenciamentoArquivos() {
 
           {/* Files and Folders List */}
           <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
+            <h2 className="text-xl font-bold text-white mb-4">
               {currentPath ? `Pasta: ${currentPath.split('/').pop()}` : 'Todos os arquivos'} ({folders.length + files.length} itens)
             </h2>
             
@@ -530,7 +530,7 @@ function GerenciamentoArquivos() {
                 {folders.map((folder, idx) => (
                   <div 
                     key={`folder-${idx}`}
-                    className="border-2 border-blue-200 rounded-lg p-3 md:p-4 hover:shadow-md transition-shadow bg-blue-50 hover:bg-blue-100 cursor-pointer"
+                    className="border border-blue-500/30 rounded-lg p-3 md:p-4 hover:shadow-md transition-shadow bg-blue-500/10 hover:bg-blue-500/15 cursor-pointer"
                   >
                     {renamingItem?.fullPath === folder.fullPath ? (
                       <div className="space-y-2">
@@ -564,7 +564,7 @@ function GerenciamentoArquivos() {
                             className="flex items-center gap-2 flex-1 cursor-pointer"
                             onClick={() => handleNavigateToFolder(folder.name)}
                           >
-                            <Folder className="w-8 h-8 text-blue-600" />
+                            <Folder className="w-8 h-8 text-blue-400" />
                           </div>
                           <div className="flex gap-1.5 shrink-0">
                             <button
@@ -590,7 +590,7 @@ function GerenciamentoArquivos() {
                           </div>
                         </div>
                         <p 
-                          className="text-sm font-medium text-blue-800 truncate cursor-pointer"
+                          className="text-sm font-medium text-blue-300 truncate cursor-pointer"
                           title={folder.name}
                           onClick={() => handleNavigateToFolder(folder.name)}
                         >
@@ -639,7 +639,7 @@ function GerenciamentoArquivos() {
                           <div className="flex gap-1.5">
                             <button
                               onClick={() => navigate('/visualizador-arquivo', { state: { fileUrl: file.url, fileName: file.name } })}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              className="p-1.5 text-blue-400 hover:bg-blue-500/20 rounded transition-colors"
                               title="Visualizar"
                             >
                               <Eye size={16} />
@@ -647,28 +647,28 @@ function GerenciamentoArquivos() {
                             <a
                               href={file.url}
                               download
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                              className="p-1.5 text-green-400 hover:bg-green-500/20 rounded transition-colors"
                               title="Baixar"
                             >
                               <Download size={16} />
                             </a>
                             <button
                               onClick={() => startRename(file)}
-                              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                              className="p-1.5 text-gray-400 hover:bg-white/10 rounded transition-colors"
                               title="Renomear"
                             >
                               <Edit2 size={16} />
                             </button>
                             <button
                               onClick={() => openDeleteConfirm('file', file.fullPath)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              className="p-1.5 text-red-400 hover:bg-red-500/10 rounded transition-colors"
                               title="Excluir"
                             >
                               <Trash2 size={16} />
                             </button>
                           </div>
                         </div>
-                        <p className="text-sm font-medium text-gray-800 truncate" title={file.name}>
+                        <p className="text-sm font-medium text-gray-200 truncate" title={file.name}>
                           {file.name}
                         </p>
                       </>
@@ -686,10 +686,10 @@ function GerenciamentoArquivos() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 backdrop-blur-xl rounded-xl shadow-2xl max-w-md w-full p-6 animate-fade-in border border-gray-700">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 size={24} className="text-red-600" />
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <Trash2 size={24} className="text-red-400" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800">
+              <h3 className="text-xl font-bold text-white">
                 Confirmar Exclusão
               </h3>
             </div>

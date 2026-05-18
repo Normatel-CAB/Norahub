@@ -374,14 +374,14 @@ function ConstrutorFormulario() {
           <ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" /> <span className="hidden xs:inline">Voltar</span>
         </button>
         
-        <h1 className="text-sm md:text-xl lg:text-2xl font-bold text-gray-800 absolute left-1/2 transform -translate-x-1/2 max-w-[50%] truncate">{card.name}</h1>
+        <h1 className="text-sm md:text-xl lg:text-2xl font-bold text-white absolute left-1/2 transform -translate-x-1/2 max-w-[50%] truncate">{card.name}</h1>
         
         <div className="flex gap-2">
           {canEdit && (
             <button
               onClick={() => setMode('builder')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors font-medium text-sm ${
-                mode === 'builder' ? 'bg-[#57B952] text-white border-[#57B952]' : 'border-gray-300 hover:bg-gray-50'
+                mode === 'builder' ? 'bg-[#57B952] text-white border-[#57B952]' : 'border-white/20 text-gray-300 hover:bg-white/10'
               }`}
             >
               <Settings size={16} /> Editar
@@ -391,7 +391,7 @@ function ConstrutorFormulario() {
           <button
             onClick={() => setMode('preview')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors font-medium text-sm ${
-              mode === 'preview' ? 'bg-[#57B952] text-white border-[#57B952]' : 'border-gray-300 hover:bg-gray-50'
+              mode === 'preview' ? 'bg-[#57B952] text-white border-[#57B952]' : 'border-white/20 text-gray-300 hover:bg-white/10'
             }`}
           >
             <Eye size={16} /> Preencher
@@ -401,7 +401,7 @@ function ConstrutorFormulario() {
             <button
               onClick={() => setMode('responses')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors font-medium text-sm ${
-                mode === 'responses' ? 'bg-[#57B952] text-white border-[#57B952]' : 'border-gray-300 hover:bg-gray-50'
+                mode === 'responses' ? 'bg-[#57B952] text-white border-[#57B952]' : 'border-white/20 text-gray-300 hover:bg-white/10'
               }`}
             >
               <FileText size={16} /> Respostas ({formResponses.length})
@@ -425,7 +425,7 @@ function ConstrutorFormulario() {
         {mode === 'builder' ? (
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-3">
-              <h2 className="text-lg md:text-xl font-bold text-gray-800">Construtor de Formulário</h2>
+              <h2 className="text-lg md:text-xl font-bold text-white">Construtor de Formulário</h2>
               <button
                 onClick={addField}
                 className="flex items-center gap-2 bg-[#57B952] hover:bg-green-600 text-white px-3 md:px-4 py-2 rounded-lg transition-colors font-medium text-sm w-full sm:w-auto justify-center"
@@ -476,10 +476,10 @@ function ConstrutorFormulario() {
                 {formFields.map((field, idx) => (
                   <div key={field.id} className="border border-white/20 rounded-lg p-4 bg-white/5 backdrop-blur-sm">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-semibold text-gray-600">Campo {idx + 1}</span>
+                      <span className="text-sm font-semibold text-gray-400">Campo {idx + 1}</span>
                       <button
                         onClick={() => removeField(field.id)}
-                        className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
+                        className="text-red-400 hover:bg-red-500/10 p-1 rounded transition-colors"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -791,14 +791,14 @@ function ConstrutorFormulario() {
               <div className="space-y-6">
                 {formResponses.length > 0 && formResponses.map((response, idx) => (
                   <div key={response.id || idx} className="border border-white/20 rounded-lg p-6 bg-white/5 backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
                       <div>
-                        <p className="font-semibold text-gray-800">{response.userName || 'Usuário'}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="font-semibold text-white">{response.userName || 'Usuário'}</p>
+                        <p className="text-xs text-gray-400">
                           {response.submittedAt ? new Date(response.submittedAt).toLocaleString('pt-BR') : 'Data não disponível'}
                         </p>
                       </div>
-                      <span className="text-sm font-medium text-gray-600">Resposta #{idx + 1}</span>
+                      <span className="text-sm font-medium text-gray-400">Resposta #{idx + 1}</span>
                     </div>
 
                     <div className="space-y-3">
@@ -811,7 +811,7 @@ function ConstrutorFormulario() {
                           
                           return (
                             <div key={field.id}>
-                              <p className="text-sm font-medium text-gray-600 mb-2">{field.label}</p>
+                              <p className="text-sm font-medium text-gray-400 mb-2">{field.label}</p>
                               {isFileArray ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                   {answer.map((file, fileIdx) => (
@@ -844,7 +844,7 @@ function ConstrutorFormulario() {
                                   ))}
                                 </div>
                               ) : (
-                                <p className="text-gray-800 mt-1">
+                                <p className="text-gray-200 mt-1">
                                   {Array.isArray(answer) 
                                     ? answer.length > 0 ? answer.join(', ') : '-'
                                     : answer ? String(answer) : '-'}

@@ -20,22 +20,12 @@ function GlobalSearch({ isOpen, onClose }) {
     }
   }, [isOpen]);
 
-  // Atalho de teclado Ctrl+K
+  // Fechar com Escape (Ctrl+K é gerenciado pelo App.jsx)
   useEffect(() => {
+    if (!isOpen) return;
     const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        if (isOpen) {
-          onClose();
-        } else {
-          onClose(); // Função será usada para abrir também
-        }
-      }
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
@@ -67,8 +57,8 @@ function GlobalSearch({ isOpen, onClose }) {
       });
 
       setAllData({ projects, cards, files: [] });
-    } catch (error) {
-      console.error('Erro ao carregar dados para busca:', error);
+    } catch {
+      // busca desabilitada se Firestore indisponível
     } finally {
       setLoading(false);
     }
@@ -128,11 +118,11 @@ function GlobalSearch({ isOpen, onClose }) {
             placeholder="Buscar projetos, cards, arquivos... (Ctrl+K)"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 outline-none text-white placeholder-gray-400 text-lg"
+            className="flex-1 outline-none bg-transparent text-white placeholder-gray-400 text-lg"
           />
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
           >
             <X size={20} className="text-gray-400" />
           </button>
@@ -168,9 +158,9 @@ function GlobalSearch({ isOpen, onClose }) {
                       <button
                         key={project.id}
                         onClick={() => handleNavigate(project)}
-                        className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-3"
+                        className="w-full text-left p-3 rounded-lg hover:bg-white/[0.06] transition-colors flex items-center gap-3"
                       >
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 bg-green-500/15 rounded-lg flex items-center justify-center shrink-0">
                           <Briefcase size={20} className="text-[#57B952]" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -195,10 +185,10 @@ function GlobalSearch({ isOpen, onClose }) {
                       <button
                         key={card.id}
                         onClick={() => handleNavigate(card)}
-                        className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-3"
+                        className="w-full text-left p-3 rounded-lg hover:bg-white/[0.06] transition-colors flex items-center gap-3"
                       >
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
-                          <FileText size={20} className="text-blue-600" />
+                        <div className="w-10 h-10 bg-blue-500/15 rounded-lg flex items-center justify-center shrink-0">
+                          <FileText size={20} className="text-blue-400" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-white truncate">{card.name}</p>
