@@ -1,202 +1,276 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { FileText, CheckCircle, ArrowLeft, ExternalLink, User, Sparkles, Settings, X, Save, Plus, Trash2, FolderOpen, BarChart3, FileSpreadsheet, File, ClipboardList, PackageCheck, DollarSign, Users } from 'lucide-react';
-// ThemeToggle removed: app forced to light mode
-import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext'; // Importar Auth
+import {
+  FileText, CheckCircle, ExternalLink, Settings, X, Save, Trash2,
+  FolderOpen, BarChart3, FileSpreadsheet, File, ClipboardList, PackageCheck,
+  DollarSign, Users, Calendar, Copy, Check, Eye,
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import NotificationCenter from '../components/NotificationCenter';
+import { UserPageHeader } from '../components/UserPageHeader';
+import { Breadcrumb } from '../components/Breadcrumb';
+import { SkeletonPainelCard } from '../components/Skeleton';
+import { ErrorState } from '../components/ErrorState';
+import { CardFieldsForm } from '../components/CardFieldsForm';
+import ActivityLogger from '../services/activityLogger';
+import { trackLinkAccess, getRecentLinks } from '../services/favorites';
+
+// ─── Identidade visual Normatel: todos os cards em verde ──────────────────────
+const GREEN = { bgColor: 'bg-[#57B952]/20', textColor: 'text-[#57B952]', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]' };
 
 const CARD_CONFIGS = {
-  link:        { icon: ExternalLink,  bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Acessar',             needsUpload: false },
-  documents:   { icon: FolderOpen,    bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver Arquivos',        needsUpload: true  },
-  reports:     { icon: BarChart3,     bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver Relatório',       needsUpload: false },
-  files:       { icon: File,          bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver PDFs',            needsUpload: true  },
-  spreadsheets:{ icon: FileSpreadsheet,bgColor: 'bg-green-500/20',textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver Planilhas',       needsUpload: true  },
-  forms:       { icon: ClipboardList, bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Acessar Formulário',  needsUpload: false, isCustomForm: true },
-  approvals:   { icon: CheckCircle,   bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver Aprovações',      needsUpload: false },
-  inventory:   { icon: PackageCheck,  bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Acessar Estoque',     needsUpload: false },
-  financial:   { icon: DollarSign,    bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Ver Financeiro',      needsUpload: false },
-  hr:          { icon: Users,         bgColor: 'bg-green-500/20', textColor: 'text-green-400', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]', label: 'Acessar RH',          needsUpload: false },
+  link:         { icon: ExternalLink,    ...GREEN, label: 'Acessar',             needsUpload: false },
+  documents:    { icon: FolderOpen,      ...GREEN, label: 'Ver Arquivos',         needsUpload: true  },
+  reports:      { icon: BarChart3,       ...GREEN, label: 'Ver Relatório',        needsUpload: false },
+  files:        { icon: File,            ...GREEN, label: 'Ver PDFs',             needsUpload: true  },
+  spreadsheets: { icon: FileSpreadsheet, ...GREEN, label: 'Ver Planilhas',        needsUpload: true  },
+  forms:        { icon: ClipboardList,   ...GREEN, label: 'Acessar Formulário',   needsUpload: false, isCustomForm: true },
+  approvals:    { icon: CheckCircle,     ...GREEN, label: 'Ver Aprovações',       needsUpload: false },
+  inventory:    { icon: PackageCheck,    ...GREEN, label: 'Acessar Estoque',      needsUpload: false },
+  financial:    { icon: DollarSign,      ...GREEN, label: 'Ver Financeiro',       needsUpload: false },
+  hr:           { icon: Users,           ...GREEN, label: 'Acessar RH',           needsUpload: false },
 };
 
 const getCardConfig = (type) => CARD_CONFIGS[type] ?? CARD_CONFIGS.link;
 
-function PainelProjeto() {
-  const { theme } = useTheme();
-  const { currentUser, userProfile } = useAuth(); // Pegar usuário
-  const isDark = theme === 'dark';
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  // Usar useState para o projeto para permitir atualizações sem reload
-  const [projeto, setProjeto] = useState(() => {
-    let initialProjeto = location.state?.projeto;
-    if (!initialProjeto) {
-      try {
-        const savedProjeto = localStorage.getItem('currentProjeto');
-        if (savedProjeto) initialProjeto = JSON.parse(savedProjeto);
-      } catch {
-        localStorage.removeItem('currentProjeto');
-      }
-    } else {
-      try {
-        localStorage.setItem('currentProjeto', JSON.stringify(initialProjeto));
-      } catch {
-        // storage pode estar cheio ou bloqueado — ignora silenciosamente
-      }
-    }
-    return initialProjeto;
-  });
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function Toast({ toast }) {
+  if (!toast.show) return null;
+  return (
+    <div className={`fixed top-5 right-5 z-[300] flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl border backdrop-blur-xl ${
+      toast.type === 'success'
+        ? 'bg-green-500/20 border-green-500/40 text-green-300'
+        : 'bg-red-500/20 border-red-500/40 text-red-300'
+    }`}>
+      {toast.type === 'success' ? <CheckCircle size={16} /> : <X size={16} />}
+      <span className="font-medium text-sm">{toast.message}</span>
+    </div>
+  );
+}
 
-  // Dados Perfil
-  const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.displayName?.split(' ')[0] || 'Usuário';
-  const fotoURL = currentUser?.photoURL || userProfile?.fotoURL;
-  const isAdmin = userProfile?.funcao === 'admin';
-  
-  // Estado para permissões
+// ─── DeadlineBadge ────────────────────────────────────────────────────────────
+function DeadlineBadge({ deadline }) {
+  if (!deadline) return null;
+  const date = new Date(deadline);
+  const now = new Date();
+  const isOverdue = date < now;
+  const diff = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+  const label = isOverdue
+    ? `Atrasado ${Math.abs(diff)}d`
+    : diff === 0
+    ? 'Vence hoje'
+    : `${diff}d restantes`;
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+      isOverdue
+        ? 'bg-red-500/15 text-red-400 border-red-500/25'
+        : diff <= 3
+        ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/25'
+        : 'bg-white/10 text-gray-400 border-white/15'
+    }`}>
+      <Calendar size={10} />
+      {label}
+    </span>
+  );
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
+function PainelProjeto() {
+  const { id: paramId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { currentUser, userProfile } = useAuth();
+
+  const [projeto, setProjeto] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [errorType, setErrorType] = useState(null);
   const [canEdit, setCanEdit] = useState(false);
   const [canEditCards, setCanEditCards] = useState(false);
-
-  // Estado do modal de edição
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editedName, setEditedName] = useState('');
-  const [editedUrlForms, setEditedUrlForms] = useState('');
-  const [editedUrlSharePoint, setEditedUrlSharePoint] = useState('');
   const [editedExtras, setEditedExtras] = useState([]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmDelete, setConfirmDelete] = useState({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null });
+  const [copiedIdx, setCopiedIdx] = useState(null);
+  const [linkCounts, setLinkCounts] = useState({});
+
+  const isAdmin = userProfile?.funcao === 'admin';
+  const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.displayName?.split(' ')[0] || 'Usuário';
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
   };
 
-  // Verificar permissões do usuário
+  // ─── Determinar o ID do projeto ─────────────────────────────────────────────
+  // Prioridade: URL param → location.state (retrocompatibilidade)
+  const projetoId = paramId ?? location.state?.projeto?.id;
+
+  // ─── Listener em tempo real via onSnapshot ───────────────────────────────────
+  useEffect(() => {
+    if (!projetoId) {
+      // sem ID e sem state → voltar
+      navigate('/selecao-projeto', { replace: true });
+      return;
+    }
+
+    setLoading(true);
+    setErrorType(null);
+
+    const unsubscribe = onSnapshot(
+      doc(db, 'projetos', projetoId),
+      (snap) => {
+        if (!snap.exists() || snap.data()?.deletedAt) {
+          setErrorType('notfound');
+          setLoading(false);
+          return;
+        }
+        setProjeto({ id: snap.id, ...snap.data() });
+        setLoading(false);
+      },
+      (err) => {
+        setErrorType(err.code === 'permission-denied' ? 'permission' : 'generic');
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [projetoId, navigate]);
+
+  // ─── Contadores de acesso ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!currentUser || !projeto) return;
+    getRecentLinks(currentUser.uid).then(res => {
+      if (!res.success) return;
+      const counts = {};
+      res.recentLinks.forEach(l => {
+        if (l.projetoId === projeto.id) counts[l.id] = l.accessCount || 0;
+      });
+      setLinkCounts(counts);
+    });
+  }, [currentUser, projeto?.id]);
+
+  // ─── Permissões ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const checkPermissions = async () => {
       if (!userProfile || !projeto) return;
-      
-      // Admin sempre pode editar
-      if (isAdmin) {
-        setCanEdit(true);
-        setCanEditCards(true);
-        return;
+      if (isAdmin) { setCanEdit(true); setCanEditCards(true); return; }
+      if (userProfile.funcao === 'gerente-projeto') { setCanEdit(true); setCanEditCards(true); return; }
+      if (typeof userProfile.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')) {
+        setCanEdit(true); setCanEditCards(true); return;
       }
-      
-      // Gerente de projeto sempre pode editar
-      if (userProfile.funcao === 'gerente-projeto') {
-        setCanEdit(true);
-        setCanEditCards(true);
-        return;
-      }
-      
-      // Verificar se o cargo do usuário tem permissão para este projeto
       try {
-        const cargosQuery = query(
-          collection(db, 'cargos'),
-          where('nome', '==', userProfile.funcao)
-        );
-        const cargosSnapshot = await getDocs(cargosQuery);
-        
-        if (!cargosSnapshot.empty) {
-          const cargoData = cargosSnapshot.docs[0].data();
-          const projetosPermitidos = cargoData.projetos || [];
-          
-          // Verificar se o projeto atual está na lista de projetos permitidos
-          if (projetosPermitidos.includes(projeto.id)) {
+        const snap = await getDocs(query(collection(db, 'cargos'), where('nome', '==', userProfile.funcao)));
+        if (!snap.empty) {
+          const cargo = snap.docs[0].data();
+          const permitidos = cargo.projetos || [];
+          if (permitidos.includes(projeto.id)) {
             setCanEdit(true);
-            // Pode editar cards se tiver permissão específica
-            setCanEditCards(cargoData.canEditCardsProjetos || false);
+            setCanEditCards(cargo.canEditCardsProjetos || false);
           } else {
-            setCanEdit(false);
-            setCanEditCards(false);
+            setCanEdit(false); setCanEditCards(false);
           }
         } else {
-          setCanEdit(false);
-          setCanEditCards(false);
+          setCanEdit(false); setCanEditCards(false);
         }
-      } catch (error) {
-        console.error('Erro ao verificar permissões:', error);
-        setCanEdit(false);
-        setCanEditCards(false);
+      } catch {
+        setCanEdit(false); setCanEditCards(false);
       }
     };
-    
     checkPermissions();
   }, [userProfile, projeto, isAdmin]);
 
-  if (!projeto) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-            <button onClick={() => navigate('/selecao-projeto')} className="text-[#57B952]">Voltar para Seleção</button>
-        </div>
-      );
-  }
-
-  // Fallback seguro
-  const linkSolicitacao = projeto.urlForms || projeto.url || '#';
-  const linkAprovacao = projeto.urlSharePoint || 'https://normatelce.sharepoint.com/';
-  const hiddenBuiltIns = Array.isArray(projeto.hiddenBuiltIns) ? projeto.hiddenBuiltIns : [];
-  const extras = Array.isArray(projeto.extras)
-    ? projeto.extras
-        .map((e, originalIndex) => ({ ...e, originalIndex }))
-        .filter((e) => e?.name?.trim())
-    : [];
-
-  // Cards fixos derivados das URLs do projeto — filtrados se o admin os ocultou
-  const builtInCards = [
-    {
-      name: 'Nova Solicitação',
-      description: `Preencher formulário de requisição para ${projeto.nome}.`,
-      url: linkSolicitacao,
-      type: 'link',
-      builtInIcon: FileText,
-      isBuiltIn: true,
-      builtInKey: 'forms',
-    },
-    {
-      name: 'Aprovação / Painel',
-      description: 'Acessar lista de pedidos e aprovações desta base.',
-      url: linkAprovacao,
-      type: 'link',
-      builtInIcon: CheckCircle,
-      isBuiltIn: true,
-      builtInKey: 'sharepoint',
-    },
-  ].filter(c => !hiddenBuiltIns.includes(c.builtInKey));
-
-  // Todos os cards: fixos visíveis primeiro, depois os extras dinâmicos
-  const allCards = [...builtInCards, ...extras];
-
+  // ─── Modal de edição ─────────────────────────────────────────────────────────
   const openEditModal = () => {
     setEditedName(projeto.nome || '');
-    setEditedUrlForms(projeto.urlForms || '');
-    setEditedUrlSharePoint(projeto.urlSharePoint || '');
     setEditedExtras(
-      projeto.extras && projeto.extras.length > 0
-        ? projeto.extras.map((e) => ({ name: e.name || '', description: e.description || '', url: e.url || '', type: e.type || 'link' }))
-        : [{ name: '', description: '', url: '', type: 'link' }]
+      (projeto.extras || []).map(e => ({
+        name: e.name || '',
+        description: e.description || '',
+        url: e.url || '',
+        type: e.type || 'link',
+      }))
     );
     setIsEditModalOpen(true);
   };
 
-  const addExtraField = () => {
-    setEditedExtras((prev) => [...prev, { name: '', description: '', url: '', type: 'link' }]);
+  const addExtraField = () =>
+    setEditedExtras(prev => [...prev, { name: '', description: '', url: '', type: 'link' }]);
+
+  const updateExtraField = (idx, key, val) =>
+    setEditedExtras(prev => prev.map((item, i) => (i === idx ? { ...item, [key]: val } : item)));
+
+  const removeExtraField = (idx) =>
+    setEditedExtras(prev => prev.filter((_, i) => i !== idx));
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editedName) return;
+    setSaving(true);
+    try {
+      const extrasOriginais = Array.isArray(projeto.extras) ? projeto.extras : [];
+      const filteredExtras = editedExtras
+        .filter(f => f.name?.trim())
+        .map(f => {
+          const original = extrasOriginais.find(o => o.name === f.name);
+          return {
+            name: f.name.trim(),
+            description: (f.description || '').trim(),
+            url: (f.url || '').trim(),
+            type: f.type || 'link',
+            files: original?.files || [],
+            formFields: original?.formFields || [],
+            formResponses: original?.formResponses || [],
+            emailNotifications: original?.emailNotifications || false,
+            notificationEmails: original?.notificationEmails || '',
+          };
+        });
+
+      await updateDoc(doc(db, 'projetos', projeto.id), {
+        nome: editedName,
+        extras: filteredExtras,
+        updatedAt: new Date(),
+      });
+
+      // onSnapshot atualiza projeto automaticamente
+      setIsEditModalOpen(false);
+      showToast(`Projeto salvo com ${filteredExtras.length} card(s)!`);
+      ActivityLogger.projectEdited(editedName, currentUser.uid, primeiroNome);
+    } catch {
+      showToast('Erro ao salvar alterações.', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const updateExtraField = (index, key, newValue) => {
-    setEditedExtras((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [key]: newValue } : item))
-    );
+  // ─── Copiar link + rastrear acesso ───────────────────────────────────────────
+  const handleCopyLink = async (e, url, idx) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx(null), 2000);
+    } catch {
+      showToast('Não foi possível copiar o link.', 'error');
+    }
   };
 
-  const removeExtraField = (index) => {
-    setEditedExtras((prev) => prev.filter((_, i) => i !== index));
+  const trackAccess = (card) => {
+    if (!currentUser || !card.url || card.url === '#') return;
+    trackLinkAccess(currentUser.uid, {
+      projetoId: projeto.id,
+      projetoNome: projeto.nome,
+      cardName: card.name,
+      url: card.url,
+      type: card.type || 'link',
+    });
   };
 
+  // ─── Deletar card ────────────────────────────────────────────────────────────
   const handleDeleteExtraCard = (e, card) => {
     e.preventDefault();
     e.stopPropagation();
@@ -209,234 +283,205 @@ function PainelProjeto() {
 
   const confirmDeleteCard = async () => {
     try {
-      let updatedProjeto;
       if (confirmDelete.isBuiltIn) {
         const current = Array.isArray(projeto.hiddenBuiltIns) ? projeto.hiddenBuiltIns : [];
-        const updated = [...current, confirmDelete.builtInKey];
-        await updateDoc(doc(db, 'projetos', projeto.id), { hiddenBuiltIns: updated });
-        updatedProjeto = { ...projeto, hiddenBuiltIns: updated };
+        await updateDoc(doc(db, 'projetos', projeto.id), { hiddenBuiltIns: [...current, confirmDelete.builtInKey] });
       } else {
-        const allExtras = Array.isArray(projeto.extras) ? projeto.extras : [];
-        const updatedExtras = allExtras.filter((_, idx) => idx !== confirmDelete.cardIndex);
+        const updatedExtras = (projeto.extras || []).filter((_, idx) => idx !== confirmDelete.cardIndex);
         await updateDoc(doc(db, 'projetos', projeto.id), { extras: updatedExtras, updatedAt: new Date() });
-        updatedProjeto = { ...projeto, extras: updatedExtras };
+        ActivityLogger.cardDeleted('card', projeto.nome, currentUser.uid, primeiroNome);
       }
-      setProjeto(updatedProjeto);
-      localStorage.setItem('currentProjeto', JSON.stringify(updatedProjeto));
-      showToast('Card removido com sucesso!', 'success');
-      setConfirmDelete({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null });
-    } catch (error) {
-      showToast('Erro ao excluir card: ' + error.message, 'error');
-      setConfirmDelete({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null });
-    }
-  };
-
-  const handleSaveEdit = async (e) => {
-    e.preventDefault();
-    if (!editedName) return;
-    setSaving(true);
-    try {
-      // Buscar os extras originais do banco para preservar dados existentes
-      const projetoDoc = await getDoc(doc(db, 'projetos', projeto.id));
-      const projetoData = projetoDoc.data();
-      const extrasOriginais = Array.isArray(projetoData.extras) ? projetoData.extras : [];
-
-      const filteredExtras = editedExtras
-        .filter((f) => f.name && f.name.trim() !== '')
-        .map((f) => {
-          const cardOriginal = extrasOriginais.find(e => e.name === f.name);
-          return {
-            name: f.name.trim(),
-            description: (f.description || '').trim(),
-            url: (f.url || '').trim(),
-            type: f.type || 'link',
-            files: cardOriginal?.files || f.files || [],
-            formFields: cardOriginal?.formFields || f.formFields || [],
-            formResponses: cardOriginal?.formResponses || [],
-            emailNotifications: cardOriginal?.emailNotifications || false,
-            notificationEmails: cardOriginal?.notificationEmails || ''
-          };
-        });
-
-      await updateDoc(doc(db, 'projetos', projeto.id), {
-        nome: editedName,
-        urlForms: editedUrlForms,
-        urlSharePoint: editedUrlSharePoint,
-        extras: filteredExtras,
-        updatedAt: new Date(),
-      });
-
-      const updatedProjeto = {
-        ...projeto,
-        nome: editedName,
-        urlForms: editedUrlForms,
-        urlSharePoint: editedUrlSharePoint,
-        extras: filteredExtras
-      };
-      
-      setProjeto(updatedProjeto);
-      localStorage.setItem('currentProjeto', JSON.stringify(updatedProjeto));
-      
-      setIsEditModalOpen(false);
-      showToast(`✅ Projeto salvo com ${filteredExtras.length} card(s)!`, 'success');
-    } catch (error) {
-      console.error('Erro ao salvar:', error);
-      showToast('Erro ao salvar alterações.', 'error');
+      showToast('Card removido.');
+    } catch {
+      showToast('Erro ao excluir card.', 'error');
     } finally {
-      setSaving(false);
+      setConfirmDelete({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null });
     }
   };
+
+  // ─── Render ──────────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+        <UserPageHeader backTo="/selecao-projeto" backLabel="Trocar Projeto" />
+        <main className="flex-grow flex flex-col items-center p-3 md:p-8">
+          <div className="w-full max-w-5xl">
+            <div className="text-center mb-8">
+              <div className="h-4 w-32 bg-white/10 rounded-full mx-auto mb-3 animate-pulse" />
+              <div className="h-8 w-64 bg-white/10 rounded-xl mx-auto animate-pulse" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[1, 2, 3, 4].map(i => <SkeletonPainelCard key={i} />)}
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (errorType) {
+    return (
+      <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+        <UserPageHeader backTo="/selecao-projeto" backLabel="Trocar Projeto" />
+        <main className="flex-grow flex items-center justify-center">
+          <ErrorState
+            type={errorType}
+            title={errorType === 'notfound' ? 'Projeto não encontrado' : undefined}
+            message={errorType === 'notfound' ? 'Este projeto não existe ou foi removido.' : undefined}
+            onRetry={errorType !== 'notfound' && errorType !== 'permission' ? () => window.location.reload() : undefined}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // ─── Dados do projeto ────────────────────────────────────────────────────────
+  const linkSolicitacao = projeto.urlForms || projeto.url || '#';
+  const linkAprovacao = projeto.urlSharePoint || 'https://normatelce.sharepoint.com/';
+  const hiddenBuiltIns = Array.isArray(projeto.hiddenBuiltIns) ? projeto.hiddenBuiltIns : [];
+  const extras = Array.isArray(projeto.extras)
+    ? projeto.extras.map((e, originalIndex) => ({ ...e, originalIndex })).filter(e => e?.name?.trim())
+    : [];
+
+  const builtInCards = [
+    { name: 'Nova Solicitação', description: `Preencher formulário de requisição para ${projeto.nome}.`, url: linkSolicitacao, type: 'link', builtInIcon: FileText, isBuiltIn: true, builtInKey: 'forms' },
+    { name: 'Aprovação / Painel', description: 'Acessar lista de pedidos e aprovações desta base.', url: linkAprovacao, type: 'link', builtInIcon: CheckCircle, isBuiltIn: true, builtInKey: 'sharepoint' },
+  ].filter(c => !hiddenBuiltIns.includes(c.builtInKey));
+
+  const allCards = [...builtInCards, ...extras];
+
+  const baseClass = 'group bg-white/10 backdrop-blur-md p-4 md:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-white/20 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 min-h-[280px] md:h-[320px] w-full';
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 transition-colors duration-200 text-white">
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl"></div>
-    </div>
-    {/* ThemeToggle removed */}
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl" />
+      </div>
 
-      <header className="relative w-full flex items-center justify-between py-4 px-4 md:px-8 border-b border-gray-700 min-h-[64px] bg-gray-900/50 backdrop-blur-md z-20">
-        <button onClick={() => navigate('/selecao-projeto')} className="flex items-center gap-1 md:gap-2 text-gray-300 hover:text-[#57B952] transition-colors font-medium text-xs md:text-sm shrink-0 z-10">
-             <ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" /> <span className="hidden sm:inline">Trocar</span><span className="hidden md:inline"> Projeto</span>
-        </button>
-        
-        <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 md:gap-4">
-                <img src="/img/Designer (6).png" alt="Logo Nora" className="h-10 sm:h-12 md:h-14 w-auto object-contain drop-shadow-lg" />
-            <span className="text-gray-400 text-xl md:text-2xl font-light">|</span>
-            <img 
-              src={isDark ? "/img/Normatel Engenharia_BRANCO.png" : "/img/Normatel Engenharia_PRETO.png"} 
-              alt="Logo Normatel" 
-              className="h-6 sm:h-8 md:h-10 w-auto object-contain drop-shadow-lg" 
-            />
+      <Toast toast={toast} />
+      <UserPageHeader backTo="/selecao-projeto" backLabel="Trocar Projeto" />
+
+      <main className="flex-grow flex flex-col relative z-10">
+        {/* Breadcrumb fixo no topo do conteúdo */}
+        <div className="px-4 md:px-8 pt-4 pb-0">
+          <Breadcrumb items={[{ label: projeto.nome }]} />
         </div>
 
-        {/* PERFIL NO CANTO DIREITO */}
-        {currentUser && (
-            <div className="flex items-center gap-2 md:gap-3 shrink-0 z-10">
-                <NotificationCenter />
-                <button 
-                    onClick={() => navigate('/perfil')} 
-                    className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-[#57B952] bg-white/10 flex items-center justify-center hover:border-green-600 transition-colors cursor-pointer shrink-0"
-                >
-                    {fotoURL ? <img src={fotoURL} className="w-full h-full object-cover" alt="Avatar" /> : <User size={16} className="md:w-5 md:h-5 text-gray-400" />}
-                </button>
-                <span className="text-xs md:text-base font-semibold text-white hidden xs:block truncate max-w-[80px] md:max-w-none"><span className="hidden md:inline">Olá, </span>{primeiroNome}</span>
-            </div>
-        )}
-      </header>
-
-      <main className="flex-grow flex flex-col items-center justify-center p-3 md:p-8">
+        {/* Conteúdo centralizado verticalmente */}
+        <div className="flex-grow flex flex-col items-center justify-center p-3 md:p-8">
         <div className="w-full max-w-5xl">
-            
-            <div className="text-center mb-6 md:mb-12">
-                <h2 className="text-xs md:text-sm font-bold text-[#57B952] uppercase tracking-widest mb-1 md:mb-2">
-                    Ambiente de Trabalho
-                </h2>
-                <h1 className="text-xl md:text-3xl lg:text-4xl font-bold text-white">
-                    {projeto.nome}
-                </h1>
-                <p className="text-xs md:text-base text-gray-400 mt-1 md:mt-2">Selecione a operação desejada para esta base.</p>
-                {canEdit && (
-                  <button
-                    onClick={openEditModal}
-                    className="mt-4 inline-flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-4 py-2 rounded-lg font-semibold text-sm border border-blue-400/30 transition-colors shadow-sm"
-                  >
-                    <Settings size={16} /> Editar Base
-                  </button>
-                )}
-            </div>
+          <div className="text-center mb-6 md:mb-10">
+            <h2 className="text-xs md:text-sm font-bold text-[#57B952] uppercase tracking-widest mb-1 md:mb-2">
+              Ambiente de Trabalho
+            </h2>
+            <h1 className="text-xl md:text-3xl lg:text-4xl font-bold text-white">{projeto.nome}</h1>
+            {projeto.deadline && (
+              <div className="mt-2 flex justify-center">
+                <DeadlineBadge deadline={projeto.deadline} />
+              </div>
+            )}
+            {projeto.tags?.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5 justify-center">
+                {projeto.tags.map(tag => (
+                  <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-white/10 text-gray-400 border border-white/15">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-xs md:text-base text-gray-400 mt-2">Selecione a operação desejada para esta base.</p>
+            {canEdit && (
+              <button
+                onClick={openEditModal}
+                className="mt-4 inline-flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-4 py-2 rounded-lg font-semibold text-sm border border-blue-400/30 transition-colors"
+              >
+                <Settings size={16} /> Editar Base
+              </button>
+            )}
+          </div>
 
-            {/* Grid dinâmico unificado — todos os cards via map() */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {allCards.map((card, idx) => {
-                const config = getCardConfig(card.type || 'link');
-                const CardIcon = card.builtInIcon || config.icon;
+          {/* Grid de cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {allCards.map((card, idx) => {
+              const config = getCardConfig(card.type || 'link');
+              const CardIcon = card.builtInIcon || config.icon;
+              const cardId = `${projeto.id}_${card.name}`.replace(/\s+/g, '_');
+              const accessCount = linkCounts[cardId] || 0;
+              const hasUrl = !config.isCustomForm && !config.needsUpload && card.type !== 'reports' && card.url && card.url !== '#';
 
-                const baseClass =
-                  'group bg-white/10 backdrop-blur-md p-4 md:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-white/20 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 min-h-[280px] md:h-[320px] w-full';
+              const cardInner = (
+                <>
+                  <div className={`${config.bgColor} p-4 md:p-6 rounded-full mb-4 md:mb-6 group-hover:scale-110 transition-transform ${config.textColor}`}>
+                    <CardIcon size={36} className="md:w-12 md:h-12" />
+                  </div>
+                  <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">{card.name}</h2>
+                  <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">{card.description || 'Acesse este recurso.'}</p>
+                  {accessCount > 0 && (
+                    <span className="flex items-center gap-1 text-[10px] text-gray-500 mb-2">
+                      <Eye size={10} /> {accessCount} {accessCount === 1 ? 'acesso' : 'acessos'}
+                    </span>
+                  )}
+                  <div className={`mt-auto flex items-center gap-2 ${config.btnColor} text-white px-4 md:px-6 py-2 rounded-full font-bold transition-colors shadow-md text-sm md:text-base`}>
+                    {config.label}
+                    {!config.needsUpload && !config.isCustomForm && card.type !== 'reports' && (
+                      <ExternalLink size={14} className="md:w-4 md:h-4" />
+                    )}
+                  </div>
+                </>
+              );
 
-                const cardInner = (
-                  <>
-                    <div className={`${config.bgColor} p-4 md:p-6 rounded-full mb-4 md:mb-6 group-hover:scale-110 transition-transform ${config.textColor}`}>
-                      <CardIcon size={36} className="md:w-12 md:h-12" />
-                    </div>
-                    <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">{card.name}</h2>
-                    <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">
-                      {card.description || 'Acesse este recurso.'}
-                    </p>
-                    <div className={`mt-auto flex items-center gap-2 ${config.btnColor} text-white px-4 md:px-6 py-2 rounded-full font-bold transition-colors shadow-md text-sm md:text-base`}>
-                      {config.label}
-                      {!config.needsUpload && !config.isCustomForm && card.type !== 'reports' && (
-                        <ExternalLink size={14} className="md:w-4 md:h-4" />
-                      )}
-                    </div>
-                  </>
-                );
-
-                return (
-                  <div key={idx} className="relative">
-                    {/* Botão excluir — disponível em todos os cards para quem pode editar */}
+              return (
+                <div key={idx} className="relative">
+                  <div className="absolute top-4 right-4 z-20 flex gap-1">
+                    {hasUrl && (
+                      <button
+                        onClick={(e) => handleCopyLink(e, card.url, idx)}
+                        className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 rounded-full transition-colors bg-white/10 backdrop-blur-md"
+                        title="Copiar link"
+                      >
+                        {copiedIdx === idx ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                      </button>
+                    )}
                     {(canEdit || canEditCards) && (
                       <button
                         onClick={(e) => handleDeleteExtraCard(e, card)}
-                        className="absolute top-4 right-4 z-20 p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded-full transition-colors bg-white/10 backdrop-blur-md"
+                        className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded-full transition-colors bg-white/10 backdrop-blur-md"
                         title="Excluir Card"
                       >
                         <Trash2 size={18} />
                       </button>
                     )}
-
-                    {config.isCustomForm ? (
-                      <div
-                        onClick={() => navigate('/construtor-formulario', { state: { card, projeto } })}
-                        className={`${baseClass} cursor-pointer`}
-                      >
-                        {cardInner}
-                      </div>
-                    ) : config.needsUpload ? (
-                      <div
-                        onClick={() => navigate('/gerenciamento-arquivos', { state: { card, projeto } })}
-                        className={`${baseClass} cursor-pointer`}
-                      >
-                        {cardInner}
-                      </div>
-                    ) : card.type === 'reports' ? (
-                      <div
-                        onClick={() => navigate('/visualizador-dashboard', { state: { dashboardUrl: card.url, dashboardName: card.name, projeto } })}
-                        className={`${baseClass} cursor-pointer`}
-                      >
-                        {cardInner}
-                      </div>
-                    ) : (
-                      <a
-                        href={card.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`${baseClass} block`}
-                      >
-                        {cardInner}
-                      </a>
-                    )}
                   </div>
-                );
-              })}
-            </div>
+
+                  {config.isCustomForm ? (
+                    <div onClick={() => { trackAccess(card); navigate('/construtor-formulario', { state: { card, projeto } }); }} className={`${baseClass} cursor-pointer`}>{cardInner}</div>
+                  ) : config.needsUpload ? (
+                    <div onClick={() => { trackAccess(card); navigate('/gerenciamento-arquivos', { state: { card, projeto } }); }} className={`${baseClass} cursor-pointer`}>{cardInner}</div>
+                  ) : card.type === 'reports' ? (
+                    <div onClick={() => { trackAccess(card); navigate('/visualizador-dashboard', { state: { dashboardUrl: card.url, dashboardName: card.name, projeto } }); }} className={`${baseClass} cursor-pointer`}>{cardInner}</div>
+                  ) : (
+                    <a href={card.url} target="_blank" rel="noopener noreferrer" onClick={() => trackAccess(card)} className={`${baseClass} block`}>{cardInner}</a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
         </div>
       </main>
-      
-      <footer className="w-full py-6 text-center text-gray-400 text-xs shrink-0 border-t border-white/20 bg-white/5">
-        &copy; 2025 Parceria Petrobras & Normatel Engenharia
+
+      <footer className="w-full py-6 text-center text-gray-400 text-xs border-t border-white/20 bg-white/5 relative z-10">
+        &copy; 2025 Parceria Petrobras &amp; Normatel Engenharia
       </footer>
 
-      {/* MODAL DE EDIÇÃO */}
+      {/* ─── Modal de edição ─────────────────────────────────────────────────── */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-[#111114] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl border border-white/[0.10] flex flex-col max-h-[95vh] sm:max-h-[88vh]">
-
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.07] flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center">
                   <Settings size={18} className="text-[#57B952]" />
                 </div>
                 <div>
@@ -444,176 +489,43 @@ function PainelProjeto() {
                   <p className="text-xs text-gray-500 mt-0.5">{projeto.nome}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors"
-              >
+              <button onClick={() => setIsEditModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors">
                 <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="flex flex-col flex-1 overflow-hidden">
               <div className="px-6 py-5 space-y-6 overflow-y-auto flex-1">
-
-                {/* Nome */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">
                     Nome da Base <span className="text-[#57B952]">*</span>
                   </label>
                   <input
                     type="text"
-                    placeholder="Ex: Projeto 743 — Facilities"
                     value={editedName}
-                    onChange={(e) => setEditedName(e.target.value)}
+                    onChange={e => setEditedName(e.target.value)}
                     required
-                    className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all"
+                    className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
                   />
                 </div>
 
-                {/* Cards */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Cards</label>
-                      {editedExtras.length > 0 && (
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#57B952]/20 text-[#57B952] text-[10px] font-bold">
-                          {editedExtras.length}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addExtraField}
-                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20 hover:bg-[#57B952]/20 font-semibold transition-colors"
-                    >
-                      <Plus size={13} /> Novo card
-                    </button>
-                  </div>
-
-                  {editedExtras.length === 0 && (
-                    <button
-                      type="button"
-                      onClick={addExtraField}
-                      className="w-full flex flex-col items-center justify-center gap-2 py-8 border border-dashed border-white/[0.10] rounded-2xl hover:border-[#57B952]/30 hover:bg-[#57B952]/[0.03] transition-all group"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-white/[0.04] group-hover:bg-[#57B952]/10 flex items-center justify-center transition-colors">
-                        <Plus size={18} className="text-gray-600 group-hover:text-[#57B952] transition-colors" />
-                      </div>
-                      <p className="text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">
-                        Clique para adicionar um card
-                      </p>
-                    </button>
-                  )}
-
-                  {editedExtras.length > 0 && (
-                    <div className="space-y-3">
-                      {editedExtras.map((field, idx) => (
-                        <div key={idx} className="group bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-4 space-y-3 transition-colors">
-                          {/* Card header */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-lg bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center text-[11px] font-bold text-[#57B952] flex-shrink-0">
-                                {idx + 1}
-                              </span>
-                              <span className="text-xs text-gray-500 font-medium">Card {idx + 1}</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeExtraField(idx); }}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/15 text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-
-                          {/* Nome + Tipo em grid */}
-                          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                            <input
-                              type="text"
-                              placeholder="Nome do card *"
-                              value={field.name}
-                              onChange={(e) => updateExtraField(idx, 'name', e.target.value)}
-                              className="sm:col-span-3 w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
-                            />
-                            <select
-                              value={field.type || 'link'}
-                              onChange={(e) => updateExtraField(idx, 'type', e.target.value)}
-                              className="sm:col-span-2 w-full px-3 py-2.5 border border-white/[0.10] rounded-xl text-sm focus:outline-none focus:border-[#57B952]/60 transition-all cursor-pointer"
-                              style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
-                            >
-                              {[
-                                { v: 'link',         l: '🔗 Link Externo' },
-                                { v: 'documents',    l: '📁 Documentos' },
-                                { v: 'reports',      l: '📊 Relatórios' },
-                                { v: 'files',        l: '📄 Arquivos PDF' },
-                                { v: 'spreadsheets', l: '📈 Planilhas' },
-                                { v: 'forms',        l: '📝 Formulários' },
-                                { v: 'approvals',    l: '✅ Aprovações' },
-                                { v: 'inventory',    l: '📦 Estoque' },
-                                { v: 'financial',    l: '💰 Financeiro' },
-                                { v: 'hr',           l: '👥 RH' },
-                              ].map(t => (
-                                <option key={t.v} value={t.v} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{t.l}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Descrição */}
-                          <input
-                            type="text"
-                            placeholder="Descrição (opcional)"
-                            value={field.description}
-                            onChange={(e) => updateExtraField(idx, 'description', e.target.value)}
-                            className="w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
-                          />
-
-                          {/* URL — só quando não usa upload nem form personalizado */}
-                          {!getCardConfig(field.type || 'link').needsUpload && !getCardConfig(field.type || 'link').isCustomForm && (
-                            <input
-                              type="url"
-                              placeholder="URL (https://...)"
-                              value={field.url}
-                              onChange={(e) => updateExtraField(idx, 'url', e.target.value)}
-                              className="w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
-                            />
-                          )}
-
-                          {getCardConfig(field.type || 'link').needsUpload && (
-                            <p className="flex items-center gap-2 text-xs text-blue-300 bg-blue-500/10 border border-blue-400/20 rounded-xl px-3 py-2">
-                              <span>📁</span> Permite upload de arquivos após criado
-                            </p>
-                          )}
-                          {getCardConfig(field.type || 'link').isCustomForm && (
-                            <p className="flex items-center gap-2 text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-400/20 rounded-xl px-3 py-2">
-                              <span>📝</span> Abrirá construtor de formulário personalizado
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <CardFieldsForm
+                  cards={editedExtras}
+                  onAdd={addExtraField}
+                  onUpdate={updateExtraField}
+                  onRemove={removeExtraField}
+                />
               </div>
 
-              {/* Footer */}
               <div className="px-6 py-4 border-t border-white/[0.07] flex gap-3 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors"
-                >
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 py-3 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
-                >
-                  {saving ? (
-                    <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Salvando...</>
-                  ) : (
-                    <><Save size={15} /> Salvar Alterações</>
-                  )}
+                <button type="submit" disabled={saving} className="flex-1 py-3 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
+                  {saving
+                    ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Salvando...</>
+                    : <><Save size={15} /> Salvar Alterações</>
+                  }
                 </button>
               </div>
             </form>
@@ -621,44 +533,15 @@ function PainelProjeto() {
         </div>
       )}
 
-      {/* TOAST NOTIFICATION */}
-      {toast.show && (
-        <div className="fixed top-8 right-8 z-[200] animate-fade-in">
-          <div className={`border-l-4 ${toast.type === 'error' ? 'bg-red-500/20 border-red-500' : 'bg-green-500/20 border-[#57B952]'} rounded-lg shadow-2xl p-4 flex items-center gap-3 min-w-[300px] text-white`}>
-            <div className={`${toast.type === 'error' ? 'bg-red-500/20' : 'bg-green-500/20'} p-2 rounded-full`}>
-              {toast.type === 'error' ? (
-                <X size={24} className="text-red-500" />
-              ) : (
-                <CheckCircle size={24} className="text-[#57B952]" />
-              )}
-            </div>
-            <div>
-              <p className="font-bold text-white">{toast.type === 'error' ? 'Erro!' : 'Sucesso!'}</p>
-              <p className="text-sm text-gray-200">{toast.message}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONFIRM DELETE MODAL */}
+      {/* ─── Confirm Delete Card ─────────────────────────────────────────────── */}
       {confirmDelete.open && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
-          <div className="bg-gray-800 rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4 border border-gray-700 text-white">
-            <h3 className="text-lg font-bold text-white mb-2">Confirmar exclusão</h3>
-            <p className="text-sm text-gray-300 mb-6">Tem certeza que deseja remover este card adicional? Esta ação não pode ser desfeita.</p>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[300] p-4">
+          <div className="bg-[#161618] rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-white/10">
+            <h3 className="text-base font-bold text-white mb-2">Confirmar exclusão</h3>
+            <p className="text-sm text-gray-400 mb-6">Tem certeza que deseja remover este card? Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmDelete({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null })}
-                className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-semibold transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmDeleteCard}
-                className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors"
-              >
-                Excluir
-              </button>
+              <button onClick={() => setConfirmDelete({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null })} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition-colors">Cancelar</button>
+              <button onClick={confirmDeleteCard} className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors">Excluir</button>
             </div>
           </div>
         </div>

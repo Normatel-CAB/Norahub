@@ -92,13 +92,24 @@ class RateLimiter {
 class InputValidator {
   static sanitizeString(input) {
     if (typeof input !== 'string') return input;
-    
-    // Remove caracteres perigosos
     return input
-      .replace(/[<>]/g, '') // Remove < e >
-      .replace(/javascript:/gi, '') // Remove javascript:
-      .replace(/on\w+\s*=/gi, '') // Remove event handlers
+      .replace(/[<>]/g, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '')
       .trim();
+  }
+
+  // Remove vetores de script de HTML permitido em corpos de e-mail
+  static sanitizeHtml(input) {
+    if (typeof input !== 'string') return '';
+    return input
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/javascript\s*:/gi, '')
+      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+      .replace(/on\w+\s*=\s*[^\s>]*/gi, '')
+      .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+      .replace(/<object[\s\S]*?<\/object>/gi, '')
+      .replace(/<embed[^>]*>/gi, '');
   }
 
   static validateEmail(email) {

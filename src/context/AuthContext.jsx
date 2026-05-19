@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '../services/firebase';
 import { onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -29,6 +29,8 @@ export function AuthProvider({ children }) {
                 if (docSnap.exists()) {
                   setUserProfile(docSnap.data());
                   perfil = docSnap.data();
+                  // Registrar último acesso — não bloqueia o fluxo
+                  updateDoc(docRef, { lastSeen: serverTimestamp() }).catch(() => {});
                 } else if (tentativas < 5) {
                   await new Promise(res => setTimeout(res, 1000));
                 }
@@ -48,8 +50,7 @@ export function AuthProvider({ children }) {
         });
         return () => unsubscribe();
       })
-      .catch((error) => {
-        console.error("Erro na persistência:", error);
+      .catch(() => {
         setLoading(false);
       });
   }, []);

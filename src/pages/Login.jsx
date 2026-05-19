@@ -86,7 +86,6 @@ function Login() {
           await checkUserProfile(result.user);
         }
       } catch (error) {
-        console.error('Erro no redirect Microsoft:', error);
         if (error?.message === 'dominio-invalido') {
           setAlertInfo({ message: 'Acesso restrito a @normatel.com.br', type: 'error' });
         } else if (error?.message === 'email-indisponivel') {
@@ -157,7 +156,6 @@ function Login() {
          throw new Error("pendente");
       }
     } catch (error) {
-      console.error("Erro:", error);
       if (error.message === 'pendente') setAlertInfo({ message: "Conta em análise. Aguarde aprovação.", type: 'error' });
       else if (error.code === 'auth/user-not-found') setAlertInfo({ message: "Usuário não encontrado. Faça o cadastro primeiro.", type: 'error' });
       else if (error.code === 'auth/wrong-password') setAlertInfo({ message: "Senha incorreta.", type: 'error' });
@@ -174,15 +172,13 @@ function Login() {
         const result = await signInWithPopup(auth, provider);
         await checkUserProfile(result.user);
     } catch (error) {
-        console.error("Erro Microsoft:", error);
       // Alguns navegadores com COOP/COEP bloqueiam o polling do popup; usamos redirect como fallback seguro
       const coopBlocked = error?.message?.includes('window.closed');
       if (coopBlocked) {
         try {
           await signInWithRedirect(auth, provider);
           return;
-        } catch (redirectError) {
-          console.error('Erro Microsoft (redirect):', redirectError);
+        } catch {
           setAlertInfo({ message: 'Erro ao redirecionar para login Microsoft.', type: 'error' });
           return;
         }

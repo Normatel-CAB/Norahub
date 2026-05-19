@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Shield, Briefcase, ChevronRight, Lock } from 'lucide-react';
+import { ArrowLeft, Users, Shield, Briefcase, ChevronRight, Lock, Activity, Trash2, TrendingUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -36,6 +36,36 @@ const OPCOES = [
     bg: 'bg-green-500/10 border-green-500/20',
     permissao: 'canCreateProjetos',
   },
+  {
+    id: 'logs',
+    titulo: 'Logs de Auditoria',
+    descricao: 'Histórico completo de ações realizadas no sistema',
+    icon: Activity,
+    path: '/logs-auditoria',
+    cor: 'text-indigo-400',
+    bg: 'bg-indigo-500/10 border-indigo-500/20',
+    permissao: null, // admin e gerente sempre têm acesso
+  },
+  {
+    id: 'lixeira',
+    titulo: 'Lixeira',
+    descricao: 'Restaurar ou excluir permanentemente projetos removidos',
+    icon: Trash2,
+    path: '/lixeira',
+    cor: 'text-red-400',
+    bg: 'bg-red-500/10 border-red-500/20',
+    permissao: null,
+  },
+  {
+    id: 'analytics',
+    titulo: 'Dashboard de Uso',
+    descricao: 'Gráficos de atividade, ações frequentes e usuários mais ativos',
+    icon: TrendingUp,
+    path: '/admin-analytics',
+    cor: 'text-purple-400',
+    bg: 'bg-purple-500/10 border-purple-500/20',
+    permissao: null,
+  },
 ];
 
 function Gerencia() {
@@ -57,8 +87,8 @@ function Gerencia() {
           );
           if (!snap.empty) setCargoData(snap.docs[0].data());
         }
-      } catch (e) {
-        console.error(e);
+      } catch {
+        // falha silenciosa — usuário verá opções sem permissão
       } finally {
         setLoading(false);
       }
@@ -68,19 +98,20 @@ function Gerencia() {
 
   const hasPermission = (opcao) => {
     if (isAdmin) return true;
+    if (opcao.permissao === null) return true;
     return !!cargoData?.[opcao.permissao];
   };
 
   const opcoesVisiveis = OPCOES.filter(o => isAdmin || hasPermission(o));
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
     </div>
   );
 
   if (!isAdmin && opcoesVisiveis.length === 0) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f] p-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
       <div className="text-center max-w-xs">
         <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-5">
           <Lock size={26} className="text-red-400" />
@@ -98,15 +129,19 @@ function Gerencia() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white font-[Outfit,sans-serif]">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white font-[Outfit,sans-serif] relative overflow-hidden">
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl pointer-events-none" />
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-white/[0.08] bg-[#0a0a0f]/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 border-b border-white/20 bg-gray-900/50 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <button
-            onClick={() => navigate('/selecao-projeto')}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
           >
-            <ArrowLeft size={16} />
+            <div className="w-8 h-8 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.1] flex items-center justify-center transition-colors">
+              <ArrowLeft size={15} />
+            </div>
             <span className="hidden sm:inline">Voltar</span>
           </button>
           <span className="text-sm font-medium text-gray-400">Área de Gerência</span>

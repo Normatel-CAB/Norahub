@@ -1053,9 +1053,9 @@ body {
   }
 }
 
-/* ===== NATIVE SELECT: escuro fechado, branco aberto ===== */
+/* ===== NATIVE SELECT: mesmo visual dos inputs, options brancos ===== */
 select {
-  background-color: #1a1a20;
+  background-color: rgba(255, 255, 255, 0.05);
   color: #f9fafb;
 }
 select option {

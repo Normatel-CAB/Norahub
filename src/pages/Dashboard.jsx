@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, User, Users, FolderOpen, FileText, TrendingUp, 
+import {
+  ArrowLeft, User, Users, FolderOpen, FileText, TrendingUp,
   Activity, Clock, CheckCircle, XCircle, BarChart3
 } from 'lucide-react';
+import { SkeletonStatCards, SkeletonActivityRow } from '../components/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../services/firebase';
@@ -49,29 +50,14 @@ function Dashboard() {
       const totalProjects = projectsSnapshot.size;
       const activeProjects = projectsSnapshot.docs.filter(doc => doc.data().ativa !== false).length;
       
-      // Contar respostas de formulários em todos os projetos
       let totalForms = 0;
-      for (const projectDoc of projectsSnapshot.docs) {
-        const projectData = projectDoc.data();
-        if (projectData.extras && Array.isArray(projectData.extras)) {
-          for (const extra of projectData.extras) {
-            if (extra.formResponses && Array.isArray(extra.formResponses)) {
-              totalForms += extra.formResponses.length;
-            }
-          }
-        }
-      }
-      
-      // Contar arquivos em todos os projetos (estimativa baseada em cards de documentos)
       let totalFiles = 0;
       for (const projectDoc of projectsSnapshot.docs) {
-        const projectData = projectDoc.data();
-        if (projectData.extras && Array.isArray(projectData.extras)) {
-          for (const extra of projectData.extras) {
-            if (extra.files && Array.isArray(extra.files)) {
-              totalFiles += extra.files.length;
-            }
-          }
+        const extras = projectDoc.data().extras;
+        if (!Array.isArray(extras)) continue;
+        for (const extra of extras) {
+          if (Array.isArray(extra.formResponses)) totalForms += extra.formResponses.length;
+          if (Array.isArray(extra.files))         totalFiles += extra.files.length;
         }
       }
       
@@ -196,10 +182,13 @@ function Dashboard() {
           </div>
 
           {loading ? (
-            <div className="text-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952] mx-auto"></div>
-              <p className="text-gray-400 mt-4">Carregando dados...</p>
-            </div>
+            <>
+              <SkeletonStatCards count={6} />
+              <div className="mt-6 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-4 md:p-6 space-y-2">
+                <div className="h-5 w-40 bg-white/[0.07] rounded animate-pulse mb-4" />
+                {[1, 2, 3, 4, 5].map(i => <SkeletonActivityRow key={i} />)}
+              </div>
+            </>
           ) : error ? (
             <div className="text-center py-20 bg-red-500/10 border border-red-500/20 rounded-xl">
               <p className="text-red-400 font-medium">{error}</p>

@@ -1,19 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, UserCheck, BookOpen, LogIn, Building2, HardHat, ChevronRight } from 'lucide-react';
-import { useEffect } from 'react';
+import { LogIn, Building2, HardHat, ChevronRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { auth } from '../services/firebase';
-import { signOut } from 'firebase/auth';
 
 function Capa() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const navigate = useNavigate();
-
-    // Desloga usuário sempre que entrar na página inicial (Capa)
-    useEffect(() => {
-        signOut(auth).catch(() => {});
-    }, []);
 
   return (
     <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 transition-colors duration-200">

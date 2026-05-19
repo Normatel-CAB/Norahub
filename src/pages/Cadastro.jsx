@@ -13,6 +13,24 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { useRecaptcha } from '../components/RecaptchaLoader';
+
+// Mínimo 8 caracteres, pelo menos: 1 maiúscula, 1 minúscula, 1 número, 1 caractere especial
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+
+function getPasswordStrength(password) {
+  if (!password) return { score: 0, label: '', color: '' };
+  let score = 0;
+  if (password.length >= 8)  score++;
+  if (password.length >= 12) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/\d/.test(password))   score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  if (score <= 2) return { score, label: 'Fraca',   color: 'bg-red-500'    };
+  if (score <= 4) return { score, label: 'Média',   color: 'bg-yellow-500' };
+  return              { score, label: 'Forte',   color: 'bg-green-500'  };
+}
 
 function Cadastro() {
   const { theme } = useTheme();
@@ -20,6 +38,7 @@ function Cadastro() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
+  const { executeRecaptcha } = useRecaptcha();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -29,6 +48,7 @@ function Cadastro() {
   const [alertInfo, setAlertInfo] = useState(null);
   // Evita que o useEffect de signOut dispare durante o fluxo Microsoft
   const inMicrosoftFlow = useRef(false);
+  const passwordStrength = getPasswordStrength(senha);
 
   const formatCPF = (value) => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -88,8 +108,7 @@ function Cadastro() {
         if (!result?.user) return;
         setLoading(true);
         await saveMicrosoftUser(result.user);
-      } catch (error) {
-        console.error('Erro redirect Microsoft:', error);
+      } catch {
         setAlertInfo({ message: 'Erro ao cadastrar com Microsoft.', type: 'error' });
       } finally {
         setLoading(false);
@@ -117,8 +136,6 @@ function Cadastro() {
       const result = await signInWithPopup(auth, provider);
       await saveMicrosoftUser(result.user);
     } catch (error) {
-      console.error('Erro Microsoft:', error);
-
       // Popup bloqueado → tenta redirect
       const popupBloqueado =
         error?.code === 'auth/popup-blocked' ||
@@ -132,8 +149,7 @@ function Cadastro() {
           p2.setCustomParameters({ prompt: 'select_account' });
           await signInWithRedirect(auth, p2);
           return; // página recarrega após redirect, inMicrosoftFlow persiste no redirect
-        } catch (redirectError) {
-          console.error('Erro redirect:', redirectError);
+        } catch {
           setAlertInfo({ message: 'Erro ao redirecionar para Microsoft.', type: 'error' });
         }
       } else if (error?.code === 'auth/popup-closed-by-user') {
@@ -154,7 +170,20 @@ function Cadastro() {
     setLoading(true);
     setAlertInfo(null);
 
+    if (!PASSWORD_REGEX.test(senha)) {
+      setAlertInfo({ message: 'Senha fraca. Use mínimo 8 caracteres com maiúscula, minúscula, número e símbolo.', type: 'error' });
+      setLoading(false);
+      return;
+    }
+
     try {
+      const recaptchaToken = await executeRecaptcha('register');
+      if (!recaptchaToken) {
+        setAlertInfo({ message: 'Verificação de segurança falhou. Tente novamente.', type: 'error' });
+        setLoading(false);
+        return;
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
       const user = userCredential.user;
       if (!user?.uid) throw new Error('Usuário não autenticado após cadastro.');
@@ -194,7 +223,6 @@ function Cadastro() {
       });
       setTimeout(() => navigate('/login', { replace: true }), 1200);
     } catch (error) {
-      console.error('Erro no cadastro:', error);
       if (error.code === 'auth/email-already-in-use') {
         setAlertInfo({ message: 'Este e-mail já está cadastrado.', type: 'error' });
       } else if (error.code === 'auth/weak-password') {
@@ -312,9 +340,21 @@ function Cadastro() {
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   className="w-full px-4 py-3 sm:py-3.5 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-[#57B952] focus:border-transparent placeholder-gray-400 text-white text-sm outline-none backdrop-blur-sm transition-all hover:bg-white/15"
-                  placeholder="••••••"
+                  placeholder="Mín. 8 chars + símbolo"
                   required
                 />
+                {senha && (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex gap-1 h-1">
+                      {[1,2,3,4,5,6].map(i => (
+                        <div key={i} className={`flex-1 rounded-full transition-colors ${i <= passwordStrength.score ? passwordStrength.color : 'bg-white/10'}`} />
+                      ))}
+                    </div>
+                    <p className={`text-[10px] ml-0.5 ${passwordStrength.score <= 2 ? 'text-red-400' : passwordStrength.score <= 4 ? 'text-yellow-400' : 'text-green-400'}`}>
+                      Senha {passwordStrength.label} — use maiúscula, número e símbolo
+                    </p>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs sm:text-sm font-semibold text-gray-200 ml-1 mb-2">CPF</label>

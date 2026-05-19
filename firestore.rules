@@ -63,25 +63,23 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
-    // Coleção LEGADA 'users' - Permissão TOTAL durante migração
+    // Coleção LEGADA 'users' - migração concluída; escrita e delete apenas para admin
     match /users/{userId} {
-      // Todos autenticados podem ler
       allow read: if isSignedIn();
-      // Criar e atualizar (para migração)
-      allow create, update: if isSignedIn();
-      // Deletar (para limpeza após migração)
-      allow delete: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin();
     }
     
     // Coleção de projetos
     match /projetos/{projectId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && 
+      allow create: if isSignedIn() &&
                       (isAdmin() || isManager()) &&
                       isValidDocumentSize() &&
                       isValidStringLength(request.resource.data.nome, 2, 200) &&
                       isSafeString(request.resource.data.nome);
       allow update: if isSignedIn() &&
+                      (isAdmin() || isManager()) &&
                       isValidDocumentSize();
       allow delete: if isAdmin();
     }
@@ -127,6 +125,14 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow delete: if isAdmin();
+    }
+
+    // Coleção de atividades (auditoria) — imutável após criação
+    match /activities/{activityId} {
+      allow read: if isAdmin() || isManager() ||
+                    (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isValidDocumentSize();
+      allow update, delete: if false; // Audit trail não pode ser alterado
     }
 
     // Configurações do sistema (ex: aprovação automática)

@@ -189,12 +189,9 @@ function AdminProjetos() {
               <div className="flex gap-2">
                 <select
                   value={usuarioParaAdicionar}
-                  onChange={(e) => {
-                    console.log('Usuário selecionado:', e.target.value);
-                    setUsuarioParaAdicionar(e.target.value);
-                  }}
+                  onChange={(e) => setUsuarioParaAdicionar(e.target.value)}
                   className="flex-1 px-3 py-2 rounded-lg border border-white/20 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
-                  style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: '#f9fafb' }}
                 >
                   <option value="" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Selecione um usuário... ({usuarios.filter(u => !membrosAdicionados.includes(String(u.uid || u.id))).length} disponíveis)</option>
                   {usuarios

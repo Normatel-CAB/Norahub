@@ -1,152 +1,179 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Building2, ArrowLeft, Plus, Briefcase, Settings, X, Save, Trash2, User, Shield } from 'lucide-react';
-// ThemeToggle removed: app forced to light mode
-import { useTheme } from '../context/ThemeContext';
+import {
+  Building2, Plus, Briefcase, Settings, X, Save, Trash2, Shield, Calendar,
+  Tag, RotateCcw, LayoutDashboard, Search, Star,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, query, where } from 'firebase/firestore';
 import NotificationCenter from '../components/NotificationCenter';
-
-const NO_URL_TYPES = ['documents', 'files', 'spreadsheets'];
-
+import { UserPageHeader } from '../components/UserPageHeader';
+import { SkeletonProjectCard } from '../components/Skeleton';
+import { Onboarding } from '../components/Onboarding';
+import { CardFieldsForm } from '../components/CardFieldsForm';
 import ActivityLogger from '../services/activityLogger';
 import FavoriteButton from '../components/FavoriteButton';
 import { getFavorites } from '../services/favorites';
 
+const NO_URL_TYPES = new Set(['documents', 'files', 'spreadsheets']);
+
+const inputCls =
+  'w-full px-4 py-3 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all';
+
+// ─── DeadlineBadge ────────────────────────────────────────────────────────────
+function DeadlineBadge({ deadline }) {
+  if (!deadline) return null;
+  const date = new Date(deadline);
+  const now = new Date();
+  const isOverdue = date < now;
+  const diff = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${
+      isOverdue
+        ? 'bg-red-500/15 text-red-400 border-red-500/25'
+        : diff <= 3
+        ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/25'
+        : 'bg-white/10 text-gray-500 border-white/15'
+    }`}>
+      <Calendar size={9} />
+      {isOverdue ? `Atrasado` : diff === 0 ? 'Hoje' : `${diff}d`}
+    </span>
+  );
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function Toast({ toast }) {
+  if (!toast.show) return null;
+  return (
+    <div className="fixed top-8 right-8 z-[200] animate-fade-in">
+      <div className={`border-l-4 ${toast.type === 'error' ? 'bg-red-500/20 border-red-500' : 'bg-green-500/20 border-[#57B952]'} rounded-lg shadow-2xl p-4 flex items-center gap-3 min-w-[300px] text-white`}>
+        <div className={`${toast.type === 'error' ? 'bg-red-500/20' : 'bg-green-500/20'} p-2 rounded-full`}>
+          {toast.type === 'error' ? <X size={20} className="text-red-400" /> : <Building2 size={20} className="text-[#57B952]" />}
+        </div>
+        <div>
+          <p className="font-bold text-white">{toast.type === 'error' ? 'Erro!' : 'Sucesso!'}</p>
+          <p className="text-sm text-gray-100">{toast.message}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SelecaoProjeto() {
-  const { theme } = useTheme();
   const { currentUser, userProfile } = useAuth();
-  const isDark = theme === 'dark';
   const navigate = useNavigate();
+  const isAdmin = userProfile?.funcao === 'admin';
+  const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.displayName?.split(' ')[0] || 'Usuário';
+
   const [projetos, setProjetos] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Variáveis de perfil
-  const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.displayName?.split(' ')[0] || 'Usuário';
-  const fotoURL = currentUser?.photoURL || userProfile?.fotoURL;
-  const isAdmin = userProfile?.funcao === 'admin'; // Verifica se é admin
   const [projetosPermitidos, setProjetosPermitidos] = useState([]);
   const [canManageProjects, setCanManageProjects] = useState(false);
   const [canAccessAdmin, setCanAccessAdmin] = useState(false);
 
-  // Estados para o Modal
+  // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
   const [newProjectName, setNewProjectName] = useState('');
-  const [urlForms, setUrlForms] = useState(''); 
-  const [urlSharePoint, setUrlSharePoint] = useState(''); 
-  const [saving, setSaving] = useState(false);
-    const [editingProject, setEditingProject] = useState(null);
-    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [newTagsInput, setNewTagsInput] = useState('');
+  const [newDeadline, setNewDeadline] = useState('');
   const [extraFields, setExtraFields] = useState([]);
-  const [confirmDelete, setConfirmDelete] = useState({ open: false, projetoId: null });
-  
-  // Filtros e Ordenação
+  const [saving, setSaving] = useState(false);
+
+  // Filtros
   const [searchFilter, setSearchFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
-  const [sortBy, setSortBy] = useState('name'); // 'name', 'date', 'recent', 'favorites'
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
+  const [activeTagFilter, setActiveTagFilter] = useState('');
   const [favIds, setFavIds] = useState(new Set());
+
+  // Confirmação de exclusão (soft delete)
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, projetoId: null, nome: '' });
+
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
   };
-  
+
+  // ─── Tags disponíveis nos projetos ──────────────────────────────────────────
+  const allTags = useMemo(() => {
+    const set = new Set();
+    projetos.forEach(p => (p.tags || []).forEach(t => set.add(t)));
+    return [...set].sort();
+  }, [projetos]);
+
+  // ─── Filtragem e ordenação ───────────────────────────────────────────────────
   const filteredAndSortedProjects = useMemo(() => {
-    let filtered = [...projetos];
+    let list = projetos.filter(p => !p.deletedAt);
 
     if (searchFilter.trim()) {
       const term = searchFilter.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.nome?.toLowerCase().includes(term) ||
-        p.descricao?.toLowerCase().includes(term)
+      list = list.filter(
+        p => p.nome?.toLowerCase().includes(term) || p.descricao?.toLowerCase().includes(term)
       );
     }
 
-    if (statusFilter === 'active') {
-      filtered = filtered.filter(p => p.ativa !== false);
-    } else if (statusFilter === 'inactive') {
-      filtered = filtered.filter(p => p.ativa === false);
-    }
+    if (statusFilter === 'active') list = list.filter(p => p.ativa !== false);
+    else if (statusFilter === 'inactive') list = list.filter(p => p.ativa === false);
 
-    if (sortBy === 'name') {
-      filtered.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-    } else if (sortBy === 'date') {
-      filtered.sort((a, b) => (b.createdAt?.toDate?.() || new Date(0)) - (a.createdAt?.toDate?.() || new Date(0)));
-    } else if (sortBy === 'recent') {
-      filtered.sort((a, b) => {
+    if (activeTagFilter) list = list.filter(p => (p.tags || []).includes(activeTagFilter));
+
+    if (sortBy === 'name') list.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    else if (sortBy === 'date') list.sort((a, b) => (b.createdAt?.toDate?.() || new Date(0)) - (a.createdAt?.toDate?.() || new Date(0)));
+    else if (sortBy === 'recent') {
+      list.sort((a, b) => {
         const da = a.updatedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
         const db_ = b.updatedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
         return db_ - da;
       });
+    } else if (sortBy === 'deadline') {
+      list.sort((a, b) => {
+        const da = a.deadline ? new Date(a.deadline) : new Date('9999');
+        const db_ = b.deadline ? new Date(b.deadline) : new Date('9999');
+        return da - db_;
+      });
     } else if (sortBy === 'favorites') {
-      filtered.sort((a, b) => {
+      list.sort((a, b) => {
         const diff = (favIds.has(b.id) ? 1 : 0) - (favIds.has(a.id) ? 1 : 0);
         return diff !== 0 ? diff : (a.nome || '').localeCompare(b.nome || '');
       });
     }
 
-    return filtered;
-  }, [projetos, searchFilter, statusFilter, sortBy, favIds]);
+    return list;
+  }, [projetos, searchFilter, statusFilter, sortBy, activeTagFilter, favIds]);
 
   useEffect(() => {
-    fetchProjetos();
-    checkPermissions();
-    loadFavorites();
+    if (userProfile) {
+      fetchProjetos();
+      checkPermissions();
+      loadFavorites();
+    }
   }, [userProfile]);
 
   const loadFavorites = async () => {
     if (!currentUser) { setFavIds(new Set()); return; }
     const res = await getFavorites(currentUser.uid, 'project');
-    if (res.success) {
-      const ids = new Set(res.favorites.map(f => f.id));
-      setFavIds(ids);
-    }
+    if (res.success) setFavIds(new Set(res.favorites.map(f => f.id)));
   };
 
   const checkPermissions = async () => {
     if (!userProfile) return;
-    
-    // Admin pode acessar tudo
-    if (isAdmin) {
-      setCanManageProjects(true);
-      setCanAccessAdmin(true);
-      return;
-    }
-    
-    // Todos os gerentes (qualquer cargo que começa com "gerente") têm acesso ao admin
+    if (isAdmin) { setCanManageProjects(true); setCanAccessAdmin(true); return; }
     if (typeof userProfile.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')) {
-      setCanManageProjects(true);
-      setCanAccessAdmin(true);
-      return;
+      setCanManageProjects(true); setCanAccessAdmin(true); return;
     }
-    
-    // Verificar se o cargo do usuário tem permissões para algum projeto
     try {
-      const cargosQuery = query(
-        collection(db, 'cargos'),
-        where('nome', '==', userProfile.funcao)
-      );
-      const cargosSnapshot = await getDocs(cargosQuery);
-      
-      if (!cargosSnapshot.empty) {
-        const cargoData = cargosSnapshot.docs[0].data();
-        const projetos = cargoData.projetos || [];
-        setProjetosPermitidos(projetos);
-        
-        // Pode criar projetos se tiver permissão canCreateProjetos ou tiver projetos atribuídos
-        const canCreate = cargoData.canCreateProjetos || projetos.length > 0;
-        setCanManageProjects(canCreate);
-        
-        // Permitir acesso ao admin se tiver qualquer permissão de gerenciamento
-        const temPermissaoAdmin = cargoData.canManageUsers || cargoData.canManagePermissions;
-        setCanAccessAdmin(temPermissaoAdmin);
-      } else {
-        setCanManageProjects(false);
-        setCanAccessAdmin(false);
+      const snap = await getDocs(query(collection(db, 'cargos'), where('nome', '==', userProfile.funcao)));
+      if (!snap.empty) {
+        const cargo = snap.docs[0].data();
+        setProjetosPermitidos(cargo.projetos || []);
+        setCanManageProjects(cargo.canCreateProjetos || (cargo.projetos || []).length > 0);
+        setCanAccessAdmin(cargo.canManageUsers || cargo.canManagePermissions);
       }
-    } catch (error) {
-      console.error('Erro ao verificar permissões:', error);
+    } catch {
       setCanManageProjects(false);
       setCanAccessAdmin(false);
     }
@@ -154,339 +181,402 @@ function SelecaoProjeto() {
 
   const fetchProjetos = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'projetos'));
-      let listaDoBanco = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Admin e todos os gerentes veem todos os projetos
-      if (userProfile && (userProfile.funcao === 'admin' || (typeof userProfile.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')))) {
-        // Mostrar todos os projetos
-      } else if (userProfile && userProfile.funcao !== 'admin') {
-        const projetosDoUsuario = userProfile.projetos || [];
-        if (projetosDoUsuario.length > 0) {
-          // Filtra apenas os projetos atribuídos ao usuário
-          listaDoBanco = listaDoBanco.filter(proj => projetosDoUsuario.includes(proj.id));
-        } else {
-          // Se não tem projetos atribuídos, mostra lista vazia
-          listaDoBanco = [];
-        }
+      const snap = await getDocs(collection(db, 'projetos'));
+      let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const isManager = typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente');
+      if (!isAdmin && !isManager) {
+        const userProjetos = userProfile?.projetos || [];
+        list = userProjetos.length > 0 ? list.filter(p => userProjetos.includes(p.id)) : [];
       }
-      
-      setProjetos(listaDoBanco);
-    } catch (error) {
-      console.error("Erro ao buscar projetos:", error);
+
+      setProjetos(list);
+    } catch {
+      showToast('Erro ao carregar projetos.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-    const handleSaveProject = async (e) => {
-    e.preventDefault();
-        if (!newProjectName.trim()) return;
-    setSaving(true);
-    try {
-                const extras = extraFields
-                    .filter(f => f.name?.trim())
-                    .map(f => ({ name: f.name.trim(), description: (f.description || '').trim(), url: (f.url || '').trim(), type: f.type || 'link', files: [], formFields: [], formResponses: [] }));
-
-                if (editingProject) {
-                    await updateDoc(doc(db, 'projetos', editingProject.id), {
-                        nome: newProjectName,
-                        urlForms,
-                        urlSharePoint,
-                        descricao: editingProject.descricao || 'Base ativa',
-                        updatedAt: new Date()
-                    });
-                    await ActivityLogger.projectEdited(newProjectName, currentUser.uid, primeiroNome);
-                } else {
-                    await addDoc(collection(db, 'projetos'), {
-                        nome: newProjectName,
-                        extras,
-                        createdAt: new Date()
-                    });
-                    await ActivityLogger.projectCreated(newProjectName, currentUser.uid, primeiroNome);
-                }
-
-                setNewProjectName('');
-                setUrlForms('');
-                setUrlSharePoint('');
-                setExtraFields([]);
-                setEditingProject(null);
-                setIsModalOpen(false);
-                fetchProjetos();
-    } catch (e) { showToast('Erro ao salvar projeto.', 'error'); } finally { setSaving(false); }
-  };
-
-    const addExtraField = () => setExtraFields(prev => [...prev, { name: '', description: '', url: '', type: 'link' }]);
-    const updateExtraField = (index, key, val) => setExtraFields(prev => prev.map((item, i) => i === index ? { ...item, [key]: val } : item));
-    const removeExtraField = (index) => setExtraFields(prev => prev.filter((_, i) => i !== index));
-
   const canEditProject = (projetoId) => {
     if (isAdmin) return true;
-    // Todos os gerentes podem editar projetos
     if (typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')) return true;
     return projetosPermitidos.includes(projetoId);
   };
 
-  const handleDeleteProject = async (e, projetoId) => {
-    e.stopPropagation();
-    setConfirmDelete({ open: true, projetoId });
-  };
-
-  const confirmDeleteProject = async () => {
+  // ─── CRUD ────────────────────────────────────────────────────────────────────
+  const handleSaveProject = async (e) => {
+    e.preventDefault();
+    if (!newProjectName.trim()) return;
+    setSaving(true);
     try {
-      const projeto = projetos.find(p => p.id === confirmDelete.projetoId);
-      const projectName = projeto?.nome || 'Projeto';
-      
-      await deleteDoc(doc(db, 'projetos', confirmDelete.projetoId));
-      setProjetos(prev => prev.filter(p => p.id !== confirmDelete.projetoId));
-      setConfirmDelete({ open: false, projetoId: null });
-      showToast('Projeto excluído com sucesso!', 'success');
-      
-      // Registrar atividade
-      await ActivityLogger.projectDeleted(projectName, currentUser.uid, primeiroNome);
-    } catch (error) {
-      console.error("Erro ao excluir:", error);
-      showToast('Erro ao excluir projeto.', 'error');
-      setConfirmDelete({ open: false, projetoId: null });
+      const tags = newTagsInput.split(',').map(t => t.trim()).filter(Boolean);
+      const deadline = newDeadline || null;
+
+      if (editingProject) {
+        await updateDoc(doc(db, 'projetos', editingProject.id), {
+          nome: newProjectName,
+          tags,
+          deadline,
+          updatedAt: new Date(),
+        });
+        ActivityLogger.projectEdited(newProjectName, currentUser.uid, primeiroNome);
+        showToast('Projeto atualizado!');
+      } else {
+        const extras = extraFields
+          .filter(f => f.name?.trim())
+          .map(f => ({
+            name: f.name.trim(),
+            description: (f.description || '').trim(),
+            url: (f.url || '').trim(),
+            type: f.type || 'link',
+            files: [], formFields: [], formResponses: [],
+          }));
+        await addDoc(collection(db, 'projetos'), {
+          nome: newProjectName,
+          tags,
+          deadline,
+          extras,
+          ativa: true,
+          createdAt: new Date(),
+        });
+        ActivityLogger.projectCreated(newProjectName, currentUser.uid, primeiroNome);
+        showToast('Projeto criado!');
+      }
+
+      resetModal();
+      fetchProjetos();
+    } catch {
+      showToast('Erro ao salvar projeto.', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleSelectProject = (projeto) => {
-    navigate('/painel-projeto', { state: { projeto } });
+  // Soft delete — move para lixeira em vez de apagar
+  const confirmSoftDelete = async () => {
+    try {
+      await updateDoc(doc(db, 'projetos', confirmDelete.projetoId), {
+        deletedAt: new Date(),
+        deletedBy: currentUser.uid,
+      });
+      setProjetos(prev =>
+        prev.map(p => p.id === confirmDelete.projetoId ? { ...p, deletedAt: new Date() } : p)
+      );
+      ActivityLogger.projectDeleted(confirmDelete.nome, currentUser.uid, primeiroNome);
+      showToast('Projeto movido para a lixeira.');
+    } catch {
+      showToast('Erro ao excluir projeto.', 'error');
+    } finally {
+      setConfirmDelete({ open: false, projetoId: null, nome: '' });
+    }
   };
 
-    const openCreateModal = () => {
-        setEditingProject(null);
-        setNewProjectName('');
-        setUrlForms('');
-        setUrlSharePoint('');
-        setExtraFields([]);
-        setIsModalOpen(true);
-    };
+  const resetModal = () => {
+    setEditingProject(null);
+    setNewProjectName('');
+    setNewTagsInput('');
+    setNewDeadline('');
+    setExtraFields([]);
+    setIsModalOpen(false);
+  };
 
-    const openEditModal = (projeto) => {
-        setEditingProject(projeto);
-        setNewProjectName(projeto.nome || '');
-        setUrlForms(projeto.urlForms || '');
-        setUrlSharePoint(projeto.urlSharePoint || '');
-        setIsModalOpen(true);
-    };
+  const openCreateModal = () => {
+    setEditingProject(null);
+    setNewProjectName('');
+    setNewTagsInput('');
+    setNewDeadline('');
+    setExtraFields([]);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (e, projeto) => {
+    e.stopPropagation();
+    setEditingProject(projeto);
+    setNewProjectName(projeto.nome || '');
+    setNewTagsInput((projeto.tags || []).join(', '));
+    setNewDeadline(projeto.deadline || '');
+    setExtraFields([]);
+    setIsModalOpen(true);
+  };
+
+  const visibleProjetos = projetos.filter(p => !p.deletedAt);
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 transition-colors duration-200 text-white">
-      {/* Background decorativo */}
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl" />
       </div>
-    {/* ThemeToggle removed */}
 
-      <header className="relative w-full flex items-center justify-between py-3 md:py-6 px-3 md:px-8 border-b border-gray-700 min-h-[56px] md:h-20 bg-gray-900/50 backdrop-blur-md z-20">
-        <div className="flex items-center min-w-[44px]">
-          <button onClick={() => navigate('/')} className="flex items-center gap-1 md:gap-2 text-gray-300 hover:text-[#57B952] hover:bg-white/5 px-3 sm:px-4 py-2 rounded-lg transition-all font-semibold text-xs md:text-sm shrink-0 backdrop-blur-sm">
-            <ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" /> <span className="hidden sm:inline">Voltar</span>
-          </button>
-        </div>
-        <div className="flex-1 flex items-center justify-center gap-2 md:gap-4 px-2">
-          <img src="/img/Designer (6).png" alt="Logo Nora" className="h-9 sm:h-10 md:h-14 w-auto object-contain drop-shadow-lg" />
-          <span className="text-gray-500 text-lg md:text-2xl font-light">|</span>
-          <img 
-            src={isDark ? "/img/Normatel Engenharia_BRANCO.png" : "/img/Normatel Engenharia_PRETO.png"} 
-            alt="Logo Normatel" 
-            className="h-5 sm:h-6 md:h-10 w-auto object-contain drop-shadow-lg" 
-          />
-        </div>
-        
-        {currentUser && (
-          <div className="flex items-center gap-2 md:gap-3 min-w-[80px] justify-end shrink-0">
-            <NotificationCenter />
-            <button 
-              onClick={() => navigate('/perfil')} 
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-[#57B952] bg-gray-700 flex items-center justify-center hover:border-green-600 transition-colors cursor-pointer shrink-0"
-            >
-              {fotoURL ? <img src={fotoURL} className="w-full h-full object-cover" alt="Avatar" /> : <User size={16} className="md:w-5 md:h-5 text-gray-500" />}
-            </button>
-            <span className="hidden sm:inline text-xs md:text-base lg:text-lg font-semibold text-white truncate max-w-[60px] sm:max-w-[100px] md:max-w-none"><span className="hidden md:inline">Olá, </span>{primeiroNome}</span>
-          </div>
-        )}
-      </header>
+      <Toast toast={toast} />
+      <UserPageHeader backTo="/" />
 
       <main className="flex-grow flex flex-col items-center p-2 sm:p-3 md:p-8 relative z-10">
         <div className="w-full max-w-6xl">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-3 md:mb-8 gap-3 md:gap-4">
-                <div className="flex-1 w-full">
-                    <h1 className="text-lg sm:text-xl md:text-3xl font-bold text-white">Seleção de projetos</h1>
-                    <p className="text-xs sm:text-sm md:text-base text-gray-300 mt-1 md:mt-2">Escolha o projeto para acessar o ambiente de trabalho.</p>
-                </div>
-                
-                <div className="flex gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end">
-                    {/* BOTÃO ADMIN - Apenas para Administrador */}
-                    {isAdmin && (
-                        <Link
-                            to="/admin"
-                            className="bg-purple-500/20 text-purple-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-purple-500/30 text-xs sm:text-sm border border-purple-500/30"
-                        >
-                          <Shield size={16} className="sm:w-[18px] sm:h-[18px]" />
-                          <span className="hidden sm:inline">Administrador</span>
-                          <span className="sm:hidden">Adm</span>
-                        </Link>
-                    )}
 
-                    {/* BOTÃO GERÊNCIA */}
-                    {(isAdmin || canAccessAdmin) && (
-                        <Link
-                            to="/gerencia"
-                            className="bg-orange-500/20 text-orange-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-orange-500/30 text-xs sm:text-sm border border-orange-500/30"
-                        >
-                          <Shield size={16} className="sm:w-[18px] sm:h-[18px]" />
-                          <span className="hidden sm:inline">Gerência</span>
-                          <span className="sm:hidden">Ger</span>
-                        </Link>
-                    )}
-
-                    {/* Botão Novo Projeto */}
-                    {canManageProjects && (
-                        <button onClick={openCreateModal} className="bg-[#57B952] hover:bg-green-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-transform hover:scale-105 text-xs sm:text-sm">
-                            <Plus size={16} className="sm:w-[18px] sm:h-[18px]" /> <span className="hidden xs:inline">Novo Projeto</span><span className="xs:hidden">Novo</span>
-                        </button>
-                    )}
-                </div>
+          {/* Título + Botões */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-3 md:mb-6 gap-3">
+            <div className="flex-1 w-full">
+              <h1 className="text-lg sm:text-xl md:text-3xl font-bold text-white">Seleção de projetos</h1>
+              <p className="text-xs sm:text-sm md:text-base text-gray-300 mt-1">Escolha o projeto para acessar o ambiente de trabalho.</p>
             </div>
+            <div className="flex gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end">
+              <Link to="/meu-painel" className="bg-[#57B952]/20 text-[#57B952] px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-[#57B952]/30 text-xs sm:text-sm border border-[#57B952]/30">
+                <LayoutDashboard size={15} /><span className="hidden sm:inline">Meu Painel</span><span className="sm:hidden">Painel</span>
+              </Link>
+              {isAdmin && (
+                <Link to="/admin" className="bg-purple-500/20 text-purple-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-purple-500/30 text-xs sm:text-sm border border-purple-500/30">
+                  <Shield size={15} /><span className="hidden sm:inline">Administrador</span><span className="sm:hidden">Adm</span>
+                </Link>
+              )}
+              {(isAdmin || canAccessAdmin) && (
+                <Link to="/gerencia" className="bg-orange-500/20 text-orange-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-orange-500/30 text-xs sm:text-sm border border-orange-500/30">
+                  <Shield size={15} /><span className="hidden sm:inline">Gerência</span><span className="sm:hidden">Ger</span>
+                </Link>
+              )}
+              {canManageProjects && (
+                <button onClick={openCreateModal} className="bg-[#57B952] hover:bg-green-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-transform hover:scale-105 text-xs sm:text-sm">
+                  <Plus size={15} /> Novo Projeto
+                </button>
+              )}
+            </div>
+          </div>
 
-            {/* Filtros e Busca */}
-            <div className="mb-4 md:mb-6 bg-white/10 backdrop-blur-md rounded-xl shadow-lg border border-white/20 p-3 md:p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                <div className="sm:col-span-2 md:col-span-2">
-                  <label className="block text-xs sm:text-sm font-medium text-gray-200 mb-1.5 md:mb-2">Buscar</label>
-                  <input
-                    type="text"
-                    placeholder="Buscar por nome..."
-                    value={searchFilter}
-                    onChange={(e) => setSearchFilter(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none bg-white/10 text-white placeholder-gray-400 backdrop-blur-sm transition-all hover:bg-white/15"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-200 mb-1.5 md:mb-2">Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none transition-all"
-                    style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
-                  >
-                    <option value="all" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Todos</option>
-                    <option value="active" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Ativos</option>
-                    <option value="inactive" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Inativos</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-200 mb-1.5 md:mb-2">Ordenar por</label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none transition-all"
-                    style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
-                  >
-                    <option value="name" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Nome (A-Z)</option>
-                    <option value="date" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Data de Criação</option>
-                    <option value="recent" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Modificados Recentemente</option>
-                    <option value="favorites" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Favoritos</option>
-                  </select>
-                </div>
+          {/* Onboarding — só aparece para novos usuários sem projetos */}
+          {!loading && visibleProjetos.length === 0 && (
+            <Onboarding onCreateProject={canManageProjects ? openCreateModal : undefined} />
+          )}
+
+          {/* Barra de busca destacada */}
+          <div className="mb-4 relative">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar projeto por nome..."
+              value={searchFilter}
+              onChange={e => setSearchFilter(e.target.value)}
+              className="w-full pl-11 pr-4 py-3.5 text-sm border border-white/20 rounded-xl focus:ring-2 focus:ring-[#57B952] outline-none bg-white/10 backdrop-blur-md text-white placeholder-gray-400 transition-all shadow-lg"
+            />
+          </div>
+
+          {/* Strip de favoritos */}
+          {favIds.size > 0 && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Star size={13} className="text-yellow-400 fill-yellow-400" />
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Favoritos</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                {projetos
+                  .filter(p => !p.deletedAt && favIds.has(p.id))
+                  .map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => navigate(`/projeto/${p.id}`)}
+                      className="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-400/10 border border-yellow-400/25 text-yellow-300 text-xs font-semibold hover:bg-yellow-400/20 transition-colors whitespace-nowrap"
+                    >
+                      <Star size={11} className="fill-yellow-400 text-yellow-400" />
+                      {p.nome}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Filtros */}
+          <div className="mb-4 md:mb-6 bg-white/10 backdrop-blur-md rounded-xl shadow-lg border border-white/20 p-3 md:p-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-200 mb-1.5">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none transition-all"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: '#f9fafb' }}
+                >
+                  <option value="all" style={{ backgroundColor: '#fff', color: '#111' }}>Todos</option>
+                  <option value="active" style={{ backgroundColor: '#fff', color: '#111' }}>Ativos</option>
+                  <option value="inactive" style={{ backgroundColor: '#fff', color: '#111' }}>Inativos</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-200 mb-1.5">Ordenar por</label>
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none transition-all"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: '#f9fafb' }}
+                >
+                  <option value="name"      style={{ backgroundColor: '#fff', color: '#111' }}>Nome (A-Z)</option>
+                  <option value="date"      style={{ backgroundColor: '#fff', color: '#111' }}>Data de Criação</option>
+                  <option value="recent"    style={{ backgroundColor: '#fff', color: '#111' }}>Modificados Recentemente</option>
+                  <option value="deadline"  style={{ backgroundColor: '#fff', color: '#111' }}>Por Prazo</option>
+                  <option value="favorites" style={{ backgroundColor: '#fff', color: '#111' }}>Favoritos</option>
+                </select>
               </div>
             </div>
 
-            {loading ? (
-                <div className="text-center py-20 text-gray-300">Carregando bases...</div>
-            ) : filteredAndSortedProjects.length === 0 ? (
-                <div className="text-center py-20 bg-white/10 backdrop-blur-md rounded-xl shadow border border-white/20">
-                    <p className="text-gray-200 mb-4">
-                      {projetos.length === 0 ? 'Nenhuma base cadastrada ainda.' : 'Nenhum projeto encontrado com os filtros aplicados.'}
-                    </p>
-                    {canManageProjects && projetos.length === 0 && (
-                        <button onClick={() => setIsModalOpen(true)} className="text-[#57B952] font-bold hover:underline">
-                            + Adicionar primeira base
-                        </button>
-                    )}
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                    {filteredAndSortedProjects.map((projeto) => (
-                        <div 
-                            key={projeto.id} 
-                            onClick={() => handleSelectProject(projeto)} 
-                            className="group bg-white/10 backdrop-blur-md p-4 sm:p-5 md:p-8 rounded-xl shadow-lg hover:shadow-xl border border-white/20 hover:border-white/40 text-left transition-all hover:-translate-y-1 flex flex-col h-full relative cursor-pointer"
-                        >
-                            <div className="flex items-start justify-between mb-2 sm:mb-3 md:mb-4">
-                                <div className="bg-[#57B952]/20 p-2 rounded-lg text-[#57B952] border border-[#57B952]/50"><Briefcase size={18} className="sm:w-5 sm:h-5 md:w-6 md:h-6" /></div>
-                                <div className="flex items-center gap-1.5 sm:gap-2">
-                                    <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-gray-300 uppercase tracking-wider">Base Ativa</span>
-                                    <FavoriteButton 
-                                        itemId={projeto.id}
-                                        itemType="project"
-                                        itemData={{ name: projeto.nome }}
-                                        size={16}
-                                        onChange={(next) => {
-                                            setFavIds(prev => {
-                                                const s = new Set(prev);
-                                                if (next) s.add(projeto.id); else s.delete(projeto.id);
-                                                return s;
-                                            });
-                                        }}
-                                    />
-                                    {canEditProject(projeto.id) && (
-                                        <button 
-                                            onClick={(e) => handleDeleteProject(e, projeto.id)}
-                                            className="p-1 sm:p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                            title="Excluir Base"
-                                        >
-                                            <Trash2 size={13} className="sm:w-[14px] sm:h-[14px] md:w-4 md:h-4" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-1.5 sm:mb-2 group-hover:text-[#57B952] transition-colors line-clamp-2">{projeto.nome}</h3>
-                            <p className="text-xs sm:text-sm text-gray-200 mb-4 sm:mb-5 md:mb-6 flex-grow line-clamp-2">{projeto.descricao || 'Acesso ao portal.'}</p>
-                            <div className="mt-auto w-full py-2 rounded-lg bg-white/10 text-center text-xs sm:text-sm font-medium text-white group-hover:bg-[#57B952] group-hover:text-white transition-colors backdrop-blur-sm border border-white/20 group-hover:border-[#57B952]/50">Acessar Projeto</div>
-                        </div>
-                    ))}
-                </div>
+            {/* Filtro por tag */}
+            {allTags.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                <Tag size={12} className="text-gray-500 flex-shrink-0" />
+                <button
+                  onClick={() => setActiveTagFilter('')}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                    !activeTagFilter
+                      ? 'bg-[#57B952]/20 text-[#57B952] border-[#57B952]/30'
+                      : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  Todos
+                </button>
+                {allTags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setActiveTagFilter(t => t === tag ? '' : tag)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                      activeTagFilter === tag
+                        ? 'bg-[#57B952]/20 text-[#57B952] border-[#57B952]/30'
+                        : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
             )}
+          </div>
+
+          {/* Grid de projetos */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+              {[1, 2, 3, 4, 5, 6].map(i => <SkeletonProjectCard key={i} />)}
+            </div>
+          ) : filteredAndSortedProjects.length === 0 ? (
+            <div className="text-center py-20 bg-white/10 backdrop-blur-md rounded-xl shadow border border-white/20">
+              <p className="text-gray-200 mb-4">
+                {visibleProjetos.length === 0
+                  ? 'Nenhuma base cadastrada ainda.'
+                  : 'Nenhum projeto encontrado com os filtros aplicados.'}
+              </p>
+              {canManageProjects && visibleProjetos.length === 0 && (
+                <button onClick={openCreateModal} className="text-[#57B952] font-bold hover:underline">
+                  + Adicionar primeira base
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+              {filteredAndSortedProjects.map(projeto => (
+                <div
+                  key={projeto.id}
+                  onClick={() => navigate(`/projeto/${projeto.id}`)}
+                  className="group bg-white/10 backdrop-blur-md p-4 sm:p-5 md:p-8 rounded-xl shadow-lg hover:shadow-xl border border-white/20 hover:border-white/40 text-left transition-all hover:-translate-y-1 flex flex-col h-full relative cursor-pointer"
+                >
+                  <div className="flex items-start justify-between mb-2 sm:mb-3 md:mb-4">
+                    <div className="bg-[#57B952]/20 p-2 rounded-lg text-[#57B952] border border-[#57B952]/50">
+                      <Briefcase size={18} className="sm:w-5 sm:h-5" />
+                    </div>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <DeadlineBadge deadline={projeto.deadline} />
+                      <span className="text-[9px] sm:text-[10px] font-bold text-gray-300 uppercase tracking-wider hidden sm:inline">
+                        Base Ativa
+                      </span>
+                      <FavoriteButton
+                        itemId={projeto.id}
+                        itemType="project"
+                        itemData={{ name: projeto.nome }}
+                        size={14}
+                        onChange={next => setFavIds(prev => {
+                          const s = new Set(prev);
+                          if (next) s.add(projeto.id); else s.delete(projeto.id);
+                          return s;
+                        })}
+                      />
+                      {canEditProject(projeto.id) && (
+                        <>
+                          <button
+                            onClick={e => openEditModal(e, projeto)}
+                            className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            title="Editar projeto"
+                          >
+                            <Settings size={12} className="sm:w-3.5 sm:h-3.5" />
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); setConfirmDelete({ open: true, projetoId: projeto.id, nome: projeto.nome }); }}
+                            className="p-1 sm:p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            title="Mover para lixeira"
+                          >
+                            <Trash2 size={12} className="sm:w-3.5 sm:h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-1.5 sm:mb-2 group-hover:text-[#57B952] transition-colors line-clamp-2">
+                    {projeto.nome}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-200 mb-3 flex-grow line-clamp-2">
+                    {projeto.descricao || 'Acesso ao portal.'}
+                  </p>
+
+                  {/* Tags */}
+                  {projeto.tags?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {projeto.tags.slice(0, 3).map(tag => (
+                        <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-gray-400 border border-white/10">
+                          {tag}
+                        </span>
+                      ))}
+                      {projeto.tags.length > 3 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-gray-500">
+                          +{projeto.tags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-auto w-full py-2 rounded-lg bg-white/10 text-center text-xs sm:text-sm font-medium text-white group-hover:bg-[#57B952] group-hover:text-white transition-colors border border-white/20 group-hover:border-[#57B952]/50">
+                    Acessar Projeto
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
-      {/* MODAL (criar/editar base) */}
+      <footer className="w-full py-6 text-center text-gray-300 text-xs border-t border-gray-700 bg-gray-900/50 backdrop-blur-md z-20 relative">
+        &copy; 2025 Parceria Petrobras &amp; Normatel Engenharia
+      </footer>
+
+      {/* ─── Modal criar/editar ──────────────────────────────────────────────── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-[#111114] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl border border-white/[0.10] flex flex-col max-h-[95vh] sm:max-h-[88vh]">
-
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.07] flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center flex-shrink-0">
-                  {editingProject
-                    ? <Settings size={18} className="text-[#57B952]" />
-                    : <Briefcase size={18} className="text-[#57B952]" />}
+                  {editingProject ? <Settings size={18} className="text-[#57B952]" /> : <Briefcase size={18} className="text-[#57B952]" />}
                 </div>
                 <div>
                   <p className="font-bold text-white text-base leading-tight">
                     {editingProject ? 'Editar Base' : 'Adicionar Nova Base'}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {editingProject ? editingProject.nome : 'Configure o projeto e adicione seus cards'}
+                    {editingProject ? editingProject.nome : 'Configure o projeto'}
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors"
-              >
+              <button onClick={resetModal} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors">
                 <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleSaveProject} className="flex flex-col flex-1 overflow-hidden">
-              <div className="px-6 py-5 space-y-6 overflow-y-auto flex-1">
+              <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
 
                 {/* Nome */}
                 <div className="space-y-1.5">
@@ -497,148 +587,62 @@ function SelecaoProjeto() {
                     type="text"
                     placeholder="Ex: Projeto 743 — Facilities"
                     value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
+                    onChange={e => setNewProjectName(e.target.value)}
                     required
-                    className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all"
+                    className={inputCls}
                   />
                 </div>
 
-              </div>
+                {/* Tags */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                    Tags <span className="text-gray-600 font-normal normal-case">(separadas por vírgula)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: obras, manutenção, 2025"
+                    value={newTagsInput}
+                    onChange={e => setNewTagsInput(e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+
+                {/* Prazo */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                    Prazo / Deadline
+                  </label>
+                  <input
+                    type="date"
+                    value={newDeadline}
+                    onChange={e => setNewDeadline(e.target.value)}
+                    className={`${inputCls} cursor-pointer`}
+                    style={{ colorScheme: 'dark' }}
+                  />
+                </div>
 
                 {/* Cards — só no modo criar */}
                 {!editingProject && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Cards</label>
-                        {extraFields.filter(f => f.name?.trim()).length > 0 && (
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#57B952]/20 text-[#57B952] text-[10px] font-bold">
-                            {extraFields.filter(f => f.name?.trim()).length}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addExtraField}
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20 hover:bg-[#57B952]/20 font-semibold transition-colors"
-                      >
-                        <Plus size={13} /> Novo card
-                      </button>
-                    </div>
-
-                    {extraFields.length === 0 && (
-                      <button
-                        type="button"
-                        onClick={addExtraField}
-                        className="w-full flex flex-col items-center justify-center gap-2 py-8 border border-dashed border-white/[0.10] rounded-2xl hover:border-[#57B952]/30 hover:bg-[#57B952]/[0.03] transition-all group"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-white/[0.04] group-hover:bg-[#57B952]/10 flex items-center justify-center transition-colors">
-                          <Plus size={18} className="text-gray-600 group-hover:text-[#57B952] transition-colors" />
-                        </div>
-                        <p className="text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">
-                          Clique para adicionar um card
-                        </p>
-                      </button>
-                    )}
-
-                    {extraFields.length > 0 && (
-                      <div className="space-y-3">
-                        {extraFields.map((field, idx) => (
-                          <div key={idx} className="group bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-4 space-y-3 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="w-6 h-6 rounded-lg bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center text-[11px] font-bold text-[#57B952] flex-shrink-0">
-                                  {idx + 1}
-                                </span>
-                                <span className="text-xs text-gray-500 font-medium">Card {idx + 1}</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => removeExtraField(idx)}
-                                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/15 text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                              <input
-                                type="text"
-                                placeholder="Nome do card *"
-                                value={field.name || ''}
-                                onChange={(e) => updateExtraField(idx, 'name', e.target.value)}
-                                className="sm:col-span-3 w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
-                              />
-                              <select
-                                value={field.type || 'link'}
-                                onChange={(e) => updateExtraField(idx, 'type', e.target.value)}
-                                className="sm:col-span-2 w-full px-3 py-2.5 border border-white/[0.10] rounded-xl text-sm focus:outline-none focus:border-[#57B952]/60 transition-all cursor-pointer"
-                                style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
-                              >
-                                {[
-                                  { v: 'link',         l: '🔗 Link Externo' },
-                                  { v: 'documents',    l: '📁 Documentos' },
-                                  { v: 'reports',      l: '📊 Relatórios' },
-                                  { v: 'files',        l: '📄 Arquivos PDF' },
-                                  { v: 'spreadsheets', l: '📈 Planilhas' },
-                                  { v: 'inventory',    l: '📦 Estoque' },
-                                  { v: 'financial',    l: '💰 Financeiro' },
-                                  { v: 'hr',           l: '👥 RH' },
-                                ].map(t => (
-                                  <option key={t.v} value={t.v} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{t.l}</option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <input
-                              type="text"
-                              placeholder="Descrição (opcional)"
-                              value={field.description || ''}
-                              onChange={(e) => updateExtraField(idx, 'description', e.target.value)}
-                              className="w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
-                            />
-
-                            {!NO_URL_TYPES.includes(field.type || 'link') && (
-                              <input
-                                type="text"
-                                placeholder="URL (https://...)"
-                                value={field.url || ''}
-                                onChange={(e) => updateExtraField(idx, 'url', e.target.value)}
-                                className="w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all"
-                              />
-                            )}
-
-                            {NO_URL_TYPES.includes(field.type || 'link') && (
-                              <p className="flex items-center gap-2 text-xs text-blue-300 bg-blue-500/10 border border-blue-400/20 rounded-xl px-3 py-2">
-                                <span>📁</span> Permite upload de arquivos após criado
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <CardFieldsForm
+                    cards={extraFields}
+                    onAdd={() => setExtraFields(prev => [...prev, { name: '', description: '', url: '', type: 'link' }])}
+                    onUpdate={(idx, key, val) =>
+                      setExtraFields(prev => prev.map((f, i) => i === idx ? { ...f, [key]: val } : f))
+                    }
+                    onRemove={idx => setExtraFields(prev => prev.filter((_, i) => i !== idx))}
+                  />
                 )}
+              </div>
 
-              {/* Footer */}
               <div className="px-6 py-4 border-t border-white/[0.07] flex gap-3 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors"
-                >
+                <button type="button" onClick={resetModal} className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 py-3 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
-                >
-                  {saving ? (
-                    <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Salvando...</>
-                  ) : (
-                    <><Save size={15} /> {editingProject ? 'Salvar Alterações' : 'Criar Base'}</>
-                  )}
+                <button type="submit" disabled={saving} className="flex-1 py-3 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
+                  {saving
+                    ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Salvando...</>
+                    : <><Save size={15} /> {editingProject ? 'Salvar Alterações' : 'Criar Base'}</>
+                  }
                 </button>
               </div>
             </form>
@@ -646,51 +650,35 @@ function SelecaoProjeto() {
         </div>
       )}
 
-      {/* TOAST NOTIFICATION */}
-      {toast.show && (
-        <div className="fixed top-8 right-8 z-[200] animate-fade-in">
-          <div className={`border-l-4 ${toast.type === 'error' ? 'bg-red-500/20 border-red-500' : 'bg-green-500/20 border-[#57B952]'} rounded-lg shadow-2xl p-4 flex items-center gap-3 min-w-[300px] text-white`}>
-            <div className={`${toast.type === 'error' ? 'bg-red-500/20' : 'bg-green-500/20'} p-2 rounded-full`}>
-              {toast.type === 'error' ? (
-                <X size={24} className="text-red-500" />
-              ) : (
-                <Building2 size={24} className="text-[#57B952]" />
-              )}
-            </div>
-            <div>
-              <p className="font-bold text-white">{toast.type === 'error' ? 'Erro!' : 'Sucesso!'}</p>
-              <p className="text-sm text-gray-100">{toast.message}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONFIRM DELETE MODAL */}
+      {/* ─── Confirm soft delete ─────────────────────────────────────────────── */}
       {confirmDelete.open && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
-          <div className="bg-gray-800 rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4 border border-gray-700 text-white">
-            <h3 className="text-lg font-bold text-white mb-2">Confirmar exclusão</h3>
-            <p className="text-sm text-gray-200 mb-6">Tem certeza que deseja remover esta base? Esta ação não pode ser desfeita.</p>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[300] p-4">
+          <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-gray-700">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center flex-shrink-0">
+                <Trash2 size={18} className="text-red-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-white text-sm">Mover para lixeira?</p>
+                <p className="text-xs text-gray-500">O projeto pode ser restaurado pelo admin.</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-300 mb-5">
+              <span className="text-white font-medium">{confirmDelete.nome}</span> será movido para a lixeira.
+            </p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmDelete({ open: false, projetoId: null })}
-                className="flex-1 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold transition-colors border border-white/20"
-              >
+              <button onClick={() => setConfirmDelete({ open: false, projetoId: null, nome: '' })} className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition-colors border border-white/20">
                 Cancelar
               </button>
-              <button
-                onClick={confirmDeleteProject}
-                className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors"
-              >
-                Excluir
+              <button onClick={confirmSoftDelete} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">
+                Mover para Lixeira
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <footer className="w-full py-6 text-center text-gray-300 text-xs shrink-0 border-t border-gray-700 bg-gray-900/50 backdrop-blur-md z-20">&copy; 2025 Parceria Petrobras & Normatel Engenharia</footer>
     </div>
   );
 }
+
 export default SelecaoProjeto;

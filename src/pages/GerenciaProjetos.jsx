@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc } from 'firebase/firestore';
 
 function Toast({ toast }) {
   if (!toast.show) return null;
@@ -38,7 +38,7 @@ const CARD_TYPES = [
 const NO_URL_TYPES = ['documents', 'files', 'spreadsheets'];
 
 // Garante legibilidade no dropdown nativo em qualquer SO/browser
-const SEL = { backgroundColor: '#1a1a20', color: '#f9fafb' };  // select fechado: escuro
+const SEL = { backgroundColor: 'rgba(255,255,255,0.05)', color: '#f9fafb' };  // select fechado: mesmo tom dos inputs
 const OPT = { backgroundColor: '#ffffff', color: '#111827' };  // options: branco
 
 const inputCls = 'w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all';
@@ -52,7 +52,7 @@ function GerenciaProjetos() {
     userProfile?.funcao === 'admin' ||
     (typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente'));
 
-  const [projetos, setProjetos] = useState([]);
+  const [allProjetos, setAllProjetos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -84,7 +84,7 @@ function GerenciaProjetos() {
   const fetchProjetos = async () => {
     try {
       const snap = await getDocs(collection(db, 'projetos'));
-      setProjetos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setAllProjetos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch {
       showToast('Erro ao carregar projetos.', 'error');
     } finally {
@@ -107,7 +107,7 @@ function GerenciaProjetos() {
       const extras = createExtras
         .filter(c => c.nome.trim())
         .map(c => ({ name: c.nome.trim(), description: c.descricao.trim(), url: c.url.trim(), type: c.tipo || 'link', files: [], formFields: [], formResponses: [] }));
-      await addDoc(collection(db, 'projetos'), { nome: createForm.nome.trim(), extras, criadoEm: new Date() });
+      await addDoc(collection(db, 'projetos'), { nome: createForm.nome.trim(), extras, criadoEm: new Date(), deletedAt: null });
       closeCreate();
       showToast('Projeto criado!');
       fetchProjetos();
@@ -132,9 +132,11 @@ function GerenciaProjetos() {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'projetos', editModal.projeto.id), { nome: editForm.nome.trim() });
+      setAllProjetos(prev => prev.map(p =>
+        p.id === editModal.projeto.id ? { ...p, nome: editForm.nome.trim() } : p
+      ));
       setEditModal({ open: false, projeto: null });
       showToast('Projeto atualizado!');
-      fetchProjetos();
     } catch {
       showToast('Erro ao salvar.', 'error');
     } finally {
@@ -144,10 +146,15 @@ function GerenciaProjetos() {
 
   const handleDelete = async () => {
     try {
-      await deleteDoc(doc(db, 'projetos', confirmDelete.projetoId));
+      await updateDoc(doc(db, 'projetos', confirmDelete.projetoId), {
+        deletedAt: new Date(),
+        deletedBy: userProfile?.uid || null,
+      });
+      setAllProjetos(prev => prev.map(p =>
+        p.id === confirmDelete.projetoId ? { ...p, deletedAt: new Date() } : p
+      ));
       setConfirmDelete({ open: false, projetoId: null, nome: '' });
-      showToast('Projeto excluído.');
-      fetchProjetos();
+      showToast('Projeto movido para a lixeira.');
     } catch {
       showToast('Erro ao excluir.', 'error');
     }
@@ -157,7 +164,7 @@ function GerenciaProjetos() {
     e.preventDefault();
     setSavingCard(true);
     try {
-      const projeto = projetos.find(p => p.id === cardModal.projetoId);
+      const projeto = allProjetos.find(p => p.id === cardModal.projetoId);
       const extras = projeto?.extras || [];
       await updateDoc(doc(db, 'projetos', cardModal.projetoId), {
         extras: [...extras, {
@@ -181,18 +188,20 @@ function GerenciaProjetos() {
     }
   };
 
+  const projetos = allProjetos.filter(p => !p.deletedAt);
+
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white font-[Outfit,sans-serif]">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white font-[Outfit,sans-serif]">
       <Toast toast={toast} />
 
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-white/[0.08] bg-[#0a0a0f]/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 border-b border-white/20 bg-gray-900/50 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/gerencia')} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
@@ -539,7 +548,7 @@ function GerenciaProjetos() {
           <div className="bg-[#161618] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <p className="font-semibold text-white mb-2">Excluir projeto?</p>
             <p className="text-sm text-gray-500 mb-5">
-              <span className="text-white font-medium">{confirmDelete.nome}</span> será removido permanentemente.
+              <span className="text-white font-medium">{confirmDelete.nome}</span> será movido para a lixeira e pode ser restaurado pelo admin.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete({ open: false, projetoId: null, nome: '' })} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition-colors">Cancelar</button>

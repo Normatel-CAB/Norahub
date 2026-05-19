@@ -21,11 +21,14 @@ import VisualizadorDashboard from './pages/VisualizadorDashboard';
 import ConstrutorFormulario from './pages/ConstrutorFormulario';
 import Dashboard from './pages/Dashboard';
 import MeusFavoritos from './pages/MeusFavoritos';
+import MeuPainel from './pages/MeuPainel';
+import LogsAuditoria from './pages/LogsAuditoria';
+import Lixeira from './pages/Lixeira';
+import AdminAnalytics from './pages/AdminAnalytics';
+import GlobalNotice from './components/GlobalNotice';
 import PrivateRoute from './components/PrivateRoute';
 import InstallPWA from './components/InstallPWA';
 import GlobalSearch from './components/GlobalSearch';
-import KeyboardShortcuts from './components/KeyboardShortcuts';
-import Chatbot from './components/Chatbot';
 import PageTransition from './components/PageTransition';
 import { useState, useEffect } from 'react';
 
@@ -47,10 +50,9 @@ function App() {
   return (
     <BrowserRouter>
       <PageTransition>
+        <GlobalNotice />
         <InstallPWA />
         <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-        <KeyboardShortcuts />
-        <Chatbot />
         <Routes>
           <Route path="/" element={<Capa />} />
           
@@ -59,6 +61,7 @@ function App() {
           <Route path="/esqueceu-senha" element={<EsqueceuSenha />} />
           <Route path="/tutoriais" element={<Tutoriais />} />
           <Route path="/favoritos" element={<PrivateRoute><MeusFavoritos /></PrivateRoute>} />
+          <Route path="/meu-painel" element={<PrivateRoute><MeuPainel /></PrivateRoute>} />
 
           {/* Rota Protegida: Só entra se tiver login */}
           <Route 
@@ -70,13 +73,23 @@ function App() {
             } 
           />
           
-          <Route 
-            path="/painel-projeto" 
+          {/* Rota principal por ID — permite F5 e links compartilháveis */}
+          <Route
+            path="/projeto/:id"
             element={
               <PrivateRoute>
                 <PainelProjeto />
               </PrivateRoute>
-            } 
+            }
+          />
+          {/* Mantida por retrocompatibilidade — redireciona para seleção se sem state */}
+          <Route
+            path="/painel-projeto"
+            element={
+              <PrivateRoute>
+                <PainelProjeto />
+              </PrivateRoute>
+            }
           />
           
           <Route 
@@ -115,9 +128,8 @@ function App() {
             } 
           />
 
-          {/* As páginas de ação direta continuam públicas ou protegidas conforme sua lógica */}
-          <Route path="/solicitacao-compras" element={<SolicitacaoCompras />} />
-          <Route path="/aprovacao-compras" element={<AprovacaoCompras />} />
+          <Route path="/solicitacao-compras" element={<PrivateRoute><SolicitacaoCompras /></PrivateRoute>} />
+          <Route path="/aprovacao-compras" element={<PrivateRoute><AprovacaoCompras /></PrivateRoute>} />
 
           <Route path="/perfil" element={<PrivateRoute><Perfil /></PrivateRoute>} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
@@ -128,6 +140,9 @@ function App() {
           <Route path="/gerencia-cargos" element={<PrivateRoute><GerenciaCargos /></PrivateRoute>} />
           <Route path="/admin" element={<PrivateRoute requiredRole="admin"><AdminDashboard /></PrivateRoute>} />
           <Route path="/admin-cargos" element={<PrivateRoute requiredRole="admin"><AdminCargos /></PrivateRoute>} />
+          <Route path="/logs-auditoria" element={<PrivateRoute requiredRole="gerente"><LogsAuditoria /></PrivateRoute>} />
+          <Route path="/lixeira" element={<PrivateRoute requiredRole="admin"><Lixeira /></PrivateRoute>} />
+          <Route path="/admin-analytics" element={<PrivateRoute requiredRole="gerente"><AdminAnalytics /></PrivateRoute>} />
         </Routes>
       </PageTransition>
     </BrowserRouter>

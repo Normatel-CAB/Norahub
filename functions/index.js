@@ -22,7 +22,9 @@ exports.sendEmailResend = functions.region('southamerica-east1').https.onCall(
     // Validação adicional de email
     const validatedTo = InputValidator.validateEmail(to);
 
-    // Defina um remetente verificado no Resend (ajuste conforme seu domínio)
+    // Sanitiza HTML: remove scripts, event handlers e javascript: URIs para evitar XSS em emails
+    const sanitizedHtml = InputValidator.sanitizeHtml(html);
+
     const fromAddress = from || process.env.RESEND_FROM || 'NoraHub <notificacoes@noreply.norahub.com>';
 
     try {
@@ -30,7 +32,7 @@ exports.sendEmailResend = functions.region('southamerica-east1').https.onCall(
         from: fromAddress,
         to: validatedTo,
         subject: InputValidator.sanitizeString(subject),
-        html
+        html: sanitizedHtml
       });
 
       await SecurityLogger.log({

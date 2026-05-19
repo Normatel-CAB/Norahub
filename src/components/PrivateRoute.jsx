@@ -56,8 +56,7 @@ function PrivateRoute({ children, requiredRole }) {
         } else {
           setHasAdminPermission(false);
         }
-      } catch (error) {
-        console.error('Erro ao verificar permissões de admin:', error);
+      } catch {
         setHasAdminPermission(false);
       }
       
@@ -76,9 +75,15 @@ function PrivateRoute({ children, requiredRole }) {
     if (userProfile?.funcao !== 'admin' && !hasAdminPermission) {
       return <Navigate to="/" replace />;
     }
-  } else if (requiredRole && userProfile && userProfile.funcao !== requiredRole && userProfile.funcao !== 'admin') {
-     // Outras rotas protegidas
-     return <Navigate to="/" replace />;
+  } else if (requiredRole && userProfile) {
+    const funcao = userProfile.funcao ?? '';
+    const isAdminUser = funcao === 'admin';
+    const isExactMatch = funcao === requiredRole;
+    // "gerente" como requiredRole aceita qualquer cargo que contenha "gerente"
+    const isGerenteMatch = requiredRole === 'gerente' && funcao.toLowerCase().includes('gerente');
+    if (!isAdminUser && !isExactMatch && !isGerenteMatch) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return children;
