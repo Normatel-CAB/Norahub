@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { X, Layers } from 'lucide-react';
 
 export const CARD_TYPES = [
   { v: 'link',         l: '🔗 Link Externo' },
@@ -19,7 +19,7 @@ export const CUSTOM_FORM_TYPES = new Set(['forms']);
 const inputCls =
   'w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all';
 
-export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove }) {
+export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, carteiras = [] }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -62,6 +62,7 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove }) {
             const type = card.type ?? card.tipo ?? 'link';
             const description = card.description ?? card.descricao ?? '';
             const url = card.url ?? '';
+            const carteiraId = card.carteiraId ?? null;
             const noUrl = NO_URL_TYPES.has(type);
             const isForm = CUSTOM_FORM_TYPES.has(type);
 
@@ -135,6 +136,26 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove }) {
                     📝 Abrirá o construtor de formulário personalizado
                   </p>
                 )}
+
+                {/* Carteira associada */}
+                <div className="flex items-center gap-2 pt-1 border-t border-white/[0.06]">
+                  <Layers size={13} className="text-gray-600 flex-shrink-0" />
+                  <select
+                    value={carteiraId ?? ''}
+                    onChange={e => onUpdate(idx, 'carteiraId', e.target.value || null)}
+                    className={`flex-1 ${inputCls} text-xs py-2`}
+                    style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: carteiraId ? '#f9fafb' : '#9ca3af' }}
+                  >
+                    <option value="" style={{ backgroundColor: '#111827', color: '#9ca3af' }}>
+                      Sem restrição — visível para todos
+                    </option>
+                    {carteiras.map(c => (
+                      <option key={c.id} value={c.id} style={{ backgroundColor: '#111827', color: '#f9fafb' }}>
+                        {c.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             );
           })}

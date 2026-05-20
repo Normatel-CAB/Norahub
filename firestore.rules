@@ -18,12 +18,13 @@ service cloud.firestore {
     }
     
     // Função helper para verificar se é gerente (verifica em ambas as coleções)
+    // Usa .lower() para comparação case-insensitive: "Gerente de Projeto" → "gerente de projeto"
     function isManager() {
       return isSignedIn() && (
-        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.funcao.matches('.*gerente.*')) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.funcao.matches('.*gerente.*'))
+        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.funcao.lower().matches('.*gerente.*')) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.funcao.lower().matches('.*gerente.*'))
       );
     }
     
@@ -146,6 +147,16 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.uid == userId;
       allow create: if isSignedIn() && request.auth.uid == userId && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Coleção de carteiras (setores)
+    match /carteiras/{carteiraId} {
+      // Todos os usuários autenticados podem ler (filtro por atribuição é feito no frontend)
+      allow read: if isSignedIn();
+      // Criar/editar/excluir: apenas admin ou gerente
+      // Permissão canChangeCarteiras é verificada no lado do cliente
+      allow create, update: if isAdmin() || isManager();
+      allow delete: if isAdmin() || isManager();
     }
   }
 }

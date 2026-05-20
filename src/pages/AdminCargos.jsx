@@ -3,22 +3,30 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Trash2, Edit2, Save, X, CheckCircle, Shield,
   Users2, Lock, FolderPlus, LayoutTemplate, ChevronDown, ChevronUp, Search,
+  UserMinus, Layers, UsersRound, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { seedCargos } from '../services/carteiras';
 
 const PERMISSOES = [
-  { id: 'canManageUsers',       label: 'Gerenciar Usuários',  desc: 'Aprovar cadastros e atribuir cargos',          icon: Users2 },
-  { id: 'canManagePermissions', label: 'Atribuir Projetos',   desc: 'Vincular e revogar projetos de usuários',      icon: Lock },
-  { id: 'canCreateCargos',      label: 'Criar Cargos',        desc: 'Criar e editar cargos no sistema',             icon: Shield },
-  { id: 'canCreateProjetos',    label: 'Criar Projetos',      desc: 'Criar e gerenciar bases de trabalho',          icon: FolderPlus },
-  { id: 'canEditCardsProjetos', label: 'Editar Cards',        desc: 'Adicionar e remover cards dos projetos',       icon: LayoutTemplate },
+  { id: 'canManageUsers',           label: 'Gerenciar Usuários',        desc: 'Aprovar cadastros e atribuir cargos',            icon: Users2 },
+  { id: 'canDeleteUsers',           label: 'Excluir Usuários',          desc: 'Remover colaboradores do sistema',               icon: UserMinus },
+  { id: 'canManagePermissions',     label: 'Atribuir Projetos',         desc: 'Vincular e revogar projetos de usuários',        icon: Lock },
+  { id: 'canManageProjectMembers',  label: 'Gerenciar Membros',         desc: 'Adicionar e remover membros de projetos',        icon: UsersRound },
+  { id: 'canChangeCarteiras',       label: 'Alterar Carteiras',         desc: 'Atribuir e revogar carteiras de usuários',       icon: Layers },
+  { id: 'canCreateCargos',          label: 'Criar Cargos',              desc: 'Criar e editar cargos no sistema',               icon: Shield },
+  { id: 'canCreateProjetos',        label: 'Criar Projetos',            desc: 'Criar e gerenciar bases de trabalho',            icon: FolderPlus },
+  { id: 'canEditCardsProjetos',     label: 'Editar Cards',              desc: 'Adicionar e remover cards dos projetos',         icon: LayoutTemplate },
 ];
 
 const EMPTY_PERMS = {
   canManageUsers: false,
+  canDeleteUsers: false,
   canManagePermissions: false,
+  canManageProjectMembers: false,
+  canChangeCarteiras: false,
   canCreateCargos: false,
   canCreateProjetos: false,
   canEditCardsProjetos: false,
@@ -134,13 +142,33 @@ function AdminCargos() {
   const openEdit = (cargo) => {
     setFormNome(cargo.nome);
     setFormPerms({
-      canManageUsers:       !!cargo.canManageUsers,
-      canManagePermissions: !!cargo.canManagePermissions,
-      canCreateCargos:      !!cargo.canCreateCargos,
-      canCreateProjetos:    !!cargo.canCreateProjetos,
-      canEditCardsProjetos: !!cargo.canEditCardsProjetos,
+      canManageUsers:          !!cargo.canManageUsers,
+      canDeleteUsers:          !!cargo.canDeleteUsers,
+      canManagePermissions:    !!cargo.canManagePermissions,
+      canManageProjectMembers: !!cargo.canManageProjectMembers,
+      canChangeCarteiras:      !!cargo.canChangeCarteiras,
+      canCreateCargos:         !!cargo.canCreateCargos,
+      canCreateProjetos:       !!cargo.canCreateProjetos,
+      canEditCardsProjetos:    !!cargo.canEditCardsProjetos,
     });
     setModal({ open: true, cargo });
+  };
+
+  const handleSeedCargos = async () => {
+    setSaving(true);
+    try {
+      const result = await seedCargos();
+      if (result.success) {
+        showToast(`${result.created} cargo(s) padrão criados!`);
+        await fetchData();
+      } else {
+        showToast('Cargos já existem ou erro ao criar.', 'error');
+      }
+    } catch {
+      showToast('Erro ao criar cargos padrão.', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const togglePerm = (id) =>
@@ -228,13 +256,25 @@ function AdminCargos() {
               </div>
             </div>
           </div>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white font-semibold transition-all hover:scale-[1.02] shadow-md shadow-[#57B952]/20"
-          >
-            <Plus size={15} />
-            <span className="hidden sm:inline">Novo</span> Cargo
-          </button>
+          <div className="flex items-center gap-2">
+            {cargos.length === 0 && (
+              <button
+                onClick={handleSeedCargos}
+                disabled={saving}
+                className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 font-semibold transition-all disabled:opacity-60"
+              >
+                <Sparkles size={14} />
+                <span className="hidden sm:inline">Criar Padrão</span>
+              </button>
+            )}
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white font-semibold transition-all hover:scale-[1.02] shadow-md shadow-[#57B952]/20"
+            >
+              <Plus size={15} />
+              <span className="hidden sm:inline">Novo</span> Cargo
+            </button>
+          </div>
         </div>
       </header>
 

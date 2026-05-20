@@ -22,6 +22,9 @@ import ConstrutorFormulario from './pages/ConstrutorFormulario';
 import Dashboard from './pages/Dashboard';
 import MeusFavoritos from './pages/MeusFavoritos';
 import MeuPainel from './pages/MeuPainel';
+import AdminCarteiras from './pages/AdminCarteiras';
+import MinhasCarteiras from './pages/MinhasCarteiras';
+import GerenciaCarteiras from './pages/GerenciaCarteiras';
 import LogsAuditoria from './pages/LogsAuditoria';
 import Lixeira from './pages/Lixeira';
 import AdminAnalytics from './pages/AdminAnalytics';
@@ -143,6 +146,9 @@ function App() {
           <Route path="/logs-auditoria" element={<PrivateRoute requiredRole="gerente"><LogsAuditoria /></PrivateRoute>} />
           <Route path="/lixeira" element={<PrivateRoute requiredRole="admin"><Lixeira /></PrivateRoute>} />
           <Route path="/admin-analytics" element={<PrivateRoute requiredRole="gerente"><AdminAnalytics /></PrivateRoute>} />
+          <Route path="/admin-carteiras" element={<PrivateRoute requiredRole="gerente"><AdminCarteiras /></PrivateRoute>} />
+          <Route path="/minhas-carteiras" element={<PrivateRoute><MinhasCarteiras /></PrivateRoute>} />
+          <Route path="/projeto/:id/carteiras" element={<PrivateRoute requiredRole="gerente"><GerenciaCarteiras /></PrivateRoute>} />
         </Routes>
       </PageTransition>
     </BrowserRouter>

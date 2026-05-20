@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Shield, Briefcase, ChevronRight, Lock, Activity, Trash2, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Users, Shield, Briefcase, ChevronRight, Lock, Activity, Trash2, TrendingUp, Layers } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -65,6 +65,16 @@ const OPCOES = [
     cor: 'text-purple-400',
     bg: 'bg-purple-500/10 border-purple-500/20',
     permissao: null,
+  },
+  {
+    id: 'carteiras',
+    titulo: 'Carteiras & Setores',
+    descricao: 'Gerenciar setores, adicionar links e atribuir carteiras aos colaboradores',
+    icon: Layers,
+    path: '/admin-carteiras',
+    cor: 'text-cyan-400',
+    bg: 'bg-cyan-500/10 border-cyan-500/20',
+    permissao: 'canChangeCarteiras',
   },
 ];
 

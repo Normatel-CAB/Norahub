@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, Search, CheckCircle, XCircle, AlertTriangle,
   ArrowLeft, Trash2, X, Briefcase, Shield, Zap, Megaphone, Save,
-  ChevronLeft, ChevronRight, UserCheck, UserX, Clock,
+  ChevronLeft, ChevronRight, UserCheck, UserX, Clock, Layers,
 } from 'lucide-react';
 import UserProfileDrawer from '../components/UserProfileDrawer';
 import { useAuth } from '../context/AuthContext';
@@ -403,7 +403,7 @@ function AdminDashboard() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/[0.05]">
-                  {['Usuário', 'Status', 'Último acesso', 'Cargo / Ação', 'Projetos', ''].map(h => (
+                  {['Usuário', 'Status', 'Último acesso', 'Cargo / Ação', 'Projetos', 'Setores', ''].map(h => (
                     <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-gray-600 uppercase tracking-wider ${h === '' ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
@@ -411,7 +411,7 @@ function AdminDashboard() {
               <tbody>
                 {paginatedUsers.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-5 py-16 text-center text-gray-700 text-sm">
+                    <td colSpan="7" className="px-5 py-16 text-center text-gray-700 text-sm">
                       {users.length === 0 ? 'Nenhum usuário cadastrado ainda.' : 'Nenhum resultado encontrado.'}
                     </td>
                   </tr>
@@ -509,6 +509,17 @@ function AdminDashboard() {
                       </button>
                     </td>
 
+                    {/* Setores (por projeto — somente leitura; gerencia em GerenciaCarteiras) */}
+                    <td className="px-5 py-3.5">
+                      {(() => {
+                        const cxp = user.carteirasPorProjeto || {};
+                        const total = Object.values(cxp).reduce((s, a) => s + (a?.length || 0), 0);
+                        return total > 0
+                          ? <span className="text-xs px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">{total} setor{total !== 1 ? 'es' : ''}</span>
+                          : <span className="text-xs text-gray-700">—</span>;
+                      })()}
+                    </td>
+
                     {/* Ações */}
                     <td className="px-5 py-3.5 text-right">
                       <button
@@ -563,6 +574,13 @@ function AdminDashboard() {
                     <button onClick={() => handleApprove(user, user.funcao || 'colaborador')} className="p-2 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25"><CheckCircle size={16} /></button>
                   )}
                   <button onClick={() => setModalProjetos({ open: true, userId: user.id, userName: user.nome, projetosAtuais: user.projetos || [] })} className="p-2 rounded-xl bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20"><Briefcase size={16} /></button>
+                  {(() => {
+                    const cxp = user.carteirasPorProjeto || {};
+                    const total = Object.values(cxp).reduce((s, a) => s + (a?.length || 0), 0);
+                    return total > 0
+                      ? <span className="flex items-center gap-1 p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-xs font-semibold"><Layers size={14} />{total}</span>
+                      : null;
+                  })()}
                   <button onClick={() => setConfirmDelete({ open: true, userId: user.id, userName: user.nome || user.email })} className="p-2 rounded-xl text-gray-600 hover:text-red-400 hover:bg-red-500/15 transition-colors"><Trash2 size={16} /></button>
                 </div>
               </div>

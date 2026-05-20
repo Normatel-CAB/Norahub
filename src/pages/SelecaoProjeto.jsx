@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2, Plus, Briefcase, Settings, X, Save, Trash2, Shield, Calendar,
-  Tag, RotateCcw, LayoutDashboard, Search, Star,
+  Tag, RotateCcw, LayoutDashboard, Search, Star, Layers,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
@@ -10,12 +10,10 @@ import { collection, getDocs, addDoc, doc, updateDoc, query, where } from 'fireb
 import NotificationCenter from '../components/NotificationCenter';
 import { UserPageHeader } from '../components/UserPageHeader';
 import { SkeletonProjectCard } from '../components/Skeleton';
-import { Onboarding } from '../components/Onboarding';
 import { CardFieldsForm } from '../components/CardFieldsForm';
 import ActivityLogger from '../services/activityLogger';
 import FavoriteButton from '../components/FavoriteButton';
 import { getFavorites } from '../services/favorites';
-
 const NO_URL_TYPES = new Set(['documents', 'files', 'spreadsheets']);
 
 const inputCls =
@@ -75,11 +73,13 @@ function SelecaoProjeto() {
   // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [editingCarteiras, setEditingCarteiras] = useState([]);
   const [newProjectName, setNewProjectName] = useState('');
   const [newTagsInput, setNewTagsInput] = useState('');
   const [newDeadline, setNewDeadline] = useState('');
   const [extraFields, setExtraFields] = useState([]);
   const [saving, setSaving] = useState(false);
+
 
   // Filtros
   const [searchFilter, setSearchFilter] = useState('');
@@ -214,29 +214,36 @@ function SelecaoProjeto() {
       const deadline = newDeadline || null;
 
       if (editingProject) {
+        const extras = extraFields
+          .filter(f => f.name?.trim())
+          .map(f => {
+            const orig = (editingProject.extras || []).find(o => o.name === f.name);
+            return {
+              name: f.name.trim(),
+              description: (f.description || '').trim(),
+              url: (f.url || '').trim(),
+              type: f.type || 'link',
+              carteiraId: f.carteiraId || null,
+              files: orig?.files || [],
+              formFields: orig?.formFields || [],
+              formResponses: orig?.formResponses || [],
+            };
+          });
         await updateDoc(doc(db, 'projetos', editingProject.id), {
           nome: newProjectName,
           tags,
           deadline,
+          extras,
           updatedAt: new Date(),
         });
         ActivityLogger.projectEdited(newProjectName, currentUser.uid, primeiroNome);
         showToast('Projeto atualizado!');
       } else {
-        const extras = extraFields
-          .filter(f => f.name?.trim())
-          .map(f => ({
-            name: f.name.trim(),
-            description: (f.description || '').trim(),
-            url: (f.url || '').trim(),
-            type: f.type || 'link',
-            files: [], formFields: [], formResponses: [],
-          }));
         await addDoc(collection(db, 'projetos'), {
           nome: newProjectName,
           tags,
           deadline,
-          extras,
+          extras: [],
           ativa: true,
           createdAt: new Date(),
         });
@@ -274,6 +281,7 @@ function SelecaoProjeto() {
 
   const resetModal = () => {
     setEditingProject(null);
+    setEditingCarteiras([]);
     setNewProjectName('');
     setNewTagsInput('');
     setNewDeadline('');
@@ -283,6 +291,7 @@ function SelecaoProjeto() {
 
   const openCreateModal = () => {
     setEditingProject(null);
+    setEditingCarteiras([]);
     setNewProjectName('');
     setNewTagsInput('');
     setNewDeadline('');
@@ -293,10 +302,21 @@ function SelecaoProjeto() {
   const openEditModal = (e, projeto) => {
     e.stopPropagation();
     setEditingProject(projeto);
+    setEditingCarteiras(
+      (projeto.carteiras || []).sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99))
+    );
     setNewProjectName(projeto.nome || '');
     setNewTagsInput((projeto.tags || []).join(', '));
     setNewDeadline(projeto.deadline || '');
-    setExtraFields([]);
+    setExtraFields(
+      (projeto.extras || []).map(e => ({
+        name: e.name || '',
+        description: e.description || '',
+        url: e.url || '',
+        type: e.type || 'link',
+        carteiraId: e.carteiraId || null,
+      }))
+    );
     setIsModalOpen(true);
   };
 
@@ -325,6 +345,11 @@ function SelecaoProjeto() {
               <Link to="/meu-painel" className="bg-[#57B952]/20 text-[#57B952] px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-[#57B952]/30 text-xs sm:text-sm border border-[#57B952]/30">
                 <LayoutDashboard size={15} /><span className="hidden sm:inline">Meu Painel</span><span className="sm:hidden">Painel</span>
               </Link>
+              {(isAdmin || (userProfile?.carteiras?.length > 0) || typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')) && (
+                <Link to="/minhas-carteiras" className="bg-cyan-500/20 text-cyan-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-cyan-500/30 text-xs sm:text-sm border border-cyan-500/30">
+                  <Layers size={15} /><span className="hidden sm:inline">Carteiras</span><span className="sm:hidden">Cart.</span>
+                </Link>
+              )}
               {isAdmin && (
                 <Link to="/admin" className="bg-purple-500/20 text-purple-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-purple-500/30 text-xs sm:text-sm border border-purple-500/30">
                   <Shield size={15} /><span className="hidden sm:inline">Administrador</span><span className="sm:hidden">Adm</span>
@@ -342,11 +367,6 @@ function SelecaoProjeto() {
               )}
             </div>
           </div>
-
-          {/* Onboarding — só aparece para novos usuários sem projetos */}
-          {!loading && visibleProjetos.length === 0 && (
-            <Onboarding onCreateProject={canManageProjects ? openCreateModal : undefined} />
-          )}
 
           {/* Barra de busca destacada */}
           <div className="mb-4 relative">
@@ -621,16 +641,39 @@ function SelecaoProjeto() {
                   />
                 </div>
 
-                {/* Cards — só no modo criar */}
-                {!editingProject && (
-                  <CardFieldsForm
-                    cards={extraFields}
-                    onAdd={() => setExtraFields(prev => [...prev, { name: '', description: '', url: '', type: 'link' }])}
-                    onUpdate={(idx, key, val) =>
-                      setExtraFields(prev => prev.map((f, i) => i === idx ? { ...f, [key]: val } : f))
-                    }
-                    onRemove={idx => setExtraFields(prev => prev.filter((_, i) => i !== idx))}
-                  />
+                {/* Setores + Cards — só no modo editar */}
+                {editingProject && (
+                  <>
+                    {editingCarteiras.length > 0 && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <Layers size={12} className="text-cyan-400" />
+                          Setores desta base
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {editingCarteiras.map(s => (
+                            <span
+                              key={s.id}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border"
+                              style={{ backgroundColor: `${s.cor}20`, borderColor: `${s.cor}40`, color: s.cor }}
+                            >
+                              {s.nome}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <CardFieldsForm
+                      cards={extraFields}
+                      onAdd={() => setExtraFields(prev => [...prev, { name: '', description: '', url: '', type: 'link', carteiraId: null }])}
+                      onUpdate={(idx, key, val) =>
+                        setExtraFields(prev => prev.map((f, i) => i === idx ? { ...f, [key]: val } : f))
+                      }
+                      onRemove={idx => setExtraFields(prev => prev.filter((_, i) => i !== idx))}
+                      carteiras={editingCarteiras}
+                    />
+                  </>
                 )}
               </div>
 
