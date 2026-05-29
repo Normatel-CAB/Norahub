@@ -17,6 +17,7 @@ import { ErrorState } from '../components/ErrorState';
 import { CardFieldsForm } from '../components/CardFieldsForm';
 import ActivityLogger from '../services/activityLogger';
 import { trackLinkAccess, getRecentLinks } from '../services/favorites';
+import { SETORES_PADRAO } from '../services/carteirasDeProjeto';
 
 // ─── Configs dos cards legados ─────────────────────────────────────────────────
 const GREEN = { bgColor: 'bg-[#57B952]/20', textColor: 'text-[#57B952]', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]' };
@@ -352,11 +353,12 @@ function PainelProjeto() {
     ? projeto.extras.map((e, originalIndex) => ({ ...e, originalIndex })).filter(e => e?.name?.trim())
     : [];
 
-  // Filter legacy extras by carteira if user has restrictions
+  // Filter legacy extras by global sector (user.setores)
+  const userSetores = new Set(userProfile?.setores || []);
   const extras = extrasRaw.filter(card => {
     if (canManageCarteiras) return true;
     if (!card.carteiraId) return true;
-    return userCarteiraIds.has(card.carteiraId);
+    return userSetores.has(card.carteiraId);
   });
 
   const builtInCards = [
@@ -462,11 +464,11 @@ function PainelProjeto() {
                         <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">{card.description || 'Acesse este recurso.'}</p>
                         {accessCount > 0 && <span className="flex items-center gap-1 text-[10px] text-gray-500 mb-2"><Eye size={10} /> {accessCount} {accessCount === 1 ? 'acesso' : 'acessos'}</span>}
                         {!canManageCarteiras && card.carteiraId && (() => {
-                          const c = (projeto.carteiras || []).find(c => c.id === card.carteiraId);
-                          if (!c) return null;
+                          const s = SETORES_PADRAO.find(s => s.id === card.carteiraId);
+                          if (!s) return null;
                           return (
-                            <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border mb-2" style={{ backgroundColor: `${c.cor}20`, borderColor: `${c.cor}40`, color: c.cor }}>
-                              <Layers size={9} /> {c.nome}
+                            <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border mb-2" style={{ backgroundColor: `${s.cor}20`, borderColor: `${s.cor}40`, color: s.cor }}>
+                              <Layers size={9} /> {s.nome}
                             </span>
                           );
                         })()}

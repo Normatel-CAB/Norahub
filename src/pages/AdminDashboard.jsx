@@ -9,6 +9,7 @@ import UserProfileDrawer from '../components/UserProfileDrawer';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { SETORES_PADRAO } from '../services/carteirasDeProjeto';
 
 const PAGE_SIZE = 15;
 
@@ -84,6 +85,8 @@ function AdminDashboard() {
   const [confirmDelete, setConfirmDelete] = useState({ open: false, userId: null, userName: '' });
   const [modalProjetos, setModalProjetos] = useState({ open: false, userId: null, userName: '', projetosAtuais: [] });
   const [searchProjetos, setSearchProjetos] = useState('');
+  const [modalSetores, setModalSetores] = useState({ open: false, userId: null, userName: '', setores: [] });
+  const [searchSetores, setSearchSetores] = useState('');
   const [pendingRoles, setPendingRoles] = useState({});
   const [autoApproval, setAutoApproval] = useState(false);
   const [togglingApproval, setTogglingApproval] = useState(false);
@@ -166,6 +169,39 @@ function AdminDashboard() {
       showToast(`${userName} removido.`);
     } catch { showToast('Erro ao remover.', 'error'); }
     finally { setConfirmDelete({ open: false, userId: null, userName: '' }); }
+  };
+
+  const openSetoresModal = (user) => {
+    setSearchSetores('');
+    setModalSetores({
+      open: true,
+      userId: user.id,
+      userName: user.nome,
+      setores: user.setores ? [...user.setores] : [],
+    });
+  };
+
+  const toggleSetor = (setorId) => {
+    setModalSetores(prev => {
+      const atual = prev.setores;
+      const novo = atual.includes(setorId)
+        ? atual.filter(id => id !== setorId)
+        : [...atual, setorId];
+      return { ...prev, setores: novo };
+    });
+  };
+
+  const salvarSetores = async () => {
+    try {
+      await updateDoc(doc(db, 'usuarios', modalSetores.userId), {
+        setores: modalSetores.setores,
+      });
+      setUsers(prev => prev.map(u =>
+        u.id === modalSetores.userId ? { ...u, setores: modalSetores.setores } : u
+      ));
+      showToast('Setores salvos!');
+      setModalSetores({ open: false, userId: null, userName: '', setores: [] });
+    } catch { showToast('Erro ao salvar setores.', 'error'); }
   };
 
   const salvarProjetos = async () => {
@@ -509,14 +545,22 @@ function AdminDashboard() {
                       </button>
                     </td>
 
-                    {/* Setores (por projeto — somente leitura; gerencia em GerenciaCarteiras) */}
+                    {/* Setores */}
                     <td className="px-5 py-3.5">
                       {(() => {
-                        const cxp = user.carteirasPorProjeto || {};
-                        const total = Object.values(cxp).reduce((s, a) => s + (a?.length || 0), 0);
-                        return total > 0
-                          ? <span className="text-xs px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">{total} setor{total !== 1 ? 'es' : ''}</span>
-                          : <span className="text-xs text-gray-700">—</span>;
+                        const total = (user.setores || []).length;
+                        return (
+                          <button
+                            onClick={() => openSetoresModal(user)}
+                            className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
+                              total > 0
+                                ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20'
+                                : 'bg-white/5 text-gray-500 border-white/10 hover:bg-white/10 hover:text-gray-300'
+                            }`}
+                          >
+                            {total > 0 ? `${total} setor${total !== 1 ? 'es' : ''}` : '+ Atribuir'}
+                          </button>
+                        );
                       })()}
                     </td>
 
@@ -574,13 +618,7 @@ function AdminDashboard() {
                     <button onClick={() => handleApprove(user, user.funcao || 'colaborador')} className="p-2 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25"><CheckCircle size={16} /></button>
                   )}
                   <button onClick={() => setModalProjetos({ open: true, userId: user.id, userName: user.nome, projetosAtuais: user.projetos || [] })} className="p-2 rounded-xl bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20"><Briefcase size={16} /></button>
-                  {(() => {
-                    const cxp = user.carteirasPorProjeto || {};
-                    const total = Object.values(cxp).reduce((s, a) => s + (a?.length || 0), 0);
-                    return total > 0
-                      ? <span className="flex items-center gap-1 p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-xs font-semibold"><Layers size={14} />{total}</span>
-                      : null;
-                  })()}
+                  <button onClick={() => openSetoresModal(user)} className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"><Layers size={16} /></button>
                   <button onClick={() => setConfirmDelete({ open: true, userId: user.id, userName: user.nome || user.email })} className="p-2 rounded-xl text-gray-600 hover:text-red-400 hover:bg-red-500/15 transition-colors"><Trash2 size={16} /></button>
                 </div>
               </div>
@@ -658,6 +696,81 @@ function AdminDashboard() {
           projetos={projetos}
           onClose={() => setSelectedUser(null)}
         />
+      )}
+
+      {/* ── Setores modal ── */}
+      {modalSetores.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-gray-800 border border-white/20 rounded-2xl shadow-2xl w-full max-w-lg max-h-[82vh] flex flex-col">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
+                  <Layers size={14} className="text-cyan-400" />
+                </div>
+                <div>
+                  <p className="font-bold text-white text-sm">Atribuir Setores</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{modalSetores.userName}</p>
+                </div>
+              </div>
+              <button onClick={() => setModalSetores({ open: false, userId: null, userName: '', setores: [] })} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors">
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="px-4 pt-4 pb-2">
+              <div className="relative">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Buscar setor..."
+                  value={searchSetores}
+                  onChange={e => setSearchSetores(e.target.value)}
+                  className="w-full pl-8 pr-4 py-2 bg-white/10 border border-white/20 rounded-xl text-sm text-white placeholder-gray-700 focus:outline-none focus:border-cyan-500/40"
+                />
+              </div>
+            </div>
+
+            {/* Body — 10 setores fixos globais */}
+            <div className="flex-1 overflow-y-auto px-4 pb-3 space-y-1">
+              {SETORES_PADRAO.filter(s =>
+                !searchSetores || s.nome.toLowerCase().includes(searchSetores.toLowerCase())
+              ).map(setor => {
+                const checked = modalSetores.setores.includes(setor.id);
+                return (
+                  <label
+                    key={setor.id}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors border ${
+                      checked ? 'border-cyan-500/25 bg-cyan-500/10' : 'border-transparent hover:bg-white/10'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleSetor(setor.id)}
+                      className="w-4 h-4 flex-shrink-0 accent-cyan-400"
+                    />
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: setor.cor }} />
+                    <span className="text-sm text-white font-medium flex-1">{setor.nome}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-4 border-t border-white/20 flex items-center justify-between gap-3">
+              <span className="text-xs text-gray-600">
+                {modalSetores.setores.length} setor(es) selecionado(s)
+              </span>
+              <div className="flex gap-3">
+                <button onClick={() => setModalSetores({ open: false, userId: null, userName: '', setores: [] })} className="px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-sm text-gray-300 font-medium hover:bg-white/[0.08] transition-colors">Cancelar</button>
+                <button onClick={salvarSetores} className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-bold transition-colors">Salvar</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Projects modal ── */}

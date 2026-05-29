@@ -125,6 +125,22 @@ export async function removeLink(projetoId, carteiraId, linkId) {
   }
 }
 
+// ─── Setores fixos globais ────────────────────────────────────────────────────
+// Usados no seletor de cards e na atribuição de usuários
+
+export const SETORES_PADRAO = [
+  { id: 'civil',          nome: 'Civil',          cor: '#3B82F6' },
+  { id: 'eletrica',       nome: 'Elétrica',        cor: '#EAB308' },
+  { id: 'limpeza',        nome: 'Limpeza',         cor: '#06B6D4' },
+  { id: 'rh',             nome: 'RH',              cor: '#EC4899' },
+  { id: 'compras',        nome: 'Compras',         cor: '#57B952' },
+  { id: 'logistica',      nome: 'Logística',       cor: '#F97316' },
+  { id: 'planejamento',   nome: 'Planejamento',    cor: '#8B5CF6' },
+  { id: 'administrativo', nome: 'Administrativo',  cor: '#64748B' },
+  { id: 'areas-verdes',   nome: 'Áreas Verdes',    cor: '#22C55E' },
+  { id: 'sms',            nome: 'SMS',             cor: '#EF4444' },
+];
+
 // ─── Seeder ───────────────────────────────────────────────────────────────────
 
 export const CARTEIRAS_PADRAO_PROJETO = [

@@ -1,4 +1,5 @@
 import { X, Layers } from 'lucide-react';
+import { SETORES_PADRAO } from '../services/carteirasDeProjeto';
 
 export const CARD_TYPES = [
   { v: 'link',         l: '🔗 Link Externo' },
@@ -19,7 +20,7 @@ export const CUSTOM_FORM_TYPES = new Set(['forms']);
 const inputCls =
   'w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all';
 
-export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, carteiras = [] }) {
+export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -149,9 +150,9 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, carteiras = [
                     <option value="" style={{ backgroundColor: '#111827', color: '#9ca3af' }}>
                       Sem restrição — visível para todos
                     </option>
-                    {carteiras.map(c => (
-                      <option key={c.id} value={c.id} style={{ backgroundColor: '#111827', color: '#f9fafb' }}>
-                        {c.nome}
+                    {SETORES_PADRAO.map(s => (
+                      <option key={s.id} value={s.id} style={{ backgroundColor: '#111827', color: '#f9fafb' }}>
+                        {s.nome}
                       </option>
                     ))}
                   </select>
