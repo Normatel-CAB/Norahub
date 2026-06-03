@@ -1,126 +1,126 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Função helper para verificar se usuário está autenticado
+
     function isSignedIn() {
       return request.auth != null;
     }
-    
-    // Função helper para verificar se é admin (verifica em ambas as coleções)
+
     function isAdmin() {
-      return isSignedIn() && (
-        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.funcao == 'admin') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.funcao == 'admin')
-      );
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.funcao == 'admin';
     }
-    
-    // Função helper para verificar se é gerente (verifica em ambas as coleções)
-    // Usa .lower() para comparação case-insensitive: "Gerente de Projeto" → "gerente de projeto"
+
     function isManager() {
-      return isSignedIn() && (
-        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.funcao.lower().matches('.*gerente.*')) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.funcao.lower().matches('.*gerente.*'))
-      );
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.funcao.lower().matches('.*gerente.*');
     }
-    
-    // Função para validar tamanho de string
+
+    function isAdminOrManager() {
+      return isAdmin() || isManager();
+    }
+
     function isValidStringLength(value, min, max) {
       return value is string && value.size() >= min && value.size() <= max;
     }
-    
-    // Função para validar que não há script tags ou código malicioso
+
     function isSafeString(value) {
-      return value is string && 
-             !value.matches('.*<script.*') && 
-             !value.matches('.*javascript:.*') &&
-             !value.matches('.*onerror.*') &&
-             !value.matches('.*onclick.*');
+      return value is string &&
+        !value.matches('(?i).*<script[^>]*>.*') &&
+        !value.matches('(?i).*javascript\\s*:.*') &&
+        !value.matches('(?i).*\\bon(error|click|load|mouseover|submit|focus|blur)\\s*=.*') &&
+        !value.matches('(?i).*<\\s*(iframe|object|embed|applet|form|input|button).*') &&
+        !value.matches('(?i).*data\\s*:.*text/html.*') &&
+        !value.matches('(?i).*vbscript\\s*:.*');
     }
-    
-    // Função para validar tamanho de documento
+
     function isValidDocumentSize() {
-      return request.resource.size() < 1048576; // 1MB max
+      return request.resource.size() < 1048576;
     }
-    
-    // Coleção de usuários - NOVA (usuarios)
+
+    // ── usuarios ─────────────────────────────────────────────────────────────────
+    // Próprio usuário lê e atualiza. Admin/gerente leem todos (necessário para
+    // AdminDashboard e GerenciaProjetos). Apenas admin pode mudar funcao.
     match /usuarios/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && 
-                      request.auth.uid == userId &&
-                      isValidDocumentSize() &&
-                      request.resource.data.keys().hasAll(['nome', 'email', 'funcao']) &&
-                      isValidStringLength(request.resource.data.nome, 2, 100) &&
-                      isSafeString(request.resource.data.nome);
-      allow update: if isSignedIn() && 
-                      (request.auth.uid == userId || isAdmin() || isManager()) &&
-                      isValidDocumentSize() &&
-                      (!('funcao' in request.resource.data) || isAdmin()) && // Apenas admin pode mudar função
-                      (isSafeString(request.resource.data.get('nome', '')) || !('nome' in request.resource.data));
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId || isAdminOrManager()
+      );
+      allow create: if isSignedIn() &&
+        request.auth.uid == userId &&
+        isValidDocumentSize() &&
+        request.resource.data.keys().hasAll(['nome', 'email', 'funcao']) &&
+        isValidStringLength(request.resource.data.nome, 2, 100) &&
+        isSafeString(request.resource.data.nome) &&
+        isSafeString(request.resource.data.email);
+      allow update: if isSignedIn() &&
+        (request.auth.uid == userId || isAdminOrManager()) &&
+        isValidDocumentSize() &&
+        (!('funcao' in request.resource.data.diff(resource.data).affectedKeys()) || isAdmin()) &&
+        (!('nome' in request.resource.data) || isSafeString(request.resource.data.nome));
       allow delete: if isAdmin();
     }
-    
-    // Coleção LEGADA 'users' - migração concluída; escrita e delete apenas para admin
+
+    // ── users (legado — somente admin pode escrever) ──────────────────────────────
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create, update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdminOrManager());
+      allow create, update, delete: if isAdmin();
     }
-    
-    // Coleção de projetos
+
+    // ── projetos ──────────────────────────────────────────────────────────────────
     match /projetos/{projectId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() &&
-                      (isAdmin() || isManager()) &&
-                      isValidDocumentSize() &&
-                      isValidStringLength(request.resource.data.nome, 2, 200) &&
-                      isSafeString(request.resource.data.nome);
+        isAdminOrManager() &&
+        isValidDocumentSize() &&
+        isValidStringLength(request.resource.data.nome, 2, 200) &&
+        isSafeString(request.resource.data.nome);
       allow update: if isSignedIn() &&
-                      (isAdmin() || isManager()) &&
-                      isValidDocumentSize();
+        isAdminOrManager() &&
+        isValidDocumentSize();
       allow delete: if isAdmin();
-    }
-    
-    // Coleção de cargos
-    match /cargos/{cargoId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() && 
-                     isValidDocumentSize() &&
-                     isSafeString(request.resource.data.get('nome', ''));
-    }
-    
-    // Coleção de formulários
-    match /formularios/{formId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn() &&
-                              isValidDocumentSize();
-      allow delete: if isAdmin();
-    }
-    
-    // Coleção de security_logs (apenas escrita por Cloud Functions, leitura apenas admin)
-    match /security_logs/{logId} {
-      allow read: if isAdmin();
-      allow write: if false; // Apenas Cloud Functions podem escrever via Admin SDK
-    }
-    
-    // Coleção de rate_limits (apenas Cloud Functions)
-    match /rate_limits/{limitId} {
-      allow read, write: if false; // Apenas Cloud Functions via Admin SDK
     }
 
-    // Coleção de arquivos
+    // ── cargos ────────────────────────────────────────────────────────────────────
+    match /cargos/{cargoId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() &&
+        isValidDocumentSize() &&
+        isSafeString(request.resource.data.get('nome', ''));
+    }
+
+    // ── formularios ──────────────────────────────────────────────────────────────
+    match /formularios/{formId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidDocumentSize();
+      allow delete: if isAdmin();
+    }
+
+    // ── security_logs (escrita exclusiva por Cloud Functions via Admin SDK) ───────
+    match /security_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // ── rate_limits (exclusivo Cloud Functions) ───────────────────────────────────
+    match /rate_limits/{limitId} {
+      allow read, write: if false;
+    }
+
+    // ── arquivos ──────────────────────────────────────────────────────────────────
     match /arquivos/{fileId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (resource.data.uploadedBy == request.auth.uid || isAdmin() || isManager());
-      allow delete: if isSignedIn() && (resource.data.uploadedBy == request.auth.uid || isAdmin() || isManager());
+      allow create: if isSignedIn() && isValidDocumentSize();
+      allow update: if isSignedIn() && (
+        resource.data.uploadedBy == request.auth.uid || isAdminOrManager()
+      );
+      allow delete: if isSignedIn() && (
+        resource.data.uploadedBy == request.auth.uid || isAdminOrManager()
+      );
     }
-    
-    // Coleção de notificações
+
+    // ── notifications ─────────────────────────────────────────────────────────────
     match /notifications/{notificationId} {
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if isSignedIn();
@@ -128,35 +128,34 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Coleção de atividades (auditoria) — imutável após criação
+    // ── activities (imutável após criação) ────────────────────────────────────────
     match /activities/{activityId} {
-      allow read: if isAdmin() || isManager() ||
-                    (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow read: if isAdminOrManager() ||
+        (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if isSignedIn() && isValidDocumentSize();
-      allow update, delete: if false; // Audit trail não pode ser alterado
+      allow update, delete: if false;
     }
 
-    // Configurações do sistema (ex: aprovação automática)
+    // ── settings ──────────────────────────────────────────────────────────────────
     match /settings/{settingId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
-    // Coleção de favoritos
+    // ── favorites ─────────────────────────────────────────────────────────────────
     match /favorites/{userId} {
       allow read: if isSignedIn() && request.auth.uid == userId;
-      allow create: if isSignedIn() && request.auth.uid == userId && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+        request.auth.uid == userId &&
+        request.resource.data.userId == request.auth.uid;
       allow update, delete: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Coleção de carteiras (setores)
+    // ── carteiras ─────────────────────────────────────────────────────────────────
     match /carteiras/{carteiraId} {
-      // Todos os usuários autenticados podem ler (filtro por atribuição é feito no frontend)
       allow read: if isSignedIn();
-      // Criar/editar/excluir: apenas admin ou gerente
-      // Permissão canChangeCarteiras é verificada no lado do cliente
-      allow create, update: if isAdmin() || isManager();
-      allow delete: if isAdmin() || isManager();
+      allow create, update: if isAdminOrManager();
+      allow delete: if isAdminOrManager();
     }
   }
 }

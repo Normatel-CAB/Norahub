@@ -14,6 +14,7 @@ import {
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useRecaptcha } from '../components/RecaptchaLoader';
+import { encryptCPF } from '../services/encryptionService';
 
 // Mínimo 8 caracteres, pelo menos: 1 maiúscula, 1 minúscula, 1 número, 1 caractere especial
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
@@ -148,16 +149,22 @@ function Cadastro() {
           const p2 = new OAuthProvider('microsoft.com');
           p2.setCustomParameters({ prompt: 'select_account' });
           await signInWithRedirect(auth, p2);
-          return; // página recarrega após redirect, inMicrosoftFlow persiste no redirect
+          return;
         } catch {
-          setAlertInfo({ message: 'Erro ao redirecionar para Microsoft.', type: 'error' });
+          setAlertInfo({ message: 'Não foi possível abrir a janela da Microsoft. Tente novamente.', type: 'error' });
         }
-      } else if (error?.code === 'auth/popup-closed-by-user') {
-        setAlertInfo({ message: 'Login cancelado.', type: 'error' });
+      } else if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
+        setAlertInfo({ message: 'Cadastro cancelado.', type: 'error' });
       } else if (error?.code === 'auth/account-exists-with-different-credential') {
-        setAlertInfo({ message: 'E-mail já cadastrado com outra forma de login.', type: 'error' });
+        setAlertInfo({ message: 'Este e-mail já tem cadastro com senha. Vá para Login.', type: 'error' });
+      } else if (error?.code === 'auth/invalid-credential' || error?.code === 'auth/invalid-oauth-client-id') {
+        setAlertInfo({ message: 'Conta Microsoft não autorizada. Contate o administrador do sistema.', type: 'error' });
+      } else if (error?.code === 'auth/unauthorized-domain') {
+        setAlertInfo({ message: 'Domínio não autorizado. Contate o administrador.', type: 'error' });
+      } else if (error?.code === 'auth/too-many-requests') {
+        setAlertInfo({ message: 'Muitas tentativas. Aguarde alguns minutos.', type: 'error' });
       } else {
-        setAlertInfo({ message: `Erro: ${error?.code || error?.message || 'desconhecido'}`, type: 'error' });
+        setAlertInfo({ message: 'Não foi possível cadastrar com Microsoft. Tente novamente.', type: 'error' });
       }
     } finally {
       inMicrosoftFlow.current = false;
@@ -188,11 +195,15 @@ function Cadastro() {
       const user = userCredential.user;
       if (!user?.uid) throw new Error('Usuário não autenticado após cadastro.');
 
-      const autoApprove = await getAutoApprovalStatus();
+      const [autoApprove, encryptedCPF] = await Promise.all([
+        getAutoApprovalStatus(),
+        encryptCPF(cpfMatricula),
+      ]);
+
       const userData = {
         nome,
         email,
-        cpfMatricula,
+        cpfMatricula: encryptedCPF,
         cargo: funcao,
         funcao: 'colaborador',
         statusAcesso: autoApprove ? 'ativo' : 'pendente',

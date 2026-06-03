@@ -87,15 +87,17 @@ function Login() {
         }
       } catch (error) {
         if (error?.message === 'dominio-invalido') {
-          setAlertInfo({ message: 'Acesso restrito a @normatel.com.br', type: 'error' });
+          setAlertInfo({ message: 'Acesso restrito a contas @normatel.com.br.', type: 'error' });
         } else if (error?.message === 'email-indisponivel') {
-          setAlertInfo({ message: 'A Microsoft não retornou seu e-mail. Verifique as permissões.', type: 'error' });
+          setAlertInfo({ message: 'A Microsoft não retornou seu e-mail. Verifique as permissões da conta.', type: 'error' });
         } else if (error?.message === 'pendente') {
-          setAlertInfo({ message: 'Conta em análise. Aguarde aprovação.', type: 'error' });
+          setAlertInfo({ message: 'Conta em análise. Aguarde aprovação do administrador.', type: 'error' });
         } else if (error?.code === 'auth/account-exists-with-different-credential') {
-          setAlertInfo({ message: 'E-mail já existe com senha.', type: 'warning' });
+          setAlertInfo({ message: 'Este e-mail já possui cadastro com senha. Use o login por e-mail.', type: 'warning' });
+        } else if (error?.code === 'auth/invalid-credential') {
+          setAlertInfo({ message: 'Conta Microsoft não autorizada. Contate o administrador.', type: 'error' });
         } else if (error?.code) {
-          setAlertInfo({ message: `Erro Microsoft: ${error.code}`, type: 'error' });
+          setAlertInfo({ message: 'Não foi possível entrar com Microsoft. Tente novamente.', type: 'error' });
         }
       } finally {
         setLoading(false);
@@ -156,10 +158,21 @@ function Login() {
          throw new Error("pendente");
       }
     } catch (error) {
-      if (error.message === 'pendente') setAlertInfo({ message: "Conta em análise. Aguarde aprovação.", type: 'error' });
-      else if (error.code === 'auth/user-not-found') setAlertInfo({ message: "Usuário não encontrado. Faça o cadastro primeiro.", type: 'error' });
-      else if (error.code === 'auth/wrong-password') setAlertInfo({ message: "Senha incorreta.", type: 'error' });
-      else setAlertInfo({ message: "Email ou senha incorretos.", type: 'error' });
+      if (error.message === 'pendente') {
+        setAlertInfo({ message: 'Conta em análise. Aguarde aprovação do administrador.', type: 'error' });
+      } else if (
+        error.code === 'auth/invalid-credential' ||
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/user-not-found'
+      ) {
+        setAlertInfo({ message: 'E-mail ou senha incorretos.', type: 'error' });
+      } else if (error.code === 'auth/too-many-requests') {
+        setAlertInfo({ message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.', type: 'error' });
+      } else if (error.code === 'auth/network-request-failed') {
+        setAlertInfo({ message: 'Sem conexão. Verifique sua internet e tente novamente.', type: 'error' });
+      } else {
+        setAlertInfo({ message: 'Não foi possível fazer login. Tente novamente.', type: 'error' });
+      }
     } finally { setLoading(false); }
   };
 
@@ -184,18 +197,23 @@ function Login() {
         }
       }
       if (error?.message === 'dominio-invalido') {
-        setAlertInfo({ message: "Acesso restrito a @normatel.com.br", type: 'error' });
+        setAlertInfo({ message: 'Acesso restrito a contas @normatel.com.br.', type: 'error' });
       } else if (error?.message === 'email-indisponivel') {
-        setAlertInfo({ message: "A Microsoft não retornou seu e-mail. Verifique as permissões da conta.", type: 'error' });
+        setAlertInfo({ message: 'A Microsoft não retornou seu e-mail. Verifique as permissões da conta.', type: 'error' });
       } else if (error?.message === 'pendente') {
-        setAlertInfo({ message: "Conta em análise.", type: 'error' });
+        setAlertInfo({ message: 'Conta em análise. Aguarde aprovação do administrador.', type: 'error' });
       } else if (error?.code === 'auth/account-exists-with-different-credential') {
-        setAlertInfo({ message: "E-mail já existe com senha.", type: 'warning' });
-      } else if (error?.code === 'auth/popup-closed-by-user') {
-        setAlertInfo({ message: "Login cancelado.", type: 'error' });
+        setAlertInfo({ message: 'Este e-mail já possui cadastro com senha. Use o login por e-mail.', type: 'warning' });
+      } else if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
+        setAlertInfo({ message: 'Login cancelado.', type: 'error' });
+      } else if (error?.code === 'auth/invalid-credential') {
+        setAlertInfo({ message: 'Credencial Microsoft inválida ou expirada. Tente novamente.', type: 'error' });
+      } else if (error?.code === 'auth/too-many-requests') {
+        setAlertInfo({ message: 'Muitas tentativas. Aguarde alguns minutos.', type: 'error' });
+      } else if (error?.code === 'auth/network-request-failed') {
+        setAlertInfo({ message: 'Sem conexão. Verifique sua internet.', type: 'error' });
       } else {
-        const fallback = error?.code || error?.message || 'Erro desconhecido.';
-        setAlertInfo({ message: `Erro: ${fallback}`, type: 'error' });
+        setAlertInfo({ message: 'Não foi possível fazer login com Microsoft. Tente novamente.', type: 'error' });
       }
     } finally { setLoading(false); }
   };
