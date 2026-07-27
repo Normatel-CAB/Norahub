@@ -1,8 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import os from 'os';
+import path from 'path';
+
+const tempDir = path.join(os.tmpdir(), 'vite-cache-norahub-' + process.pid);
 
 export default defineConfig({
   plugins: [react()],
+  cacheDir: tempDir,
 
   build: {
     // Remove todos os console.* em produção

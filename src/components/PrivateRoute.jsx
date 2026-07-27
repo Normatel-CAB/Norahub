@@ -12,14 +12,16 @@ function quickAdminCheck(userProfile, pathname) {
   return null; // precisa checar cargos no Firestore
 }
 
-function PrivateRoute({ children, requiredRole }) {
+function PrivateRoute({ children, requiredRole, requiredPermission }) {
   const { currentUser, userProfile, loading } = useAuth();
   const location = useLocation();
 
   // Tenta resolver permissão admin de forma síncrona a partir do perfil em memória
   const quickResult = useMemo(
     () => quickAdminCheck(userProfile, location.pathname),
-    [userProfile, location.pathname]
+    // funcao é o único campo usado por quickAdminCheck — evita recalcular em todo snapshot
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userProfile?.funcao, location.pathname]
   );
 
   // Apenas chega aqui se quickResult === null (cargo custom que precisa de Firestore)
@@ -44,14 +46,20 @@ function PrivateRoute({ children, requiredRole }) {
       .then(snap => {
         if (!snap.empty) {
           const c = snap.docs[0].data();
-          setCargoPermission(c.canManageUsers || c.canManagePermissions || false);
+          // Se a rota exige uma permissão específica, verifica só ela
+          // Caso contrário, verifica permissões genéricas de área admin
+          const granted = requiredPermission
+            ? !!c[requiredPermission]
+            : (c.canManageUsers || c.canManagePermissions || false);
+          setCargoPermission(granted);
         } else {
           setCargoPermission(false);
         }
       })
       .catch(() => setCargoPermission(false))
       .finally(() => setCargoLoading(false));
-  }, [userProfile, location.pathname, quickResult]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.funcao, location.pathname, quickResult, requiredPermission]);
 
   // Spinner enquanto Firebase Auth ou perfil carrega
   const spinner = (

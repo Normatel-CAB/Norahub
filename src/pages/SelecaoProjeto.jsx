@@ -151,7 +151,9 @@ function SelecaoProjeto() {
       checkPermissions();
       loadFavorites();
     }
-  }, [userProfile]);
+  // Apenas primitivos como dependências — arrays como projetos causam re-run a cada snapshot
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.uid, userProfile?.funcao, (userProfile?.projetos || []).join(',')]);
 
   const loadFavorites = async () => {
     if (!currentUser) { setFavIds(new Set()); return; }

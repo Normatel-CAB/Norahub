@@ -47,7 +47,7 @@ const EMPTY_CARTEIRA = { nome: '', descricao: '', cor: '#57B952' };
 const EMPTY_LINK = { nome: '', url: '', tipo: 'link', descricao: '' };
 
 function AdminCarteiras() {
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isAdmin = userProfile?.funcao === 'admin';
   const isManager = typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente');
@@ -75,10 +75,12 @@ function AdminCarteiras() {
   };
 
   useEffect(() => {
-    if (!userProfile) return;
-    if (!isAdmin && !isManager) { navigate('/'); return; }
+    if (authLoading) return;
+    if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
+    if (!isAdmin && !isManager) { navigate('/selecao-projeto', { replace: true }); return; }
     fetchCarteiras();
-  }, [userProfile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
 
   const fetchCarteiras = async () => {
     setLoading(true);

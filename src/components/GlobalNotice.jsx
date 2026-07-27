@@ -16,7 +16,7 @@ function GlobalNotice() {
   const [dismissedMsg, setDismissedMsg] = useState('');
 
   useEffect(() => {
-    if (!userProfile) return;
+    if (!userProfile?.uid) return;
     const unsub = onSnapshot(doc(db, 'settings', 'globalNotice'), snap => {
       if (snap.exists()) {
         const d = snap.data();
@@ -30,7 +30,8 @@ function GlobalNotice() {
       }
     });
     return unsub;
-  }, [userProfile]);
+  // userProfile?.uid: listener recriado só no login/logout, não a cada update de perfil
+  }, [userProfile?.uid]);
 
   if (!notice || dismissedMsg === notice.message) return null;
 

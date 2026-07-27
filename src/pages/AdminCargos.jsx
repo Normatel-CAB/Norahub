@@ -71,7 +71,7 @@ function Toast({ toast }) {
 }
 
 function AdminCargos() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isAdmin = userProfile?.funcao === 'admin';
 
@@ -85,6 +85,8 @@ function AdminCargos() {
   const [search, setSearch] = useState('');
 
   const [formNome, setFormNome] = useState('');
+  const [formDescricao, setFormDescricao] = useState('');
+  const [formStatus, setFormStatus] = useState('ativo');
   const [formPerms, setFormPerms] = useState({ ...EMPTY_PERMS });
 
   const showToast = (message, type = 'success') => {
@@ -94,19 +96,21 @@ function AdminCargos() {
 
   useEffect(() => {
     const checkAccess = async () => {
-      if (!userProfile) { navigate('/'); return; }
+      if (authLoading) return;
+      if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
       if (isAdmin) { fetchData(); return; }
       try {
         const snap = await getDocs(query(collection(db, 'cargos'), where('nome', '==', userProfile.funcao)));
         if (!snap.empty && snap.docs[0].data().canCreateCargos) {
           fetchData();
         } else {
-          navigate('/');
+          navigate('/selecao-projeto', { replace: true });
         }
-      } catch { navigate('/'); }
+      } catch { navigate('/selecao-projeto', { replace: true }); }
     };
     checkAccess();
-  }, [isAdmin, userProfile, navigate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, userProfile?.uid, userProfile?.funcao, navigate]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -135,12 +139,16 @@ function AdminCargos() {
 
   const openCreate = () => {
     setFormNome('');
+    setFormDescricao('');
+    setFormStatus('ativo');
     setFormPerms({ ...EMPTY_PERMS });
     setModal({ open: true, cargo: null });
   };
 
   const openEdit = (cargo) => {
     setFormNome(cargo.nome);
+    setFormDescricao(cargo.descricao || '');
+    setFormStatus(cargo.status || 'ativo');
     setFormPerms({
       canManageUsers:          !!cargo.canManageUsers,
       canDeleteUsers:          !!cargo.canDeleteUsers,
@@ -179,7 +187,14 @@ function AdminCargos() {
     if (!formNome.trim()) return;
     setSaving(true);
     try {
-      const data = { nome: formNome.trim(), tipo: 'colaborador', ...formPerms, updatedAt: new Date() };
+      const data = {
+        nome: formNome.trim(),
+        descricao: formDescricao.trim(),
+        status: formStatus,
+        tipo: 'colaborador',
+        ...formPerms,
+        updatedAt: new Date(),
+      };
       if (modal.cargo) {
         await updateDoc(doc(db, 'cargos', modal.cargo.id), data);
         setCargos(prev => prev.map(c => c.id === modal.cargo.id ? { ...c, ...data } : c));
@@ -343,7 +358,17 @@ function AdminCargos() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white text-sm truncate">{cargo.nome}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-white text-sm truncate">{cargo.nome}</p>
+                        {cargo.status === 'inativo' && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/20">
+                            Inativo
+                          </span>
+                        )}
+                      </div>
+                      {cargo.descricao && (
+                        <p className="text-[11px] text-gray-500 truncate mt-0.5">{cargo.descricao}</p>
+                      )}
                       <div className="mt-1">
                         <PermLevelBadge count={count} />
                       </div>
@@ -459,6 +484,45 @@ function AdminCargos() {
                     autoFocus
                     className="w-full px-4 py-3 bg-white/[0.06] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.08] transition-all"
                   />
+                </div>
+
+                {/* Descrição */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Descrição
+                  </label>
+                  <input
+                    type="text"
+                    value={formDescricao}
+                    onChange={e => setFormDescricao(e.target.value)}
+                    placeholder="Ex: Responsável por coordenar equipes..."
+                    className="w-full px-4 py-3 bg-white/[0.06] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.08] transition-all"
+                  />
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Status
+                  </label>
+                  <div className="flex gap-2">
+                    {[{ value: 'ativo', label: 'Ativo' }, { value: 'inativo', label: 'Inativo' }].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setFormStatus(opt.value)}
+                        className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                          formStatus === opt.value
+                            ? opt.value === 'ativo'
+                              ? 'bg-[#57B952]/15 border-[#57B952]/40 text-[#57B952]'
+                              : 'bg-red-500/15 border-red-500/40 text-red-400'
+                            : 'bg-white/[0.03] border-white/[0.08] text-gray-500 hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Permissões */}

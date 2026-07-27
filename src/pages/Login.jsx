@@ -113,7 +113,8 @@ function Login() {
       if (userProfile.statusAcesso === 'pendente') return;
       navigate('/selecao-projeto');
     }
-  }, [authLoading, currentUser, userProfile, navigate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, currentUser?.uid, userProfile?.statusAcesso, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 

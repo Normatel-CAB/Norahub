@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { SETORES_PADRAO } from '../services/carteirasDeProjeto';
+import { migrarCarteiraParaCargo, verificarMigracaoNecessaria } from '../services/migration';
 
 const PAGE_SIZE = 15;
 
@@ -70,7 +71,7 @@ function Toast({ toast }) {
 }
 
 function AdminDashboard() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isAdmin = userProfile?.funcao === 'admin';
 
@@ -95,6 +96,8 @@ function AdminDashboard() {
   const [noticeActive, setNoticeActive] = useState(false);
   const [savingNotice, setSavingNotice] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [migracaoPendente, setMigracaoPendente] = useState(0);
+  const [migrando, setMigrando] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -103,8 +106,10 @@ function AdminDashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (authLoading) return;
+      if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
       const canAccess = isAdmin || userProfile?.funcao?.toLowerCase().includes('gerente');
-      if (!canAccess) { navigate('/selecao-projeto'); return; }
+      if (!canAccess) { navigate('/selecao-projeto', { replace: true }); return; }
       try {
         const [userSnap, projetoSnap, cargosSnap, settingSnap, noticeSnap] = await Promise.all([
           getDocs(collection(db, 'usuarios')),
@@ -128,14 +133,21 @@ function AdminDashboard() {
         let cargosList = cargosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         if (cargosList.length === 0) cargosList = [{ id: 'default', nome: 'Colaborador' }];
         setCargos(cargosList);
+
+        // Verifica silenciosamente se há dados legados para migrar
+        if (isAdmin) {
+          verificarMigracaoNecessaria().then(({ pendentes }) => setMigracaoPendente(pendentes));
+        }
       } catch {
         showToast('Erro ao carregar dados.', 'error');
       } finally {
         setLoading(false);
       }
     };
-    if (userProfile) fetchData();
-  }, [isAdmin, userProfile, navigate]);
+    if (!authLoading) fetchData();
+  // Primitivos estáveis: evita refetch completo a cada snapshot do perfil
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, userProfile?.uid, userProfile?.funcao, navigate]);
 
   useEffect(() => { setPage(0); }, [searchTerm, statusFilter]);
 
@@ -227,6 +239,19 @@ function AdminDashboard() {
       showToast('Erro ao salvar aviso.', 'error');
     } finally {
       setSavingNotice(false);
+    }
+  };
+
+  const handleMigracao = async () => {
+    setMigrando(true);
+    try {
+      const result = await migrarCarteiraParaCargo();
+      setMigracaoPendente(0);
+      showToast(`Migração concluída: ${result.migrated} usuário(s) atualizados.`);
+    } catch {
+      showToast('Erro na migração. Tente novamente.', 'error');
+    } finally {
+      setMigrando(false);
     }
   };
 
@@ -347,6 +372,33 @@ function AdminDashboard() {
               } ${togglingApproval ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
             >
               <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 ${autoApproval ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        )}
+
+        {/* Migração carteira→cargo — admin only, visível apenas se houver dados legados */}
+        {isAdmin && migracaoPendente > 0 && (
+          <div className="flex items-center justify-between gap-4 px-5 py-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center flex-shrink-0">
+                <Shield size={15} className="text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Migração pendente</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {migracaoPendente} usuário(s) com campo legado "carteira" precisam ser migrados para "cargo"
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleMigracao}
+              disabled={migrando}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex-shrink-0"
+            >
+              {migrando
+                ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                : <Shield size={13} />}
+              Migrar Agora
             </button>
           </div>
         )}

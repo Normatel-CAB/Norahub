@@ -16,7 +16,7 @@ function formatDate(ts) {
 }
 
 function Lixeira() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isAdmin = userProfile?.funcao === 'admin';
 
@@ -32,11 +32,13 @@ function Lixeira() {
   };
 
   useEffect(() => {
-    if (!userProfile) return;
+    if (authLoading) return;
+    if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
     const canAccess = isAdmin || userProfile.funcao?.toLowerCase().includes('gerente');
-    if (!canAccess) { navigate('/selecao-projeto'); return; }
+    if (!canAccess) { navigate('/selecao-projeto', { replace: true }); return; }
     fetchDeleted();
-  }, [userProfile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
 
   const fetchDeleted = async () => {
     setLoading(true);

@@ -66,7 +66,7 @@ function actionMatchesFilter(action, filter) {
 }
 
 function LogsAuditoria() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isAdmin = userProfile?.funcao === 'admin';
 
@@ -78,11 +78,13 @@ function LogsAuditoria() {
   const [cursors, setCursors] = useState([null]); // stack of page cursors
 
   useEffect(() => {
-    if (!userProfile) return;
+    if (authLoading) return;
+    if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
     const canAccess = isAdmin || userProfile.funcao?.toLowerCase().includes('gerente');
-    if (!canAccess) { navigate('/selecao-projeto'); return; }
+    if (!canAccess) { navigate('/selecao-projeto', { replace: true }); return; }
     fetchLogs(0);
-  }, [userProfile, typeFilter]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, userProfile?.uid, userProfile?.funcao, typeFilter]);
 
   const fetchLogs = async (pageIndex, cursorDoc = null) => {
     setLoading(true);

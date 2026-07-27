@@ -68,8 +68,8 @@ const OPCOES = [
   },
   {
     id: 'carteiras',
-    titulo: 'Carteiras & Setores',
-    descricao: 'Gerenciar setores, adicionar links e atribuir carteiras aos colaboradores',
+    titulo: 'Setores & Links',
+    descricao: 'Gerenciar setores, adicionar links e atribuir setores aos colaboradores',
     icon: Layers,
     path: '/admin-carteiras',
     cor: 'text-cyan-400',
@@ -79,7 +79,7 @@ const OPCOES = [
 ];
 
 function Gerencia() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [cargoData, setCargoData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -89,7 +89,8 @@ function Gerencia() {
 
   useEffect(() => {
     const fetchCargo = async () => {
-      if (!userProfile) return;
+      if (authLoading) return;
+      if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
       try {
         if (!isAdmin) {
           const snap = await getDocs(
@@ -104,7 +105,8 @@ function Gerencia() {
       }
     };
     fetchCargo();
-  }, [userProfile, isAdmin]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
 
   const hasPermission = (opcao) => {
     if (isAdmin) return true;
@@ -114,7 +116,7 @@ function Gerencia() {
 
   const opcoesVisiveis = OPCOES.filter(o => isAdmin || hasPermission(o));
 
-  if (loading) return (
+  if (authLoading || loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
     </div>

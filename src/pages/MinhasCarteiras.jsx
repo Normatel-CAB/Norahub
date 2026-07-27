@@ -1,226 +1,209 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Layers, ChevronDown, ChevronRight, ExternalLink, Link2,
-  FileText, Phone, Mail, Globe, ArrowLeft, Folder, Lock,
-  Search, X,
+  Shield, ArrowLeft, CheckCircle, Users2, UserMinus, Lock,
+  UsersRound, Layers, FolderPlus, LayoutTemplate, Info,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getCarteiras } from '../services/carteiras';
+import { db } from '../services/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
-const LINK_ICONS = {
-  link:      <Globe className="w-3.5 h-3.5" />,
-  documento: <FileText className="w-3.5 h-3.5" />,
-  contato:   <Phone className="w-3.5 h-3.5" />,
-  email:     <Mail className="w-3.5 h-3.5" />,
-};
-
-function LinkRow({ link }) {
-  const icon = LINK_ICONS[link.tipo] ?? LINK_ICONS.link;
-  const isClickable = link.url && link.tipo !== 'contato' && link.tipo !== 'email';
-
-  const handleClick = () => {
-    if (!isClickable) return;
-    window.open(link.url, '_blank', 'noopener,noreferrer');
-  };
-
-  return (
-    <div
-      onClick={isClickable ? handleClick : undefined}
-      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/5 bg-white/[0.03] transition-all ${
-        isClickable ? 'cursor-pointer hover:bg-white/[0.07] hover:border-white/10 group' : ''
-      }`}
-    >
-      <span className="text-white/40 flex-shrink-0">{icon}</span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white/90 truncate">{link.nome}</p>
-        {link.descricao && (
-          <p className="text-xs text-white/40 truncate mt-0.5">{link.descricao}</p>
-        )}
-        {link.url && (
-          <p className="text-xs text-white/30 truncate mt-0.5">{link.url}</p>
-        )}
-      </div>
-      {isClickable && (
-        <ExternalLink className="w-3.5 h-3.5 text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
-      )}
-    </div>
-  );
-}
-
-function CarteiraCard({ carteira }) {
-  const [expanded, setExpanded] = useState(false);
-  const links = carteira.links ?? [];
-
-  return (
-    <div
-      className="rounded-2xl border border-white/10 bg-white/[0.04] overflow-hidden"
-      style={{ borderLeftColor: carteira.cor, borderLeftWidth: 3 }}
-    >
-      {/* Header */}
-      <button
-        onClick={() => setExpanded(e => !e)}
-        className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-white/[0.03] transition-colors"
-      >
-        <span
-          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: `${carteira.cor}25` }}
-        >
-          <Layers className="w-4 h-4" style={{ color: carteira.cor }} />
-        </span>
-
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white/90">{carteira.nome}</p>
-          {carteira.descricao && (
-            <p className="text-xs text-white/40 truncate mt-0.5">{carteira.descricao}</p>
-          )}
-        </div>
-
-        <span
-          className="text-xs font-semibold px-2 py-0.5 rounded-full border flex-shrink-0"
-          style={{
-            color: carteira.cor,
-            backgroundColor: `${carteira.cor}20`,
-            borderColor: `${carteira.cor}40`,
-          }}
-        >
-          {links.length} {links.length === 1 ? 'link' : 'links'}
-        </span>
-
-        {expanded
-          ? <ChevronDown className="w-4 h-4 text-white/30 flex-shrink-0" />
-          : <ChevronRight className="w-4 h-4 text-white/30 flex-shrink-0" />}
-      </button>
-
-      {/* Links list */}
-      {expanded && (
-        <div className="px-5 pb-4 space-y-2">
-          {links.length === 0 ? (
-            <p className="text-xs text-white/30 italic py-2">Nenhum link cadastrado nesta carteira.</p>
-          ) : (
-            links.map(link => <LinkRow key={link.id} link={link} />)
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+const PERMISSOES = [
+  { id: 'canManageUsers',          label: 'Gerenciar Usuários',    icon: Users2        },
+  { id: 'canDeleteUsers',          label: 'Excluir Usuários',      icon: UserMinus     },
+  { id: 'canManagePermissions',    label: 'Atribuir Projetos',     icon: Lock          },
+  { id: 'canManageProjectMembers', label: 'Gerenciar Membros',     icon: UsersRound    },
+  { id: 'canChangeCarteiras',      label: 'Alterar Setores',       icon: Layers        },
+  { id: 'canCreateCargos',         label: 'Criar Cargos',          icon: Shield        },
+  { id: 'canCreateProjetos',       label: 'Criar Projetos',        icon: FolderPlus    },
+  { id: 'canEditCardsProjetos',    label: 'Editar Cards',          icon: LayoutTemplate },
+];
 
 export default function MinhasCarteiras() {
-  const { currentUser, userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  const [carteiras, setCarteiras] = useState([]);
+  const [cargoData, setCargoData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
 
   const isAdmin = userProfile?.funcao === 'admin';
-  const carteiraIds = userProfile?.carteiras ?? [];
+  const nomeCargo = userProfile?.funcao || 'Colaborador';
 
   useEffect(() => {
-    if (!currentUser) return;
-    (async () => {
-      setLoading(true);
-      const { success, carteiras: all } = await getCarteiras();
-      if (success) {
-        const filtered = isAdmin ? all : all.filter(c => carteiraIds.includes(c.id));
-        setCarteiras(filtered);
-      }
+    if (authLoading) return;
+    if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
+
+    if (isAdmin) {
+      setCargoData({
+        nome: 'Administrador',
+        descricao: 'Acesso total ao sistema',
+        status: 'ativo',
+        canManageUsers: true,
+        canDeleteUsers: true,
+        canManagePermissions: true,
+        canManageProjectMembers: true,
+        canChangeCarteiras: true,
+        canCreateCargos: true,
+        canCreateProjetos: true,
+        canEditCardsProjetos: true,
+      });
       setLoading(false);
-    })();
-  }, [currentUser, userProfile]);
+      return;
+    }
 
-  const visible = carteiras.filter(c =>
-    c.nome.toLowerCase().includes(search.toLowerCase()) ||
-    (c.descricao ?? '').toLowerCase().includes(search.toLowerCase())
-  );
+    const fetchCargo = async () => {
+      try {
+        const snap = await getDocs(
+          query(collection(db, 'cargos'), where('nome', '==', nomeCargo))
+        );
+        if (!snap.empty) {
+          setCargoData(snap.docs[0].data());
+        }
+      } catch {
+        // falha silenciosa
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const totalLinks = carteiras.reduce((sum, c) => sum + (c.links?.length ?? 0), 0);
+    fetchCargo();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
+
+  const permsAtivas = PERMISSOES.filter(p => cargoData?.[p.id]);
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f1117] via-[#151821] to-[#0f1117] text-white p-6">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white font-[Outfit,sans-serif] relative overflow-hidden">
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#57B952]/8 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Back + Header */}
-        <div className="flex items-center gap-3">
+      {/* Header */}
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-gray-900/70 backdrop-blur-md">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
           >
-            <ArrowLeft className="w-4 h-4 text-white/60" />
+            <div className="w-8 h-8 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.10] flex items-center justify-center transition-colors">
+              <ArrowLeft size={15} />
+            </div>
+            <span className="hidden sm:inline">Voltar</span>
           </button>
-          <div>
-            <h1 className="text-xl font-bold text-white">Minhas Carteiras</h1>
-            <p className="text-xs text-white/40">Setores e links atribuídos à sua conta</p>
+          <div className="h-4 w-px bg-white/[0.08]" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/25 flex items-center justify-center">
+              <Shield size={15} className="text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white leading-tight">Meu Cargo</p>
+              <p className="text-[10px] text-gray-500 leading-tight">Função e permissões no sistema</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+
+        {/* Card do cargo */}
+        <div className="bg-white/[0.05] border border-white/[0.10] rounded-2xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-purple-500/20 border border-purple-500/25 flex items-center justify-center flex-shrink-0">
+              <Shield size={24} className="text-purple-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-white">{cargoData?.nome || nomeCargo}</h1>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                  cargoData?.status === 'inativo'
+                    ? 'bg-red-500/15 text-red-400 border-red-500/20'
+                    : 'bg-[#57B952]/15 text-[#57B952] border-[#57B952]/20'
+                }`}>
+                  {cargoData?.status === 'inativo' ? 'Inativo' : 'Ativo'}
+                </span>
+              </div>
+              {cargoData?.descricao ? (
+                <p className="text-sm text-gray-400 mt-1">{cargoData.descricao}</p>
+              ) : (
+                <p className="text-sm text-gray-600 mt-1 italic">Sem descrição cadastrada.</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
-              <Layers className="w-4 h-4 text-blue-400" />
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center">
+              <Shield size={16} className="text-purple-400" />
             </div>
             <div>
-              <p className="text-xl font-bold text-white">{carteiras.length}</p>
-              <p className="text-xs text-white/40">Carteiras</p>
+              <p className="text-xl font-bold text-white">{permsAtivas.length}</p>
+              <p className="text-xs text-gray-500">Permissões ativas</p>
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center">
-              <Link2 className="w-4 h-4 text-purple-400" />
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center">
+              <CheckCircle size={16} className="text-[#57B952]" />
             </div>
             <div>
-              <p className="text-xl font-bold text-white">{totalLinks}</p>
-              <p className="text-xs text-white/40">Links disponíveis</p>
+              <p className="text-xl font-bold text-white">{PERMISSOES.length}</p>
+              <p className="text-xs text-gray-500">Total possível</p>
             </div>
           </div>
         </div>
 
-        {/* Search */}
-        {carteiras.length > 2 && (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar carteira..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-9 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/25 focus:bg-white/8 transition-all"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+        {/* Permissões */}
+        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-white/[0.06]">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Permissões do Cargo</p>
+          </div>
+          <div className="divide-y divide-white/[0.04]">
+            {PERMISSOES.map(perm => {
+              const active = !!cargoData?.[perm.id];
+              const Icon = perm.icon;
+              return (
+                <div
+                  key={perm.id}
+                  className={`flex items-center gap-3 px-5 py-3.5 transition-colors ${active ? '' : 'opacity-40'}`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    active ? 'bg-[#57B952]/20' : 'bg-white/[0.05]'
+                  }`}>
+                    <Icon size={14} className={active ? 'text-[#57B952]' : 'text-gray-600'} />
+                  </div>
+                  <p className={`text-sm font-medium flex-1 ${active ? 'text-white' : 'text-gray-600'}`}>
+                    {perm.label}
+                  </p>
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    active ? 'bg-[#57B952]' : 'bg-white/[0.06] border border-white/[0.10]'
+                  }`}>
+                    {active && <CheckCircle size={11} className="text-white" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Info */}
+        {!cargoData && !isAdmin && (
+          <div className="flex items-start gap-3 px-4 py-3.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+            <Info size={15} className="text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-300 leading-relaxed">
+              Seu cargo <strong>"{nomeCargo}"</strong> ainda não está cadastrado no sistema. Contate um administrador para regularizar.
+            </p>
           </div>
         )}
 
-        {/* Content */}
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-16 rounded-2xl bg-white/[0.04] border border-white/10 animate-pulse" />
-            ))}
-          </div>
-        ) : carteiras.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-10 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
-              <Lock className="w-6 h-6 text-white/20" />
-            </div>
-            <p className="text-sm font-semibold text-white/60 mb-1">Nenhuma carteira atribuída</p>
-            <p className="text-xs text-white/30">Você ainda não possui carteiras atribuídas. Contate seu gerente.</p>
-          </div>
-        ) : visible.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">
-            <Folder className="w-8 h-8 text-white/20 mx-auto mb-3" />
-            <p className="text-sm text-white/40">Nenhuma carteira encontrada para "{search}"</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {visible.map(c => <CarteiraCard key={c.id} carteira={c} />)}
-          </div>
-        )}
-      </div>
+      </main>
     </div>
   );
 }

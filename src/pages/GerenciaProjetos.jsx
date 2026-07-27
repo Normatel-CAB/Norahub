@@ -45,7 +45,7 @@ const inputCls = 'w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] 
 const selectCls = `${inputCls} cursor-pointer`;
 
 function GerenciaProjetos() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const isAuthorized =
@@ -93,9 +93,12 @@ function GerenciaProjetos() {
   };
 
   useEffect(() => {
-    if (userProfile && !isAuthorized) { navigate('/selecao-projeto', { replace: true }); return; }
-    if (userProfile) fetchProjetos();
-  }, [userProfile, isAuthorized]);
+    if (authLoading) return;
+    if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
+    if (!isAuthorized) { navigate('/selecao-projeto', { replace: true }); return; }
+    fetchProjetos();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
 
   const closeCreate = () => { setCreateModal(false); setCreateForm({ ...EMPTY_PROJECT }); setCreateExtras([]); };
 

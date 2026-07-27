@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter, useLocation } from 'react-router-dom'
 import App from './App'
 import './index.css'
 import './pwa.css'
@@ -30,12 +31,20 @@ class ErrorBoundary extends React.Component {
           <p style={{ color: '#aaa', marginBottom: '1.5rem', maxWidth: 400 }}>
             O aplicativo encontrou um erro inesperado. Tente recarregar a página.
           </p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{ padding: '0.75rem 2rem', background: '#57B952', color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700 }}
-          >
-            Recarregar
-          </button>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+              style={{ padding: '0.75rem 2rem', background: '#374151', color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700 }}
+            >
+              Tentar novamente
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ padding: '0.75rem 2rem', background: '#57B952', color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700 }}
+            >
+              Recarregar
+            </button>
+          </div>
           {import.meta.env.DEV && (
             <pre style={{ marginTop: '2rem', color: '#ef4444', fontSize: '0.75rem', textAlign: 'left', maxWidth: 600, overflow: 'auto' }}>
               {this.state.error?.toString()}
@@ -48,19 +57,33 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// Reseta o ErrorBoundary automaticamente ao navegar para outra rota
+// Deve ficar dentro do BrowserRouter para usar useLocation
+function RouteAwareErrorBoundary({ children }) {
+  const location = useLocation();
+  // A cada mudança de rota, o ErrorBoundary recebe um novo key e é remontado (estado resetado)
+  return (
+    <ErrorBoundary key={location.pathname}>
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 const rootElement = document.getElementById('root');
 if (rootElement) {
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <ErrorBoundary>
-        <RecaptchaLoader>
-          <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-            <AuthProvider>
-              <App />
-            </AuthProvider>
-          </ThemeProvider>
-        </RecaptchaLoader>
-      </ErrorBoundary>
+      <RecaptchaLoader>
+        <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+          <AuthProvider>
+            <BrowserRouter>
+              <RouteAwareErrorBoundary>
+                <App />
+              </RouteAwareErrorBoundary>
+            </BrowserRouter>
+          </AuthProvider>
+        </ThemeProvider>
+      </RecaptchaLoader>
     </React.StrictMode>
   );
 }

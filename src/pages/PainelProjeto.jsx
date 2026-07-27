@@ -165,6 +165,7 @@ function PainelProjeto() {
   const [confirmDelete, setConfirmDelete] = useState({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null });
   const [copiedIdx, setCopiedIdx] = useState(null);
   const [linkCounts, setLinkCounts] = useState({});
+  const [cargosLista, setCargosLista] = useState([]);
 
   const isAdmin = userProfile?.funcao === 'admin';
   const isManager = typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente');
@@ -203,6 +204,13 @@ function PainelProjeto() {
     return () => unsub();
   }, [projetoId, navigate]);
 
+  // ─── Load cargos list (for card restriction UI) ───────────────────────────────
+  useEffect(() => {
+    getDocs(collection(db, 'cargos'))
+      .then(snap => setCargosLista(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .catch(() => {});
+  }, []);
+
   // ─── Access counters ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!currentUser || !projeto) return;
@@ -217,7 +225,7 @@ function PainelProjeto() {
   // ─── Permissions ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const check = async () => {
-      if (!userProfile || !projeto) return;
+      if (!userProfile || !projetoId) return;
       if (isAdmin || isManager) { setCanEdit(true); setCanEditCards(true); return; }
       try {
         const snap = await getDocs(query(collection(db, 'cargos'), where('nome', '==', userProfile.funcao)));
@@ -229,7 +237,9 @@ function PainelProjeto() {
       } catch { setCanEdit(false); setCanEditCards(false); }
     };
     check();
-  }, [userProfile, projeto, isAdmin, isManager]);
+  // Primitivos estáveis: evita nova consulta de cargos a cada snapshot do projeto
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.uid, userProfile?.funcao, projetoId, isAdmin, isManager]);
 
   // ─── Legacy edit modal helpers ───────────────────────────────────────────────
   const openEditModal = () => {
@@ -241,12 +251,13 @@ function PainelProjeto() {
         url: e.url || '',
         type: e.type || 'link',
         carteiraId: e.carteiraId || null,
+        cargos: e.cargos || [],
       }))
     );
     setIsEditModalOpen(true);
   };
 
-  const addExtraField = () => setEditedExtras(prev => [...prev, { name: '', description: '', url: '', type: 'link', carteiraId: null }]);
+  const addExtraField = () => setEditedExtras(prev => [...prev, { name: '', description: '', url: '', type: 'link', carteiraId: null, cargos: [] }]);
   const updateExtraField = (idx, key, val) => setEditedExtras(prev => prev.map((item, i) => i === idx ? { ...item, [key]: val } : item));
   const removeExtraField = (idx) => setEditedExtras(prev => prev.filter((_, i) => i !== idx));
 
@@ -264,6 +275,7 @@ function PainelProjeto() {
           url: (f.url || '').trim(),
           type: f.type || 'link',
           carteiraId: f.carteiraId || null,
+          cargos: f.cargos || [],
           files: original?.files || [],
           formFields: original?.formFields || [],
           formResponses: original?.formResponses || [],
@@ -353,12 +365,13 @@ function PainelProjeto() {
     ? projeto.extras.map((e, originalIndex) => ({ ...e, originalIndex })).filter(e => e?.name?.trim())
     : [];
 
-  // Filter legacy extras by global sector (user.setores)
+  // Filter legacy extras by sector and cargo
   const userSetores = new Set(userProfile?.setores || []);
   const extras = extrasRaw.filter(card => {
     if (canManageCarteiras) return true;
-    if (!card.carteiraId) return true;
-    return userSetores.has(card.carteiraId);
+    if (card.carteiraId && !userSetores.has(card.carteiraId)) return false;
+    if (card.cargos?.length > 0 && !card.cargos.includes(userProfile?.funcao)) return false;
+    return true;
   });
 
   const builtInCards = [
@@ -561,7 +574,7 @@ function PainelProjeto() {
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">Nome da Base *</label>
                   <input type="text" value={editedName} onChange={e => setEditedName(e.target.value)} required className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all" />
                 </div>
-                <CardFieldsForm cards={editedExtras} onAdd={addExtraField} onUpdate={updateExtraField} onRemove={removeExtraField} carteiras={projetoCarteiras} />
+                <CardFieldsForm cards={editedExtras} onAdd={addExtraField} onUpdate={updateExtraField} onRemove={removeExtraField} carteiras={projetoCarteiras} cargosLista={cargosLista} />
               </div>
               <div className="px-6 py-4 border-t border-white/[0.07] flex gap-3 flex-shrink-0">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors">Cancelar</button>

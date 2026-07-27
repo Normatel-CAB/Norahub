@@ -56,7 +56,7 @@ function BarTooltip({ active, payload, label }) {
 }
 
 function AdminAnalytics() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isAdmin = userProfile?.funcao === 'admin';
 
@@ -68,11 +68,13 @@ function AdminAnalytics() {
   const [topUsers, setTopUsers] = useState([]);
 
   useEffect(() => {
-    if (!userProfile) return;
+    if (authLoading) return;
+    if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
     const canAccess = isAdmin || userProfile.funcao?.toLowerCase().includes('gerente');
-    if (!canAccess) { navigate('/selecao-projeto'); return; }
+    if (!canAccess) { navigate('/selecao-projeto', { replace: true }); return; }
     loadData();
-  }, [userProfile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
 
   const loadData = async () => {
     setLoading(true);
@@ -152,7 +154,7 @@ function AdminAnalytics() {
     }
   };
 
-  if (loading) return (
+  if (authLoading || loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
     </div>

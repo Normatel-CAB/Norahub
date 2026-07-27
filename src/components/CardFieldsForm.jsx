@@ -1,4 +1,4 @@
-import { X, Layers } from 'lucide-react';
+import { X, Layers, Shield } from 'lucide-react';
 import { SETORES_PADRAO } from '../services/carteirasDeProjeto';
 
 export const CARD_TYPES = [
@@ -20,7 +20,7 @@ export const CUSTOM_FORM_TYPES = new Set(['forms']);
 const inputCls =
   'w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all';
 
-export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove }) {
+export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, cargosLista = [] }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -64,6 +64,7 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove }) {
             const description = card.description ?? card.descricao ?? '';
             const url = card.url ?? '';
             const carteiraId = card.carteiraId ?? null;
+            const cardCargos = card.cargos ?? [];
             const noUrl = NO_URL_TYPES.has(type);
             const isForm = CUSTOM_FORM_TYPES.has(type);
 
@@ -148,7 +149,7 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove }) {
                     style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: carteiraId ? '#f9fafb' : '#9ca3af' }}
                   >
                     <option value="" style={{ backgroundColor: '#111827', color: '#9ca3af' }}>
-                      Sem restrição — visível para todos
+                      Sem restrição de setor
                     </option>
                     {SETORES_PADRAO.map(s => (
                       <option key={s.id} value={s.id} style={{ backgroundColor: '#111827', color: '#f9fafb' }}>
@@ -157,6 +158,46 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove }) {
                     ))}
                   </select>
                 </div>
+
+                {/* Cargos que podem ver este card */}
+                {cargosLista.length > 0 && (
+                  <div className="flex items-start gap-2 pt-1 border-t border-white/[0.06]">
+                    <Shield size={13} className="text-purple-500 flex-shrink-0 mt-1.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] text-gray-500 mb-2">
+                        Restringir por cargo
+                        {cardCargos.length > 0
+                          ? <span className="ml-1.5 text-purple-400 font-semibold">({cardCargos.length} selecionado{cardCargos.length > 1 ? 's' : ''})</span>
+                          : <span className="ml-1.5 text-gray-600">— vazio = todos os cargos</span>
+                        }
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {cargosLista.map(c => {
+                          const selected = cardCargos.includes(c.nome);
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                const next = selected
+                                  ? cardCargos.filter(x => x !== c.nome)
+                                  : [...cardCargos, c.nome];
+                                onUpdate(idx, 'cargos', next);
+                              }}
+                              className={`text-[11px] px-2.5 py-1 rounded-full border font-semibold transition-all ${
+                                selected
+                                  ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                                  : 'bg-white/[0.04] border-white/[0.10] text-gray-500 hover:text-gray-300 hover:border-white/[0.20]'
+                              }`}
+                            >
+                              {c.nome}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
