@@ -90,17 +90,17 @@ function EsqueceuSenha() {
           {success ? (
             // Tela de Sucesso (Com aviso de Spam reforçado)
             <div className="flex flex-col items-center text-center animate-fade-in">
-              <div className="bg-green-100 p-4 rounded-full mb-4">
-                <CheckCircle size={48} className="text-green-600" />
+              <div className="bg-green-500/20 p-4 rounded-full mb-4">
+                <CheckCircle size={48} className="text-[#57B952]" />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">E-mail Enviado!</h3>
               
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6 w-full">
-                <div className="flex items-center justify-center gap-2 text-yellow-700 font-semibold mb-1">
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-6 w-full">
+                <div className="flex items-center justify-center gap-2 text-yellow-400 font-semibold mb-1">
                     <AlertTriangle size={18} />
                     <span>Atenção</span>
                 </div>
-                <p className="text-sm text-yellow-800">
+                <p className="text-sm text-yellow-300">
                   Verifique sua pasta de <strong>Spam</strong> ou <strong>Lixo Eletrônico</strong>.
                 </p>
               </div>

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, User, Users, FolderOpen, FileText, TrendingUp, 
+import {
+  ArrowLeft, User, Users, FolderOpen, FileText, TrendingUp,
   Activity, Clock, CheckCircle, XCircle, BarChart3
 } from 'lucide-react';
+import { SkeletonStatCards, SkeletonActivityRow } from '../components/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../services/firebase';
@@ -27,6 +28,7 @@ function Dashboard() {
   
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.displayName?.split(' ')[0] || 'Usuário';
   const fotoURL = currentUser?.photoURL || userProfile?.fotoURL;
@@ -48,29 +50,14 @@ function Dashboard() {
       const totalProjects = projectsSnapshot.size;
       const activeProjects = projectsSnapshot.docs.filter(doc => doc.data().ativa !== false).length;
       
-      // Contar respostas de formulários em todos os projetos
       let totalForms = 0;
-      for (const projectDoc of projectsSnapshot.docs) {
-        const projectData = projectDoc.data();
-        if (projectData.extras && Array.isArray(projectData.extras)) {
-          for (const extra of projectData.extras) {
-            if (extra.formResponses && Array.isArray(extra.formResponses)) {
-              totalForms += extra.formResponses.length;
-            }
-          }
-        }
-      }
-      
-      // Contar arquivos em todos os projetos (estimativa baseada em cards de documentos)
       let totalFiles = 0;
       for (const projectDoc of projectsSnapshot.docs) {
-        const projectData = projectDoc.data();
-        if (projectData.extras && Array.isArray(projectData.extras)) {
-          for (const extra of projectData.extras) {
-            if (extra.files && Array.isArray(extra.files)) {
-              totalFiles += extra.files.length;
-            }
-          }
+        const extras = projectDoc.data().extras;
+        if (!Array.isArray(extras)) continue;
+        for (const extra of extras) {
+          if (Array.isArray(extra.formResponses)) totalForms += extra.formResponses.length;
+          if (Array.isArray(extra.files))         totalFiles += extra.files.length;
         }
       }
       
@@ -98,7 +85,7 @@ function Dashboard() {
       setRecentActivity(activities);
       setLoading(false);
     } catch (error) {
-      console.error('Erro ao buscar dados do dashboard:', error);
+      setError('Erro ao carregar os dados do dashboard. Tente novamente.');
       setLoading(false);
     }
   };
@@ -119,15 +106,15 @@ function Dashboard() {
     }
   };
 
-  const StatCard = ({ icon: Icon, label, value, color, bgColor }) => (
-    <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-md border border-white/20 p-4 md:p-6 hover:shadow-lg transition-shadow">
+  const StatCard = ({ icon: Icon, label, value, accent }) => (
+    <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-md border border-white/20 p-4 md:p-6 hover:shadow-lg hover:border-white/30 transition-all">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-400 mb-1">{label}</p>
-          <p className={`text-2xl md:text-3xl font-bold ${color}`}>{value}</p>
+          <p className="text-xs md:text-sm text-gray-400 mb-1 uppercase tracking-wider font-medium">{label}</p>
+          <p className={`text-2xl md:text-3xl font-bold text-white`}>{value}</p>
         </div>
-        <div className={`${bgColor} p-3 md:p-4 rounded-xl`}>
-          <Icon size={24} className={`md:w-8 md:h-8 ${color}`} />
+        <div className={`${accent} bg-opacity-20 p-3 md:p-4 rounded-xl border border-white/10`}>
+          <Icon size={24} className={`md:w-8 md:h-8 ${accent}`} />
         </div>
       </div>
     </div>
@@ -195,55 +182,62 @@ function Dashboard() {
           </div>
 
           {loading ? (
-            <div className="text-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952] mx-auto"></div>
-              <p className="text-gray-400 mt-4">Carregando dados...</p>
+            <>
+              <SkeletonStatCards count={6} />
+              <div className="mt-6 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-4 md:p-6 space-y-2">
+                <div className="h-5 w-40 bg-white/[0.07] rounded animate-pulse mb-4" />
+                {[1, 2, 3, 4, 5].map(i => <SkeletonActivityRow key={i} />)}
+              </div>
+            </>
+          ) : error ? (
+            <div className="text-center py-20 bg-red-500/10 border border-red-500/20 rounded-xl">
+              <p className="text-red-400 font-medium">{error}</p>
+              <button
+                onClick={fetchDashboardData}
+                className="mt-4 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg text-sm font-medium transition-colors border border-red-500/30"
+              >
+                Tentar novamente
+              </button>
             </div>
           ) : (
             <>
               {/* Cards de Estatísticas */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-                <StatCard 
+                <StatCard
                   icon={Users}
                   label="Total de Usuários"
                   value={stats.totalUsers}
-                  color="text-blue-600"
-                  bgColor="bg-blue-100"
+                  accent="text-blue-400"
                 />
-                <StatCard 
+                <StatCard
                   icon={FolderOpen}
                   label="Total de Projetos"
                   value={stats.totalProjects}
-                  color="text-green-600"
-                  bgColor="bg-green-100"
+                  accent="text-[#57B952]"
                 />
-                <StatCard 
+                <StatCard
                   icon={Activity}
                   label="Projetos Ativos"
                   value={stats.activeProjects}
-                  color="text-purple-600"
-                  bgColor="bg-purple-100"
+                  accent="text-purple-400"
                 />
-                <StatCard 
+                <StatCard
                   icon={FileText}
                   label="Total de Formulários"
                   value={stats.totalForms}
-                  color="text-orange-600"
-                  bgColor="bg-orange-100"
+                  accent="text-orange-400"
                 />
-                <StatCard 
+                <StatCard
                   icon={FolderOpen}
                   label="Total de Arquivos"
                   value={stats.totalFiles}
-                  color="text-indigo-600"
-                  bgColor="bg-indigo-100"
+                  accent="text-indigo-400"
                 />
-                <StatCard 
+                <StatCard
                   icon={TrendingUp}
                   label="Taxa de Atividade"
                   value={`${stats.totalProjects > 0 ? Math.round((stats.activeProjects / stats.totalProjects) * 100) : 0}%`}
-                  color="text-[#57B952]"
-                  bgColor="bg-green-100"
+                  accent="text-[#57B952]"
                 />
               </div>
 
@@ -264,15 +258,15 @@ function Dashboard() {
                         className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors text-white"
                       >
                         <div className={`p-2 rounded-lg ${
-                          activity.type === 'form_response' ? 'bg-blue-100' :
-                          activity.type === 'file_upload' ? 'bg-green-100' :
-                          activity.type === 'approval' ? 'bg-purple-100' :
-                          'bg-gray-100'
+                          activity.type === 'form_response' ? 'bg-blue-500/15' :
+                          activity.type === 'file_upload' ? 'bg-green-500/15' :
+                          activity.type === 'approval' ? 'bg-purple-500/15' :
+                          'bg-white/10'
                         }`}>
-                          {activity.type === 'form_response' ? <FileText size={18} className="text-blue-600" /> :
-                           activity.type === 'file_upload' ? <FolderOpen size={18} className="text-green-600" /> :
-                           activity.type === 'approval' ? <CheckCircle size={18} className="text-purple-600" /> :
-                           <Activity size={18} className="text-gray-600" />}
+                          {activity.type === 'form_response' ? <FileText size={18} className="text-blue-400" /> :
+                           activity.type === 'file_upload' ? <FolderOpen size={18} className="text-green-400" /> :
+                           activity.type === 'approval' ? <CheckCircle size={18} className="text-purple-400" /> :
+                           <Activity size={18} className="text-gray-400" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-white">{activity.title || activity.action || 'Atividade'}</p>

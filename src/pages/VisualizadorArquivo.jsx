@@ -257,7 +257,7 @@ function VisualizadorArquivo() {
               </button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
-              <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans leading-relaxed">
+              <pre className="whitespace-pre-wrap text-sm text-gray-200 font-sans leading-relaxed">
                 {analysisResult.data}
               </pre>
             </div>
@@ -273,7 +273,7 @@ function VisualizadorArquivo() {
               </button>
               <button
                 onClick={() => setAnalysisResult(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+                className="px-4 py-2 bg-white/10 text-gray-300 rounded-lg hover:bg-white/20"
               >
                 Fechar
               </button>

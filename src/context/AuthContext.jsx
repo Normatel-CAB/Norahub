@@ -1,61 +1,66 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { auth, db } from '../services/firebase';
 import { onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 
-const AuthContext = createContext();
+const AUTH_DEFAULT = { currentUser: null, userProfile: null, loading: true };
 
-export const useAuth = () => useContext(AuthContext);
+const AuthContext = createContext(AUTH_DEFAULT);
+
+export const useAuth = () => useContext(AuthContext) ?? AUTH_DEFAULT;
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null); 
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setPersistence(auth, browserLocalPersistence)
-      .then(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-          if (user) {
-            setCurrentUser(user);
-            let tentativas = 0;
-            let perfil = null;
-            while (tentativas < 5 && !perfil) {
-              try {
-                const docRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                  setUserProfile(docSnap.data());
-                  perfil = docSnap.data();
-                } else {
-                  tentativas++;
-                  await new Promise(res => setTimeout(res, 1000));
-                }
-              } catch (error) {
-                if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
-                  tentativas++;
-                  await new Promise(res => setTimeout(res, 1000));
-                } else {
-                  console.error("Erro ao buscar perfil:", error);
-                  break;
-                }
-              }
+    let unsubscribeProfile = () => {};
+
+    setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      unsubscribeProfile();
+
+      if (user) {
+        setCurrentUser(user);
+        const docRef = doc(db, 'usuarios', user.uid);
+
+        // Atualiza lastSeen UMA VEZ no login — nunca dentro do onSnapshot
+        // (colocar dentro do onSnapshot cria loop infinito: write → snapshot → write → ...)
+        updateDoc(docRef, { lastSeen: serverTimestamp() }).catch(() => {});
+
+        unsubscribeProfile = onSnapshot(
+          docRef,
+          (snap) => {
+            if (snap.exists()) {
+              setUserProfile(snap.data());
+            } else {
+              setUserProfile(null);
             }
-          } else {
-            setCurrentUser(null);
-            setUserProfile(null);
-          }
-          setLoading(false); 
-        });
-        return () => unsubscribe();
-      })
-      .catch((error) => {
-        console.error("Erro na persistência:", error);
+            setLoading(false);
+          },
+          () => setLoading(false)
+        );
+      } else {
+        setCurrentUser(null);
+        setUserProfile(null);
         setLoading(false);
-      });
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeProfile();
+    };
   }, []);
 
-  const value = { currentUser, userProfile, loading };
+  // useMemo evita recriar o objeto de contexto a cada render do AuthProvider,
+  // reduzindo re-renders desnecessários em todos os consumidores de useAuth()
+  const value = useMemo(
+    () => ({ currentUser, userProfile, loading }),
+    [currentUser, userProfile, loading]
+  );
 
   return (
     <AuthContext.Provider value={value}>

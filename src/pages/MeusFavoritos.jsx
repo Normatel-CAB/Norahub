@@ -65,7 +65,7 @@ function MeusFavoritos() {
             <button
               key={btn.key}
               onClick={() => setFilter(btn.key)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${filter === btn.key ? 'bg-[#57B952] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${filter === btn.key ? 'bg-[#57B952] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
             >
               {btn.label}
             </button>

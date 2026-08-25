@@ -108,10 +108,67 @@ export const getFavorites = async (userId, filterByType = null) => {
 // Toggle favorito (adiciona se não existe, remove se existe)
 export const toggleFavorite = async (userId, itemId, itemType, itemData) => {
   const isAlreadyFavorite = await isFavorite(userId, itemId);
-  
+
   if (isAlreadyFavorite) {
     return await removeFavorite(userId, itemId);
   } else {
     return await addFavorite(userId, itemId, itemType, itemData);
+  }
+};
+
+// Registrar acesso a um link
+export const trackLinkAccess = async (userId, linkData) => {
+  try {
+    const favoriteRef = doc(db, 'favorites', userId);
+    const favoriteDoc = await getDoc(favoriteRef);
+
+    const id = `${linkData.projetoId}_${linkData.cardName}`.replace(/\s+/g, '_');
+    const now = new Date().toISOString();
+
+    if (!favoriteDoc.exists()) {
+      await setDoc(favoriteRef, {
+        userId,
+        items: [],
+        recentLinks: [{ ...linkData, id, accessCount: 1, lastAccessedAt: now }],
+        createdAt: now,
+      });
+      return;
+    }
+
+    const recentLinks = favoriteDoc.data().recentLinks || [];
+    const existingIdx = recentLinks.findIndex(l => l.id === id);
+
+    let updatedLinks;
+    if (existingIdx >= 0) {
+      updatedLinks = recentLinks.map((l, i) =>
+        i === existingIdx
+          ? { ...l, accessCount: (l.accessCount || 0) + 1, lastAccessedAt: now }
+          : l
+      );
+    } else {
+      updatedLinks = [{ ...linkData, id, accessCount: 1, lastAccessedAt: now }, ...recentLinks];
+    }
+
+    updatedLinks.sort((a, b) => new Date(b.lastAccessedAt) - new Date(a.lastAccessedAt));
+    if (updatedLinks.length > 20) updatedLinks = updatedLinks.slice(0, 20);
+
+    await updateDoc(favoriteRef, { recentLinks: updatedLinks });
+  } catch {
+    // Tracking is non-critical — fail silently
+  }
+};
+
+// Buscar links recentemente acessados
+export const getRecentLinks = async (userId) => {
+  try {
+    const favoriteRef = doc(db, 'favorites', userId);
+    const favoriteDoc = await getDoc(favoriteRef);
+    if (!favoriteDoc.exists()) return { success: true, recentLinks: [] };
+    const recentLinks = (favoriteDoc.data().recentLinks || []).sort(
+      (a, b) => new Date(b.lastAccessedAt) - new Date(a.lastAccessedAt)
+    );
+    return { success: true, recentLinks };
+  } catch {
+    return { success: false, recentLinks: [] };
   }
 };

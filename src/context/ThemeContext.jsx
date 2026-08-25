@@ -24,12 +24,10 @@ export function ThemeProvider({ children, ...props }) {
     // Aplica imediatamente (independente do modo do sistema)
     applyDark();
 
-    // Detecta mudanças no modo do sistema e, se o sistema ficar em dark,
-    // garante que a aplicação permaneça em modo claro (branco).
+    // Reforça dark mode se o sistema alterar preferência de tema.
     const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e) => {
-      // sempre aplicar tema claro, mesmo se sistema estiver em dark
-      applyLight();
+    const handler = () => {
+      applyDark();
     };
 
     if (mq) {

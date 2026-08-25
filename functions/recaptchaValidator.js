@@ -16,8 +16,8 @@ async function verifyRecaptchaToken(token) {
   try {
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
     if (!secretKey) {
-      console.warn('RECAPTCHA_SECRET_KEY não configurada');
-      return { valid: true, score: 0.5, error: 'Secret key não configurada' }; // Falhar aberto
+      // Fail-closed: sem chave configurada, bloquear para não expor a função sem proteção
+      return { valid: false, score: 0, error: 'RECAPTCHA_SECRET_KEY não configurada no servidor' };
     }
 
     const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {

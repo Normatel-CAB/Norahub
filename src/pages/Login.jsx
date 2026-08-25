@@ -1,4 +1,4 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 // ThemeToggle removed: app forced to light mode
@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import Alert from '../components/Alert';
 import { useRecaptcha } from '../components/RecaptchaLoader';
 import { auth, db } from '../services/firebase';
-import { signInWithEmailAndPassword, signOut, OAuthProvider, signInWithPopup, signInWithRedirect, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, OAuthProvider, signInWithPopup, signInWithRedirect, updateProfile, getRedirectResult } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import ActivityLogger from '../services/activityLogger';
 
@@ -16,28 +16,13 @@ function Login() {
   const isDark = theme === 'dark';
   const { currentUser, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const { executeRecaptcha } = useRecaptcha();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [alertInfo, setAlertInfo] = useState(null);
 
-  // Removido signOut automático para não desconectar o usuário após um login
-  // useEffect intentionally left empty
-
-  // Redirecionamento Automático
-  useEffect(() => {
-    // Se já carregou e tem usuário válido
-    if (!authLoading && currentUser && userProfile) {
-        if (userProfile.statusAcesso === 'pendente') return;
-        
-        // TODOS (Inclusive Admin) vão para a seleção de projeto
-        navigate('/selecao-projeto');
-    }
-  }, [authLoading, currentUser, userProfile, navigate]);
-
-    const checkUserProfile = async (user) => {
+  const checkUserProfile = async (user) => {
       // Normaliza email vindo do auth ou dos dados do provedor
       const providerEmail = user.providerData?.[0]?.email;
       const effectiveEmail = user.email || providerEmail || null;
@@ -54,53 +39,82 @@ function Login() {
         }
       }
       
-      const docSnap = await getDoc(doc(db, 'users', user.uid));
-      
+      const docSnap = await getDoc(doc(db, 'usuarios', user.uid));
+
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.statusAcesso === 'pendente') { 
-            // Se for Microsoft, atualiza para ativo automaticamente para não travar
-            if (user.providerData[0]?.providerId === 'microsoft.com') {
-                await updateDoc(doc(db, 'users', user.uid), { statusAcesso: 'ativo', fotoURL: user.photoURL || null });
-                // Força atualização do Auth com a foto
-                if (user.photoURL) {
-                  await updateProfile(user, { photoURL: user.photoURL });
-                }
-                navigate('/selecao-projeto');
-                return;
-            }
-            await signOut(auth); 
-            throw new Error("pendente"); 
+        if (data.statusAcesso === 'pendente') {
+            await signOut(auth);
+            throw new Error("pendente");
         }
-        
+
         // Se for Microsoft e ativo, atualiza foto
         if (user.providerData[0]?.providerId === 'microsoft.com' && user.photoURL) {
-          await updateDoc(doc(db, 'users', user.uid), { fotoURL: user.photoURL });
+          await updateDoc(doc(db, 'usuarios', user.uid), { fotoURL: user.photoURL });
           await updateProfile(user, { photoURL: user.photoURL });
         }
-        
-        // Redireciona para seleção
+
         navigate('/selecao-projeto');
-        
-      } else { 
-        // Cria perfil se não existir (Primeiro acesso Microsoft -> Ativo)
-        await setDoc(doc(db, 'users', user.uid), {
+
+      } else {
+        // Cria perfil se não existir (Primeiro acesso Microsoft → pendente para aprovação)
+        await setDoc(doc(db, 'usuarios', user.uid), {
           nome: user.displayName || 'Usuário Microsoft',
           email: effectiveEmail,
           cargo: 'Colaborador',
-          funcao: 'colaborador', // Padrão seguro
-          statusAcesso: 'ativo', // Já entra aprovado
+          funcao: 'colaborador',
+          statusAcesso: 'pendente',
           uid: user.uid,
-          fotoURL: user.photoURL || null, // Salva a foto da conta Microsoft
+          fotoURL: user.photoURL || null,
           createdAt: new Date()
         });
-        // Força atualização do Auth com a foto
         if (user.photoURL) {
           await updateProfile(user, { photoURL: user.photoURL });
         }
-        navigate('/selecao-projeto');
+        await signOut(auth);
+        throw new Error("pendente");
       }
   };
+
+  // Lê o resultado do signInWithRedirect ao voltar da Microsoft
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          setLoading(true);
+          await checkUserProfile(result.user);
+        }
+      } catch (error) {
+        if (error?.message === 'dominio-invalido') {
+          setAlertInfo({ message: 'Acesso restrito a contas @normatel.com.br.', type: 'error' });
+        } else if (error?.message === 'email-indisponivel') {
+          setAlertInfo({ message: 'A Microsoft não retornou seu e-mail. Verifique as permissões da conta.', type: 'error' });
+        } else if (error?.message === 'pendente') {
+          setAlertInfo({ message: 'Conta em análise. Aguarde aprovação do administrador.', type: 'error' });
+        } else if (error?.code === 'auth/account-exists-with-different-credential') {
+          setAlertInfo({ message: 'Este e-mail já possui cadastro com senha. Use o login por e-mail.', type: 'warning' });
+        } else if (error?.code === 'auth/invalid-credential') {
+          setAlertInfo({ message: 'Conta Microsoft não autorizada. Contate o administrador.', type: 'error' });
+        } else if (error?.code) {
+          setAlertInfo({ message: 'Não foi possível entrar com Microsoft. Tente novamente.', type: 'error' });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    handleRedirectResult();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Redirecionamento automático se já está logado
+  useEffect(() => {
+    if (!authLoading && currentUser && userProfile) {
+      if (userProfile.statusAcesso === 'pendente') return;
+      navigate('/selecao-projeto');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, currentUser?.uid, userProfile?.statusAcesso, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 
@@ -123,34 +137,43 @@ function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, senha);
       
       // Verificação específica para senha (mantém a regra de pendente)
-      const docSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
+      const docSnap = await getDoc(doc(db, 'usuarios', userCredential.user.uid));
       if (docSnap.exists()) {
          if (docSnap.data().statusAcesso === 'pendente') {
             await signOut(auth);
             throw new Error("pendente");
          }
-         // Registrar login no dashboard
          const userData = docSnap.data();
          await ActivityLogger.userLogin(userCredential.user.uid, userData.nome || email.split('@')[0]);
-         // Se ativo, o useEffect lá em cima redireciona
       } else {
-         // Criar perfil básico caso não exista (usuário legado)
-         await setDoc(doc(db, 'users', userCredential.user.uid), {
+         // Usuário existe no Auth mas não no Firestore (conta legada)
+         await setDoc(doc(db, 'usuarios', userCredential.user.uid), {
            nome: userCredential.user.displayName || email.split('@')[0],
            email: userCredential.user.email,
-           funcao: 'usuario',
-           statusAcesso: 'ativo',
+           funcao: 'colaborador',
+           statusAcesso: 'pendente',
            fotoURL: userCredential.user.photoURL || null,
            createdAt: new Date()
          });
-         // Continua o login normalmente
+         await signOut(auth);
+         throw new Error("pendente");
       }
     } catch (error) {
-      console.error("Erro:", error);
-      if (error.message === 'pendente') setAlertInfo({ message: "Conta em análise. Aguarde aprovação.", type: 'error' });
-      else if (error.code === 'auth/user-not-found') setAlertInfo({ message: "Usuário não encontrado. Faça o cadastro primeiro.", type: 'error' });
-      else if (error.code === 'auth/wrong-password') setAlertInfo({ message: "Senha incorreta.", type: 'error' });
-      else setAlertInfo({ message: "Email ou senha incorretos.", type: 'error' });
+      if (error.message === 'pendente') {
+        setAlertInfo({ message: 'Conta em análise. Aguarde aprovação do administrador.', type: 'error' });
+      } else if (
+        error.code === 'auth/invalid-credential' ||
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/user-not-found'
+      ) {
+        setAlertInfo({ message: 'E-mail ou senha incorretos.', type: 'error' });
+      } else if (error.code === 'auth/too-many-requests') {
+        setAlertInfo({ message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.', type: 'error' });
+      } else if (error.code === 'auth/network-request-failed') {
+        setAlertInfo({ message: 'Sem conexão. Verifique sua internet e tente novamente.', type: 'error' });
+      } else {
+        setAlertInfo({ message: 'Não foi possível fazer login. Tente novamente.', type: 'error' });
+      }
     } finally { setLoading(false); }
   };
 
@@ -163,32 +186,35 @@ function Login() {
         const result = await signInWithPopup(auth, provider);
         await checkUserProfile(result.user);
     } catch (error) {
-        console.error("Erro Microsoft:", error);
       // Alguns navegadores com COOP/COEP bloqueiam o polling do popup; usamos redirect como fallback seguro
       const coopBlocked = error?.message?.includes('window.closed');
       if (coopBlocked) {
         try {
           await signInWithRedirect(auth, provider);
           return;
-        } catch (redirectError) {
-          console.error('Erro Microsoft (redirect):', redirectError);
+        } catch {
           setAlertInfo({ message: 'Erro ao redirecionar para login Microsoft.', type: 'error' });
           return;
         }
       }
       if (error?.message === 'dominio-invalido') {
-        setAlertInfo({ message: "Acesso restrito a @normatel.com.br", type: 'error' });
+        setAlertInfo({ message: 'Acesso restrito a contas @normatel.com.br.', type: 'error' });
       } else if (error?.message === 'email-indisponivel') {
-        setAlertInfo({ message: "A Microsoft não retornou seu e-mail. Verifique as permissões da conta.", type: 'error' });
+        setAlertInfo({ message: 'A Microsoft não retornou seu e-mail. Verifique as permissões da conta.', type: 'error' });
       } else if (error?.message === 'pendente') {
-        setAlertInfo({ message: "Conta em análise.", type: 'error' });
+        setAlertInfo({ message: 'Conta em análise. Aguarde aprovação do administrador.', type: 'error' });
       } else if (error?.code === 'auth/account-exists-with-different-credential') {
-        setAlertInfo({ message: "E-mail já existe com senha.", type: 'warning' });
-      } else if (error?.code === 'auth/popup-closed-by-user') {
-        setAlertInfo({ message: "Login cancelado.", type: 'error' });
+        setAlertInfo({ message: 'Este e-mail já possui cadastro com senha. Use o login por e-mail.', type: 'warning' });
+      } else if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
+        setAlertInfo({ message: 'Login cancelado.', type: 'error' });
+      } else if (error?.code === 'auth/invalid-credential') {
+        setAlertInfo({ message: 'Credencial Microsoft inválida ou expirada. Tente novamente.', type: 'error' });
+      } else if (error?.code === 'auth/too-many-requests') {
+        setAlertInfo({ message: 'Muitas tentativas. Aguarde alguns minutos.', type: 'error' });
+      } else if (error?.code === 'auth/network-request-failed') {
+        setAlertInfo({ message: 'Sem conexão. Verifique sua internet.', type: 'error' });
       } else {
-        const fallback = error?.code || error?.message || 'Erro desconhecido.';
-        setAlertInfo({ message: `Erro: ${fallback}`, type: 'error' });
+        setAlertInfo({ message: 'Não foi possível fazer login com Microsoft. Tente novamente.', type: 'error' });
       }
     } finally { setLoading(false); }
   };

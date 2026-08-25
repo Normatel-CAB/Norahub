@@ -50,5 +50,10 @@ lerna-debug.log*
 firebase-debug.log*
 firestore-debug.log*
 
+# Cloud Functions secrets
+functions/.env
+functions/.env.local
+functions/.secret.local
+
 # Vite
 .vite/

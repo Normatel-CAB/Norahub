@@ -41,7 +41,7 @@ function MenuNormatel() {
         <div className="absolute right-3 md:right-8 flex items-center gap-2 md:gap-3 mr-12 md:mr-16 shrink-0 z-10">
              <button 
                  onClick={() => navigate('/perfil')} 
-                 className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-[#57B952] bg-gray-200 flex items-center justify-center hover:border-green-600 transition-colors cursor-pointer shrink-0"
+                 className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-[#57B952] bg-gray-700 flex items-center justify-center hover:border-green-600 transition-colors cursor-pointer shrink-0"
              >
                  {fotoURL ? <img src={fotoURL} className="w-full h-full object-cover" alt="Avatar" /> : <User size={16} className="md:w-5 md:h-5 text-gray-500" />}
              </button>
@@ -64,7 +64,7 @@ function MenuNormatel() {
                     rel="noopener noreferrer"
                     className="group bg-gray-800 p-10 rounded-2xl shadow-lg border border-gray-700 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 cursor-pointer"
                 >
-                    <div className="bg-green-100 bg-green-900/30 p-6 rounded-full mb-6 group-hover:scale-110 transition-transform text-[#57B952]">
+                    <div className="bg-green-900/30 p-6 rounded-full mb-6 group-hover:scale-110 transition-transform text-[#57B952]">
                         <UserCheck size={48} />
                     </div>
                     <h3 className="text-2xl font-bold text-white mb-2">Sou Solicitante</h3>
@@ -79,12 +79,12 @@ function MenuNormatel() {
                     rel="noopener noreferrer"
                     className="group bg-gray-800 p-10 rounded-2xl shadow-lg border border-gray-700 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 cursor-pointer"
                 >
-                    <div className="bg-blue-100 bg-blue-900/30 p-6 rounded-full mb-6 group-hover:scale-110 transition-transform text-blue-600 text-blue-400">
+                    <div className="bg-blue-900/30 p-6 rounded-full mb-6 group-hover:scale-110 transition-transform text-blue-400">
                         <ShoppingCart size={48} />
                     </div>
                     <h3 className="text-2xl font-bold text-white mb-2">Sou Comprador</h3>
                     <p className="text-gray-500 mb-6">Painel de aprovação.</p>
-                    <span className="text-blue-600 text-blue-400 font-bold flex items-center gap-1">Acessar <ChevronRight size={16} /></span>
+                    <span className="text-blue-400 font-bold flex items-center gap-1">Acessar <ChevronRight size={16} /></span>
                 </a>
             </div>
         </div>

@@ -1,86 +1,95 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
-function PrivateRoute({ children, requiredRole }) {
+// Avalia permissão de admin/gerente de forma síncrona, sem Firestore
+function quickAdminCheck(userProfile, pathname) {
+  if (!userProfile || !pathname.startsWith('/admin')) return null; // inconclusivo
+  if (userProfile.funcao === 'admin') return true;
+  if (typeof userProfile.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')) return true;
+  return null; // precisa checar cargos no Firestore
+}
+
+function PrivateRoute({ children, requiredRole, requiredPermission }) {
   const { currentUser, userProfile, loading } = useAuth();
   const location = useLocation();
-  const [hasAdminPermission, setHasAdminPermission] = useState(false);
-  const [permissionLoading, setPermissionLoading] = useState(true);
 
-  // Verificar se o cargo tem permissão de admin quando tentar acessar /admin
+  // Tenta resolver permissão admin de forma síncrona a partir do perfil em memória
+  const quickResult = useMemo(
+    () => quickAdminCheck(userProfile, location.pathname),
+    // funcao é o único campo usado por quickAdminCheck — evita recalcular em todo snapshot
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userProfile?.funcao, location.pathname]
+  );
+
+  // Apenas chega aqui se quickResult === null (cargo custom que precisa de Firestore)
+  const [cargoPermission, setCargoPermission] = useState(null);
+  const [cargoLoading, setCargoLoading] = useState(false);
+
   useEffect(() => {
-    const checkAdminPermission = async () => {
-      if (!userProfile) {
-        setHasAdminPermission(false);
-        setPermissionLoading(false);
-        return;
-      }
+    if (quickResult !== null) {
+      setCargoPermission(null);
+      setCargoLoading(false);
+      return;
+    }
+    if (!userProfile || !location.pathname.startsWith('/admin')) {
+      setCargoPermission(false);
+      setCargoLoading(false);
+      return;
+    }
 
-      // Se não está tentando acessar /admin, não precisa verificar
-      if (!location.pathname.startsWith('/admin')) {
-        setHasAdminPermission(false);
-        setPermissionLoading(false);
-        return;
-      }
-
-      // Para rotas /admin: admin tem acesso automático
-      if (userProfile.funcao === 'admin') {
-        setHasAdminPermission(true);
-        setPermissionLoading(false);
-        return;
-      }
-
-      // Todos os gerentes (qualquer cargo que começa com "gerente") têm acesso automático a /admin
-      if (typeof userProfile.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')) {
-        setHasAdminPermission(true);
-        setPermissionLoading(false);
-        return;
-      }
-
-      // Para outros cargos em /admin: verificar se tem canManageUsers ou canManagePermissions
-      try {
-        const cargosQuery = query(
-          collection(db, 'cargos'),
-          where('nome', '==', userProfile.funcao)
-        );
-        const cargosSnapshot = await getDocs(cargosQuery);
-        
-        if (!cargosSnapshot.empty) {
-          const cargoData = cargosSnapshot.docs[0].data();
-          // Permite acesso se tiver permissão de gerenciar usuários ou permissões
-          const temPermissao = cargoData.canManageUsers || cargoData.canManagePermissions;
-          setHasAdminPermission(temPermissao);
+    setCargoLoading(true);
+    const cargosQuery = query(collection(db, 'cargos'), where('nome', '==', userProfile.funcao));
+    getDocs(cargosQuery)
+      .then(snap => {
+        if (!snap.empty) {
+          const c = snap.docs[0].data();
+          // Se a rota exige uma permissão específica, verifica só ela
+          // Caso contrário, verifica permissões genéricas de área admin
+          const granted = requiredPermission
+            ? !!c[requiredPermission]
+            : (c.canManageUsers || c.canManagePermissions || false);
+          setCargoPermission(granted);
         } else {
-          setHasAdminPermission(false);
+          setCargoPermission(false);
         }
-      } catch (error) {
-        console.error('Erro ao verificar permissões de admin:', error);
-        setHasAdminPermission(false);
-      }
-      
-      setPermissionLoading(false);
-    };
+      })
+      .catch(() => setCargoPermission(false))
+      .finally(() => setCargoLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.funcao, location.pathname, quickResult, requiredPermission]);
 
-    checkAdminPermission();
-  }, [userProfile, location.pathname]);
+  // Spinner enquanto Firebase Auth ou perfil carrega
+  const spinner = (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gray-900">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952]" />
+    </div>
+  );
 
-  if (loading || permissionLoading) return <div className="min-h-screen w-full flex items-center justify-center bg-gray-100"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952]"></div></div>;
-
+  if (loading) return spinner;
   if (!currentUser) return <Navigate to="/login" replace />;
 
-  // Se for rota de admin
+  // Aguarda cargos do Firestore apenas quando necessário
+  if (cargoLoading) return spinner;
+
+  // Rota /admin
   if (location.pathname.startsWith('/admin')) {
-    if (userProfile?.funcao !== 'admin' && !hasAdminPermission) {
+    const hasAccess = quickResult ?? cargoPermission ?? false;
+    if (!hasAccess) return <Navigate to="/" replace />;
+  } else if (requiredRole && userProfile) {
+    // Rotas com requiredRole fora de /admin (ex: gerente, admin)
+    const funcao = userProfile.funcao ?? '';
+    const isAdminUser    = funcao === 'admin';
+    const isExactMatch   = funcao === requiredRole;
+    const isGerenteMatch = requiredRole === 'gerente' && funcao.toLowerCase().includes('gerente');
+    if (!isAdminUser && !isExactMatch && !isGerenteMatch) {
       return <Navigate to="/" replace />;
     }
-  } else if (requiredRole && userProfile && userProfile.funcao !== requiredRole && userProfile.funcao !== 'admin') {
-     // Outras rotas protegidas
-     return <Navigate to="/" replace />;
   }
 
   return children;
 }
+
 export default PrivateRoute;

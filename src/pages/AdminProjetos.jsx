@@ -19,7 +19,6 @@ function AdminProjetos() {
   const [projetoSelecionado, setProjetoSelecionado] = useState(null);
   const [membrosAdicionados, setMembrosAdicionados] = useState([]);
   const [usuarioParaAdicionar, setUsuarioParaAdicionar] = useState('');
-  const [membrosList, setMembrosList] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -27,19 +26,13 @@ function AdminProjetos() {
 
   const fetchData = async () => {
     try {
-      // Fetch projetos
-      const projSnapshot = await getDocs(collection(db, 'projetos'));
-      const projList = projSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setProjetos(projList);
-      console.log('Projetos carregados:', projList);
-
-      // Fetch todos os usuários (removido filtro de status) e garante campo uid
-      const userSnapshot = await getDocs(collection(db, 'usuarios'));
-      const userList = userSnapshot.docs.map(doc => ({ id: doc.id, uid: doc.data()?.uid || doc.id, ...doc.data() }));
-      setUsuarios(userList);
-      console.log('Usuários carregados:', userList);
+      const [projSnapshot, userSnapshot] = await Promise.all([
+        getDocs(collection(db, 'projetos')),
+        getDocs(collection(db, 'usuarios')),
+      ]);
+      setProjetos(projSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      setUsuarios(userSnapshot.docs.map(d => ({ id: d.id, uid: d.data()?.uid || d.id, ...d.data() })));
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
       setAlertInfo({ message: 'Erro ao carregar dados.', type: 'error' });
     } finally {
       setLoading(false);
@@ -47,14 +40,9 @@ function AdminProjetos() {
   };
 
   const abrirModal = (projeto) => {
-    console.log('Abrindo modal para projeto:', projeto);
-    console.log('Usuários disponíveis:', usuarios);
     setProjetoSelecionado(projeto);
-    // Copia os membros existentes do projeto
     const membrosExistentes = (projeto.membros || []).map(m => String(m));
-    setMembrosList(membrosExistentes);
     setMembrosAdicionados(membrosExistentes);
-    console.log('Membros iniciais:', membrosExistentes);
     setUsuarioParaAdicionar('');
     setModalOpen(true);
   };
@@ -62,34 +50,22 @@ function AdminProjetos() {
   const fecharModal = () => {
     setModalOpen(false);
     setProjetoSelecionado(null);
-    setMembrosList([]);
     setMembrosAdicionados([]);
     setUsuarioParaAdicionar('');
   };
 
   const adicionarMembro = () => {
-    console.log('=== ADICIONAR MEMBRO ===');
-    console.log('Usuário para adicionar:', usuarioParaAdicionar);
-    console.log('Membros atuais:', membrosAdicionados);
-    
-    if (!usuarioParaAdicionar || usuarioParaAdicionar.trim() === '') {
+    if (!usuarioParaAdicionar) {
       setAlertInfo({ message: 'Selecione um usuário para adicionar.', type: 'warning' });
       return;
     }
-    
     if (membrosAdicionados.includes(usuarioParaAdicionar)) {
       setAlertInfo({ message: 'Este usuário já foi adicionado.', type: 'warning' });
       return;
     }
-    
-    // Cria novo array com o usuário adicionado
-    const novosMembros = [...membrosAdicionados, usuarioParaAdicionar];
-    console.log('Novos membros após adição:', novosMembros);
-    
-    setMembrosAdicionados(novosMembros);
+    setMembrosAdicionados(prev => [...prev, usuarioParaAdicionar]);
     setUsuarioParaAdicionar('');
-    
-    setAlertInfo({ message: `Usuário adicionado! Total: ${novosMembros.length}`, type: 'success' });
+    setAlertInfo(null);
   };
 
   const removerMembro = (userId) => {
@@ -97,43 +73,19 @@ function AdminProjetos() {
   };
 
   const salvarMembros = async () => {
-    console.log('=== SALVAR MEMBROS ===');
-    console.log('Projeto selecionado:', projetoSelecionado?.id);
-    console.log('Membros a salvar:', membrosAdicionados);
-    
-    if (!projetoSelecionado) {
-      setAlertInfo({ message: 'Projeto não selecionado.', type: 'error' });
-      return;
-    }
-    
-    // Verifica se há membros (array deve ter pelo menos 1 elemento)
-    if (!Array.isArray(membrosAdicionados) || membrosAdicionados.length === 0) {
-      setAlertInfo({ message: 'Adicione pelo menos um membro antes de salvar.', type: 'warning' });
-      return;
-    }
-    
+    if (!projetoSelecionado) return;
+
     setSavingLoading(true);
     try {
-      console.log('Iniciando atualização no Firestore...');
       await updateDoc(doc(db, 'projetos', projetoSelecionado.id), {
-        membros: membrosAdicionados
+        membros: membrosAdicionados,
       });
-      console.log('✓ Membros salvos com sucesso');
-      
-      // Atualiza a lista de projetos localmente
       setProjetos(prev =>
-        prev.map(p => p.id === projetoSelecionado.id
-          ? { ...p, membros: membrosAdicionados }
-          : p
-        )
+        prev.map(p => p.id === projetoSelecionado.id ? { ...p, membros: membrosAdicionados } : p)
       );
-      
       setAlertInfo({ message: 'Membros atualizados com sucesso!', type: 'success' });
-      setTimeout(() => {
-        fecharModal();
-      }, 1500);
+      setTimeout(fecharModal, 1500);
     } catch (error) {
-      console.error('✗ Erro ao salvar membros:', error);
       setAlertInfo({ message: `Erro ao salvar: ${error.message}`, type: 'error' });
     } finally {
       setSavingLoading(false);
@@ -237,17 +189,15 @@ function AdminProjetos() {
               <div className="flex gap-2">
                 <select
                   value={usuarioParaAdicionar}
-                  onChange={(e) => {
-                    console.log('Usuário selecionado:', e.target.value);
-                    setUsuarioParaAdicionar(e.target.value);
-                  }}
-                  className="flex-1 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white focus:ring-2 focus:ring-[#57B952] outline-none text-sm placeholder-gray-400"
+                  onChange={(e) => setUsuarioParaAdicionar(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-lg border border-white/20 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: '#f9fafb' }}
                 >
-                  <option value="">Selecione um usuário... ({usuarios.filter(u => !membrosAdicionados.includes(String(u.uid || u.id))).length} disponíveis)</option>
+                  <option value="" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Selecione um usuário... ({usuarios.filter(u => !membrosAdicionados.includes(String(u.uid || u.id))).length} disponíveis)</option>
                   {usuarios
                     .filter(u => !membrosAdicionados.includes(String(u.uid || u.id)))
                     .map(u => (
-                      <option key={u.uid || u.id} value={u.uid || u.id}>
+                      <option key={u.uid || u.id} value={u.uid || u.id} style={{ backgroundColor: '#ffffff', color: '#111827' }}>
                         {u.nome} ({u.email})
                       </option>
                     ))}
@@ -272,7 +222,7 @@ function AdminProjetos() {
                       <span className="text-sm text-white">{getNomeUsuario(userId)}</span>
                       <button
                         onClick={() => removerMembro(userId)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                        className="p-1 text-red-400 hover:bg-red-500/20 rounded transition-colors"
                       >
                         <Trash2 size={16} />
                       </button>
