@@ -7,10 +7,7 @@ import {
   Sparkles, Layers, Users, Link2, Settings,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import {
-  doc, onSnapshot, collection, getDocs, updateDoc,
-} from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import {
   createCarteira, updateCarteira, deleteCarteira,
   addLink, updateLink, removeLink, seedCarteiras,
@@ -18,6 +15,28 @@ import {
 } from '../services/carteirasDeProjeto';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function mapProjetoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    ativa: row.ativa,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(row.data || {}),
+  };
+}
+
+function mapUsuarioRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    email: row.email,
+    funcao: row.funcao,
+    fotoUrl: row.foto_url,
+    ...(row.data || {}),
+  };
+}
 
 const LINK_ICON_MAP = {
   link:      ExternalLink,
@@ -107,19 +126,34 @@ function GerenciaCarteiras() {
     if (!projetoId) { navigate('/selecao-projeto'); return; }
     if (!isAdmin && !isManager) { navigate('/selecao-projeto'); return; }
 
-    const unsub = onSnapshot(doc(db, 'projetos', projetoId), (snap) => {
-      if (!snap.exists()) { navigate('/selecao-projeto'); return; }
-      setProjeto({ id: snap.id, ...snap.data() });
+    let active = true;
+
+    const fetchProjeto = async () => {
+      const { data: row, error } = await supabase.from('projetos').select('*').eq('id', projetoId).maybeSingle();
+      if (!active) return;
+      if (error || !row) { navigate('/selecao-projeto'); return; }
+      setProjeto(mapProjetoRow(row));
       setLoading(false);
-    });
-    return () => unsub();
+    };
+    fetchProjeto();
+
+    const channel = supabase
+      .channel(`projeto-carteiras-${projetoId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projetos', filter: `id=eq.${projetoId}` }, (payload) => {
+        if (payload.eventType === 'DELETE') { navigate('/selecao-projeto'); return; }
+        setProjeto(mapProjetoRow(payload.new));
+      })
+      .subscribe();
+
+    return () => { active = false; supabase.removeChannel(channel); };
   }, [projetoId, isAdmin, isManager, navigate]);
 
   // ─── Load users ───────────────────────────────────────────────────────────
   useEffect(() => {
-    getDocs(collection(db, 'usuarios')).then(snap => {
-      setAllUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.funcao !== 'admin'));
-    }).catch(() => {});
+    supabase.from('usuarios').select('*').then(({ data, error }) => {
+      if (error) return;
+      setAllUsers((data || []).map(mapUsuarioRow).filter(u => u.funcao !== 'admin'));
+    });
   }, []);
 
   const carteiras = useMemo(
@@ -159,7 +193,7 @@ function GerenciaCarteiras() {
         await updateCarteira(projetoId, carteiraModal.carteira.id, formCarteira);
         showToast('Setor atualizado!');
       } else {
-        await createCarteira(projetoId, { ...formCarteira, ordem: carteiras.length + 1 }, currentUser.uid);
+        await createCarteira(projetoId, { ...formCarteira, ordem: carteiras.length + 1 }, currentUser.id);
         showToast('Setor criado!');
       }
       setCarteiraModal({ open: false, carteira: null });
@@ -175,7 +209,7 @@ function GerenciaCarteiras() {
 
   const handleSeed = async () => {
     setSeeding(true);
-    const res = await seedCarteiras(projetoId, currentUser.uid);
+    const res = await seedCarteiras(projetoId, currentUser.id);
     if (res.success) {
       showToast('10 setores criados com sucesso!');
       setExpandedIds(new Set());
@@ -205,7 +239,7 @@ function GerenciaCarteiras() {
         await updateLink(projetoId, linkModal.carteiraId, linkModal.link.id, formLink);
         showToast('Link atualizado!');
       } else {
-        await addLink(projetoId, linkModal.carteiraId, formLink, currentUser.uid);
+        await addLink(projetoId, linkModal.carteiraId, formLink, currentUser.id);
         showToast('Link adicionado!');
       }
       setLinkModal({ open: false, carteiraId: null, link: null });
@@ -228,9 +262,14 @@ function GerenciaCarteiras() {
     const alreadyHas = current.includes(carteiraId);
     const updated = alreadyHas ? current.filter(id => id !== carteiraId) : [...current, carteiraId];
     try {
-      await updateDoc(doc(db, 'usuarios', user.id), {
-        [`carteirasPorProjeto.${projetoId}`]: updated,
-      });
+      const { data: row, error: fetchErr } = await supabase.from('usuarios').select('data').eq('id', user.id).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const mergedData = {
+        ...(row?.data || {}),
+        carteirasPorProjeto: { ...((row?.data || {}).carteirasPorProjeto || {}), [projetoId]: updated },
+      };
+      const { error } = await supabase.from('usuarios').update({ data: mergedData }).eq('id', user.id);
+      if (error) throw error;
       setAllUsers(prev => prev.map(u =>
         u.id === user.id
           ? { ...u, carteirasPorProjeto: { ...(u.carteirasPorProjeto || {}), [projetoId]: updated } }

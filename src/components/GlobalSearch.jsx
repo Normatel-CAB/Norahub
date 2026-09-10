@@ -1,9 +1,30 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X, FileText, Briefcase, ExternalLink, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
+
+function mapProjetoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    ativa: row.ativa,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(row.data || {}),
+  };
+}
+
+function mapUsuarioRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    email: row.email,
+    funcao: row.funcao,
+    fotoUrl: row.foto_url,
+    ...(row.data || {}),
+  };
+}
 
 function GlobalSearch({ isOpen, onClose }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,13 +57,13 @@ function GlobalSearch({ isOpen, onClose }) {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const fetches = [getDocs(collection(db, 'projetos'))];
-      if (isAdmin) fetches.push(getDocs(collection(db, 'usuarios')));
+      const fetches = [supabase.from('projetos').select('*')];
+      if (isAdmin) fetches.push(supabase.from('usuarios').select('*'));
 
-      const [projectsSnapshot, usersSnapshot] = await Promise.all(fetches);
+      const [projectsRes, usersRes] = await Promise.all(fetches);
 
-      const projects = projectsSnapshot.docs
-        .map(d => ({ id: d.id, type: 'project', ...d.data() }))
+      const projects = (projectsRes.data || [])
+        .map(row => ({ type: 'project', ...mapProjetoRow(row) }))
         .filter(p => !p.deletedAt);
 
       const cards = [];
@@ -58,8 +79,8 @@ function GlobalSearch({ isOpen, onClose }) {
         });
       });
 
-      const users = usersSnapshot
-        ? usersSnapshot.docs.map(d => ({ id: d.id, type: 'user', ...d.data() }))
+      const users = usersRes
+        ? (usersRes.data || []).map(row => ({ type: 'user', ...mapUsuarioRow(row) }))
         : [];
 
       setAllData({ projects, cards, users });

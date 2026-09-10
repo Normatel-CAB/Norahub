@@ -38,6 +38,8 @@ const Lixeira                = lazy(() => import('./pages/Lixeira'));
 const AdminAnalytics         = lazy(() => import('./pages/AdminAnalytics'));
 const AdminDashboard         = lazy(() => import('./pages/AdminDashboard'));
 const AdminCargos            = lazy(() => import('./pages/AdminCargos'));
+const Aplicativos            = lazy(() => import('./pages/Aplicativos'));
+const AdminAplicativos       = lazy(() => import('./pages/AdminAplicativos'));
 
 function RouteSpinner() {
   return (
@@ -86,6 +88,7 @@ function App() {
 
           <Route path="/favoritos"              element={<PrivateRoute><MeusFavoritos /></PrivateRoute>} />
           <Route path="/meu-painel"             element={<PrivateRoute><MeuPainel /></PrivateRoute>} />
+          <Route path="/aplicativos"             element={<PrivateRoute><Aplicativos /></PrivateRoute>} />
           <Route path="/perfil"                 element={<PrivateRoute><Perfil /></PrivateRoute>} />
           <Route path="/dashboard"              element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/gerenciamento-arquivos" element={<PrivateRoute><GerenciamentoArquivos /></PrivateRoute>} />
@@ -110,6 +113,7 @@ function App() {
           {/* ── Rotas admin ────────────────────────────────────────────────── */}
           <Route path="/admin"        element={<PrivateRoute requiredRole="admin"><AdminDashboard /></PrivateRoute>} />
           <Route path="/admin-cargos" element={<PrivateRoute requiredPermission="canCreateCargos"><AdminCargos /></PrivateRoute>} />
+          <Route path="/admin-aplicativos" element={<PrivateRoute requiredRole="admin"><AdminAplicativos /></PrivateRoute>} />
           <Route path="/lixeira"      element={<PrivateRoute requiredRole="admin"><Lixeira /></PrivateRoute>} />
 
           {/* ── Redirect legado ────────────────────────────────────────────── */}

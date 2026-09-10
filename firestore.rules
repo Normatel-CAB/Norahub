@@ -90,6 +90,12 @@ service cloud.firestore {
         isSafeString(request.resource.data.get('nome', ''));
     }
 
+    // ── apps_normatel (catálogo do portal de aplicativos) ─────────────────────────
+    match /apps_normatel/{appId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // ── formularios ──────────────────────────────────────────────────────────────
     match /formularios/{formId} {
       allow read: if isSignedIn();

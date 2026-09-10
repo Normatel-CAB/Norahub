@@ -1,10 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
-import * as firebaseAuth from 'firebase/auth';
-import * as firebaseFirestore from 'firebase/firestore';
+import { supabase, setTableResult, resetSupabaseMock, emitAuthStateChange } from './mocks/supabaseMock';
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 function renderWithProviders(ui) {
@@ -18,7 +16,7 @@ function renderWithProviders(ui) {
 // ── AuthContext ───────────────────────────────────────────────────────────────
 describe('AuthContext', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetSupabaseMock();
   });
 
   it('inicia com loading=true e resolve para loading=false', async () => {
@@ -33,10 +31,7 @@ describe('AuthContext', () => {
   });
 
   it('expõe currentUser=null quando não há sessão', async () => {
-    firebaseAuth.onAuthStateChanged.mockImplementation((auth, cb) => {
-      cb(null);
-      return vi.fn();
-    });
+    supabase.auth.getSession.mockResolvedValueOnce({ data: { session: null } });
     const Probe = () => {
       const { currentUser } = useAuth();
       return <div data-testid="user">{currentUser ? 'logged' : 'guest'}</div>;
@@ -48,21 +43,18 @@ describe('AuthContext', () => {
   });
 
   it('expõe currentUser após login', async () => {
-    const mockUser = { uid: 'uid123', email: 'test@test.com' };
-    firebaseAuth.onAuthStateChanged.mockImplementation((auth, cb) => {
-      cb(mockUser);
-      return vi.fn();
-    });
-    firebaseFirestore.onSnapshot.mockImplementation((ref, cb) => {
-      cb({ exists: () => true, data: () => ({ nome: 'Test', funcao: 'colaborador', email: 'test@test.com' }) });
-      return vi.fn();
+    const mockUser = { id: 'uid123', email: 'test@test.com', app_metadata: {}, user_metadata: {} };
+    supabase.auth.getSession.mockResolvedValueOnce({ data: { session: { user: mockUser } } });
+    setTableResult('usuarios', {
+      data: { id: 'uid123', nome: 'Test', funcao: 'colaborador', status_acesso: 'ativo', email: 'test@test.com' },
+      error: null,
     });
 
     const Probe = () => {
       const { currentUser, userProfile } = useAuth();
       return (
         <div>
-          <span data-testid="uid">{currentUser?.uid ?? 'none'}</span>
+          <span data-testid="uid">{currentUser?.id ?? 'none'}</span>
           <span data-testid="role">{userProfile?.funcao ?? 'none'}</span>
         </div>
       );
@@ -75,27 +67,22 @@ describe('AuthContext', () => {
   });
 
   it('limpa o estado ao fazer logout', async () => {
-    let authCallback;
-    const mockUser = { uid: 'uid123' };
-    firebaseAuth.onAuthStateChanged.mockImplementation((auth, cb) => {
-      authCallback = cb;
-      cb(mockUser);
-      return vi.fn();
-    });
-    firebaseFirestore.onSnapshot.mockImplementation((ref, cb) => {
-      cb({ exists: () => true, data: () => ({ funcao: 'colaborador' }) });
-      return vi.fn();
+    const mockUser = { id: 'uid123', email: 'test@test.com', app_metadata: {}, user_metadata: {} };
+    supabase.auth.getSession.mockResolvedValueOnce({ data: { session: { user: mockUser } } });
+    setTableResult('usuarios', {
+      data: { id: 'uid123', nome: 'Test', funcao: 'colaborador', status_acesso: 'ativo' },
+      error: null,
     });
 
     const Probe = () => {
       const { currentUser } = useAuth();
       return <div data-testid="user">{currentUser ? 'logged' : 'guest'}</div>;
     };
-    const { rerender } = renderWithProviders(<Probe />);
+    renderWithProviders(<Probe />);
     await waitFor(() => expect(screen.getByTestId('user').textContent).toBe('logged'));
 
-    // Simula logout
-    authCallback(null);
+    // Simula logout via onAuthStateChange (equivalente ao antigo callback do Firebase)
+    emitAuthStateChange('SIGNED_OUT', null);
     await waitFor(() => expect(screen.getByTestId('user').textContent).toBe('guest'));
   });
 });

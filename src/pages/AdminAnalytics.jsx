@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, Users, Folder, Activity } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -55,6 +54,16 @@ function BarTooltip({ active, payload, label }) {
   );
 }
 
+function mapActivityRow(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type,
+    createdAt: row.created_at,
+    ...(row.data || {}),
+  };
+}
+
 function AdminAnalytics() {
   const { userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -74,7 +83,7 @@ function AdminAnalytics() {
     if (!canAccess) { navigate('/selecao-projeto', { replace: true }); return; }
     loadData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
+  }, [authLoading, userProfile?.id, userProfile?.funcao]);
 
   const loadData = async () => {
     setLoading(true);
@@ -82,26 +91,29 @@ function AdminAnalytics() {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const [usersSnap, projectsSnap, activitiesSnap] = await Promise.all([
-        getDocs(collection(db, 'usuarios')),
-        getDocs(collection(db, 'projetos')),
-        getDocs(query(collection(db, 'activities'), orderBy('timestamp', 'desc'))),
+      const [usersRes, projectsRes, activitiesRes] = await Promise.all([
+        supabase.from('usuarios').select('id, status_acesso'),
+        supabase.from('projetos').select('id, data'),
+        supabase.from('activities').select('*').order('created_at', { ascending: false }),
       ]);
+      if (usersRes.error) throw usersRes.error;
+      if (projectsRes.error) throw projectsRes.error;
+      if (activitiesRes.error) throw activitiesRes.error;
 
-      const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const projects = projectsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const allActivities = activitiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const users = usersRes.data || [];
+      const projects = projectsRes.data || [];
+      const allActivities = (activitiesRes.data || []).map(mapActivityRow);
 
       setStats({
         users: users.length,
-        activeUsers: users.filter(u => u.statusAcesso === 'ativo').length,
-        projects: projects.filter(p => !p.deletedAt).length,
+        activeUsers: users.filter(u => u.status_acesso === 'ativo').length,
+        projects: projects.filter(p => !(p.data || {}).deletedAt).length,
         totalActivities: allActivities.length,
       });
 
       // Filter to last 30 days
       const recent = allActivities.filter(a => {
-        const ts = a.timestamp?.toDate?.() ?? (a.createdAt?.toDate?.() ?? null);
+        const ts = a.createdAt ? new Date(a.createdAt) : null;
         return ts && ts >= thirtyDaysAgo;
       });
 
@@ -114,7 +126,7 @@ function AdminAnalytics() {
         dayMap[key] = 0;
       }
       recent.forEach(a => {
-        const ts = a.timestamp?.toDate?.() ?? (a.createdAt?.toDate?.() ?? null);
+        const ts = a.createdAt ? new Date(a.createdAt) : null;
         if (ts) {
           const key = ts.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
           if (dayMap[key] !== undefined) dayMap[key]++;

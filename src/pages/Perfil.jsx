@@ -4,15 +4,14 @@ import { User, Mail, Lock, Phone, Camera, LogOut, Save, ArrowLeft, KeyRound } fr
 // ThemeToggle removed: app forced to light mode
 import { useTheme } from '../context/ThemeContext';
 import Alert from '../components/Alert';
-import { auth, db, storage } from '../services/firebase'; 
-import { updatePassword, signOut, updateProfile, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { supabase } from '../services/supabase';
+import { useAuth } from '../context/AuthContext';
 
 function Perfil() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const navigate = useNavigate();
+  const { currentUser, userProfile, loading: authLoading } = useAuth();
 
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -23,7 +22,6 @@ function Perfil() {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [fotoURL, setFotoURL] = useState(null);
   const [novaFotoFile, setNovaFotoFile] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [alertInfo, setAlertInfo] = useState(null);
   const [isPasswordProvider, setIsPasswordProvider] = useState(false);
@@ -36,129 +34,96 @@ function Perfil() {
   }, [fotoURL]);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          navigate('/login');
-          return;
-        }
-        
-        setNome(currentUser.displayName || '');
-        setEmail(currentUser.email || '');
-        
-        // Verificar se é autenticação por senha (não Microsoft)
-        const hasPasswordProvider = currentUser.providerData.some(
-          provider => provider.providerId === 'password'
-        );
-        setIsPasswordProvider(hasPasswordProvider);
-        
-        // Prioridade: 1. Foto do Auth (Microsoft/Google - sempre tem prioridade), 2. Foto do Firestore (upload manual)
-        let initialPhoto = currentUser.photoURL;
-        
-        if (currentUser.displayName) setPrimeiroNome(currentUser.displayName.split(' ')[0]);
-        
-        try {
-          const docRef = doc(db, 'usuarios', currentUser.uid);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setCelular(data.celular || '');
-            if (!currentUser.displayName && data.nome) { setNome(data.nome); setPrimeiroNome(data.nome.split(' ')[0]); }
-            
-            // Se Auth não tem foto mas Firestore tem (upload manual), use do Firestore
-            if (!initialPhoto && data.fotoURL) initialPhoto = data.fotoURL;
-          }
-        } catch (error) { 
-          console.error('Erro ao buscar dados do Firestore:', error); 
-        } 
-        
-        setFotoURL(initialPhoto);
-      } catch (error) {
-        console.error('Erro ao carregar perfil:', error);
-        setAlertInfo({ message: 'Erro ao carregar perfil. Tente novamente.', type: 'error' });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUserData();
-  }, [navigate]);
+    if (authLoading) return;
+    if (!currentUser) { navigate('/login'); return; }
 
-  const handleLogout = async () => { await signOut(auth); navigate('/login'); };
+    const displayName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || userProfile?.nome || '';
+    setNome(displayName);
+    setEmail(currentUser.email || userProfile?.email || '');
+    setCelular(userProfile?.data?.celular || '');
+    if (displayName) setPrimeiroNome(displayName.split(' ')[0]);
+
+    setIsPasswordProvider(currentUser.app_metadata?.provider === 'email');
+
+    // Prioridade: foto do Auth (Microsoft) > foto salva no perfil (upload manual)
+    const initialPhoto = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || userProfile?.foto_url || null;
+    setFotoURL(initialPhoto);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, currentUser?.id, userProfile?.id]);
+
+  const handleLogout = async () => { await supabase.auth.signOut(); navigate('/login'); };
 
   const handleSave = async (e) => {
-    e.preventDefault(); 
-    setSaving(true); 
+    e.preventDefault();
+    setSaving(true);
     setAlertInfo(null);
-    
+
     try {
-      const currentUser = auth.currentUser;
       if (!currentUser) {
         setAlertInfo({ message: 'Sessão expirada. Entre novamente.', type: 'error' });
         setSaving(false);
         return;
       }
-      
+
       let downloadURL = fotoURL;
-      
-      // Se selecionou arquivo, faz upload
+
+      // Se selecionou arquivo, faz upload no bucket `avatars`
       if (novaFotoFile) {
         try {
-          const storageRef = ref(storage, `users/${currentUser.uid}/profile.jpg`);
-          const metadata = {
-            contentType: novaFotoFile.type,
-            customMetadata: { uploadedBy: currentUser.uid, uploadedAt: new Date().toISOString() },
-          };
-          await uploadBytes(storageRef, novaFotoFile, metadata);
-          downloadURL = await getDownloadURL(storageRef);
+          const path = `${currentUser.id}/profile.jpg`;
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(path, novaFotoFile, { upsert: true, contentType: novaFotoFile.type });
+          if (uploadError) throw uploadError;
+
+          const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path);
+          downloadURL = `${publicUrlData.publicUrl}?t=${Date.now()}`; // cache-bust
           setFotoURL(downloadURL);
         } catch (storageError) {
-          if (storageError.code === 'storage/unauthorized') {
-            setAlertInfo({ message: 'Sem permissão para upload. Verifique as regras do Firebase Storage.', type: 'error' });
-          } else if (storageError.code === 'storage/quota-exceeded') {
-            setAlertInfo({ message: 'Cota de armazenamento excedida.', type: 'error' });
-          } else {
-            setAlertInfo({ message: `Erro no upload: ${storageError.message}`, type: 'error' });
-          }
+          setAlertInfo({ message: `Erro no upload: ${storageError.message}`, type: 'error' });
           setSaving(false);
           return;
         }
       }
 
-      const firestoreUpdate = { nome, celular, updatedAt: new Date() };
-      if (downloadURL) firestoreUpdate.fotoURL = downloadURL;
-
-      if (nome !== currentUser.displayName || (downloadURL && downloadURL !== currentUser.photoURL)) {
-        await updateProfile(currentUser, {
-          displayName: nome,
-          ...(downloadURL && { photoURL: downloadURL }),
+      // Atualiza nome/foto nos metadados de Auth quando mudaram
+      if (nome !== (currentUser.user_metadata?.full_name || '') || (downloadURL && downloadURL !== currentUser.user_metadata?.avatar_url)) {
+        const { error: authUpdateError } = await supabase.auth.updateUser({
+          data: { full_name: nome, ...(downloadURL ? { avatar_url: downloadURL } : {}) },
         });
+        if (authUpdateError) throw authUpdateError;
         setPrimeiroNome(nome.split(' ')[0]);
       }
 
-      await updateDoc(doc(db, 'usuarios', currentUser.uid), firestoreUpdate);
+      const usuarioUpdate = { nome, data: { ...(userProfile?.data || {}), celular } };
+      if (downloadURL) usuarioUpdate.foto_url = downloadURL;
+      const { error: dbError } = await supabase.from('usuarios').update(usuarioUpdate).eq('id', currentUser.id);
+      if (dbError) throw dbError;
 
       if (novaSenha) {
         if (!senhaAtual) throw new Error('senha-atual-vazia');
         if (novaSenha !== confirmarSenha) throw new Error('senhas-nao-batem');
         if (novaSenha.length < 6) throw new Error('senha-curta');
-        const credential = EmailAuthProvider.credential(currentUser.email, senhaAtual);
-        await reauthenticateWithCredential(currentUser, credential);
-        await updatePassword(currentUser, novaSenha);
+
+        // Confirma a senha atual antes de trocar (equivalente à reautenticação do Firebase)
+        const { error: reauthError } = await supabase.auth.signInWithPassword({ email: currentUser.email, password: senhaAtual });
+        if (reauthError) throw new Error('senha-atual-incorreta');
+
+        const { error: pwError } = await supabase.auth.updateUser({ password: novaSenha });
+        if (pwError) throw pwError;
         setSenhaAtual(''); setNovaSenha(''); setConfirmarSenha('');
       }
 
       setAlertInfo({ message: 'Perfil atualizado!', type: 'success' });
       setNovaFotoFile(null);
-      
+
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
       let msg = "Erro ao atualizar.";
       if (error.message === 'senha-atual-vazia') msg = "Digite a senha atual.";
       if (error.message === 'senhas-nao-batem') msg = "As senhas não conferem.";
       if (error.message === 'senha-curta') msg = "A senha deve ter pelo menos 6 caracteres.";
-      if (error.code === 'auth/wrong-password') msg = "Senha atual incorreta.";
-      if (error.code === 'auth/requires-recent-login') msg = "Refaça o login para alterar dados sensíveis.";
+      if (error.message === 'senha-atual-incorreta') msg = "Senha atual incorreta.";
       setAlertInfo({ message: msg, type: 'error' });
     } finally {
       setSaving(false);
@@ -168,19 +133,19 @@ function Perfil() {
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     // Validação de tamanho (máx 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setAlertInfo({ message: 'A foto deve ter no máximo 5MB.', type: 'error' });
       return;
     }
-    
+
     // Validação de tipo
     if (!file.type.startsWith('image/')) {
       setAlertInfo({ message: 'Apenas imagens são permitidas.', type: 'error' });
       return;
     }
-    
+
     setNovaFotoFile(file);
     setFotoURL(URL.createObjectURL(file));
     setAlertInfo({ message: 'Foto selecionada! Clique em "Salvar Alterações" para confirmar.', type: 'success' });
@@ -200,7 +165,7 @@ function Perfil() {
 
 
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952]"></div></div>;
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952]"></div></div>;
 
   return (
     <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 transition-colors duration-200 relative text-white">
@@ -214,10 +179,10 @@ function Perfil() {
       <header className="relative w-full flex items-center justify-between py-3 md:py-6 px-3 md:px-8 bg-white/5 backdrop-blur-md shadow-sm border-b border-white/10 min-h-[56px] md:h-20 z-20">
         <button onClick={() => navigate(-1)} className="text-gray-300 hover:text-[#57B952] hover:bg-white/5 px-4 py-2 rounded-lg transition-all font-medium text-xs md:text-sm flex items-center gap-1 shrink-0 z-10 backdrop-blur-sm"><ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" /> <span className="hidden sm:inline">Voltar</span></button>
         <Link to="/" className="hidden sm:flex items-center justify-center absolute left-1/2 transform -translate-x-1/2">
-          <img 
-            src={isDark ? "/img/Normatel Engenharia_BRANCO.png" : "/img/Normatel Engenharia_PRETO.png"} 
-            alt="Logo" 
-            className="h-6 sm:h-8 md:h-10 w-auto object-contain drop-shadow-lg" 
+          <img
+            src={isDark ? "/img/Normatel Engenharia_BRANCO.png" : "/img/Normatel Engenharia_PRETO.png"}
+            alt="Logo"
+            className="h-6 sm:h-8 md:h-10 w-auto object-contain drop-shadow-lg"
           />
         </Link>
         <div className="flex items-center gap-1.5 md:gap-3 shrink-0 z-10">
@@ -252,7 +217,7 @@ function Perfil() {
                     <div><label className="block text-sm font-medium text-gray-300 ml-1">Celular</label><input type="tel" value={celular} onChange={e=>setCelular(formatCelular(e.target.value))} className="w-full pl-4 py-2 bg-white/10 border border-white/20 rounded-lg placeholder-gray-400 text-white backdrop-blur-sm transition-all hover:bg-white/15 focus:ring-2 focus:ring-[#57B952] outline-none" placeholder="(00) 00000-0000" /></div>
                     <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-200 ml-1">Email</label><input type="email" value={email} disabled className="w-full pl-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 cursor-not-allowed" /></div>
                       </div>
-                    
+
                     {/* Seção de Alterar Senha - Apenas para login com senha */}
                     {isPasswordProvider && (
                       <div className="md:col-span-2 pt-6 border-t border-gray-700">

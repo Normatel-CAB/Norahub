@@ -1,5 +1,4 @@
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from './firebase';
+import { supabase } from './supabase';
 
 export const logActivity = async (
   action,
@@ -11,17 +10,10 @@ export const logActivity = async (
   metadata = {}
 ) => {
   try {
-    await addDoc(collection(db, 'activities'), {
-      action,
-      title,
-      message: description,
-      description,
-      userId,
-      userName,
+    await supabase.from('activities').insert({
+      user_id: userId,
       type,
-      timestamp: serverTimestamp(),
-      createdAt: serverTimestamp(),
-      metadata,
+      data: { action, title, message: description, description, userName, metadata },
     });
   } catch {
     // falhas de log não devem quebrar o fluxo principal

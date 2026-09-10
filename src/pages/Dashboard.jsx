@@ -7,9 +7,18 @@ import {
 import { SkeletonStatCards, SkeletonActivityRow } from '../components/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { db } from '../services/firebase';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import NotificationCenter from '../components/NotificationCenter';
+
+function mapActivityRow(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type,
+    createdAt: row.created_at,
+    ...(row.data || {}),
+  };
+}
 
 function Dashboard() {
   const { currentUser, userProfile } = useAuth();
@@ -30,8 +39,8 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.displayName?.split(' ')[0] || 'Usuário';
-  const fotoURL = currentUser?.photoURL || userProfile?.fotoURL;
+  const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.user_metadata?.full_name?.split(' ')[0] || 'Usuário';
+  const fotoURL = currentUser?.user_metadata?.avatar_url || userProfile?.foto_url;
 
   useEffect(() => {
     fetchDashboardData();
@@ -40,39 +49,38 @@ function Dashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Buscar usuários
-      const usersSnapshot = await getDocs(collection(db, 'usuarios'));
-      const totalUsers = usersSnapshot.size;
-      
+      const { data: usersRows, error: usersErr } = await supabase.from('usuarios').select('id');
+      if (usersErr) throw usersErr;
+      const totalUsers = (usersRows || []).length;
+
       // Buscar projetos
-      const projectsSnapshot = await getDocs(collection(db, 'projetos'));
-      const totalProjects = projectsSnapshot.size;
-      const activeProjects = projectsSnapshot.docs.filter(doc => doc.data().ativa !== false).length;
-      
+      const { data: projectRows, error: projErr } = await supabase.from('projetos').select('id, ativa, data');
+      if (projErr) throw projErr;
+      const totalProjects = (projectRows || []).length;
+      const activeProjects = (projectRows || []).filter(p => p.ativa !== false).length;
+
       let totalForms = 0;
       let totalFiles = 0;
-      for (const projectDoc of projectsSnapshot.docs) {
-        const extras = projectDoc.data().extras;
+      for (const projeto of (projectRows || [])) {
+        const extras = projeto.data?.extras;
         if (!Array.isArray(extras)) continue;
         for (const extra of extras) {
           if (Array.isArray(extra.formResponses)) totalForms += extra.formResponses.length;
           if (Array.isArray(extra.files))         totalFiles += extra.files.length;
         }
       }
-      
+
       // Buscar atividades recentes
-      const activitiesQuery = query(
-        collection(db, 'activities'),
-        orderBy('timestamp', 'desc'),
-        limit(10)
-      );
-      const activitiesSnapshot = await getDocs(activitiesQuery);
-      const activities = activitiesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
+      const { data: activityRows, error: actErr } = await supabase
+        .from('activities')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (actErr) throw actErr;
+      const activities = (activityRows || []).map(mapActivityRow);
+
       setStats({
         totalUsers,
         totalProjects,
@@ -93,8 +101,8 @@ function Dashboard() {
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return 'Data desconhecida';
     try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return date.toLocaleDateString('pt-BR', { 
+      const date = new Date(timestamp);
+      return date.toLocaleDateString('pt-BR', {
         day: '2-digit', 
         month: '2-digit', 
         year: 'numeric',
@@ -271,7 +279,7 @@ function Dashboard() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-white">{activity.title || activity.action || 'Atividade'}</p>
                           <p className="text-xs text-gray-500 mt-1">{activity.message || activity.description || 'Sem descrição'}</p>
-                          <p className="text-xs text-gray-400 mt-1">{formatTimestamp(activity.timestamp || activity.createdAt)}</p>
+                          <p className="text-xs text-gray-400 mt-1">{formatTimestamp(activity.createdAt)}</p>
                         </div>
                       </div>
                     ))}

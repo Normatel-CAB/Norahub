@@ -1,14 +1,13 @@
-import { db } from './firebase';
-import { collection, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { supabase } from './supabase';
 
 /**
- * Migra todos os documentos de usuários que ainda usam o campo legado `carteira` (singular)
- * para o campo `cargo`, e garante consistência com o campo `funcao`.
+ * Migra usuários que ainda usam o campo legado `carteira` (singular), dentro de
+ * `usuarios.data`, para o campo `cargo` — e remove o campo legado.
  *
  * Regras:
- * - Se o usuário tem `carteira` mas não tem `cargo`, copia `carteira` → `cargo`
+ * - Se o usuário tem `data.carteira` mas não tem `data.cargo`, copia carteira → cargo
  * - Remove o campo `carteira` legado
- * - Não altera o campo `funcao` (mantido para compatibilidade interna)
+ * - Não altera o campo `funcao` (coluna própria, mantida para permissões)
  *
  * Retorna: { migrated: number, skipped: number, errors: number }
  */
@@ -16,44 +15,28 @@ export async function migrarCarteiraParaCargo() {
   const results = { migrated: 0, skipped: 0, errors: 0 };
 
   try {
-    const snap = await getDocs(collection(db, 'usuarios'));
-    const batch = writeBatch(db);
-    let batchCount = 0;
+    const { data: usuarios, error } = await supabase.from('usuarios').select('id, data');
+    if (error) throw error;
 
-    for (const docSnap of snap.docs) {
-      const data = docSnap.data();
-      const temCarteira = data.carteira !== undefined;
-      const temCargo    = data.cargo !== undefined;
-
-      if (!temCarteira) {
+    for (const u of usuarios || []) {
+      const d = u.data || {};
+      if (d.carteira === undefined) {
         results.skipped++;
         continue;
       }
 
-      const updates = {};
-
-      // Copia o valor de carteira para cargo se cargo ainda não existe
-      if (!temCargo && data.carteira) {
-        updates.cargo = data.carteira;
+      const novoData = { ...d };
+      if (novoData.cargo === undefined && novoData.carteira) {
+        novoData.cargo = novoData.carteira;
       }
+      delete novoData.carteira;
 
-      // Remove o campo legado `carteira`
-      updates.carteira = null; // Firestore não suporta deleteField via writeBatch facilmente,
-                               // então setamos null e filtramos no código ao ler
-
-      batch.update(doc(db, 'usuarios', docSnap.id), updates);
-      batchCount++;
+      const { error: updErr } = await supabase.from('usuarios').update({ data: novoData }).eq('id', u.id);
+      if (updErr) {
+        results.errors++;
+        continue;
+      }
       results.migrated++;
-
-      // Firestore batch limit: 500 operações
-      if (batchCount >= 490) {
-        await batch.commit();
-        batchCount = 0;
-      }
-    }
-
-    if (batchCount > 0) {
-      await batch.commit();
     }
   } catch (err) {
     results.errors++;
@@ -69,8 +52,9 @@ export async function migrarCarteiraParaCargo() {
  */
 export async function verificarMigracaoNecessaria() {
   try {
-    const snap = await getDocs(collection(db, 'usuarios'));
-    const pendentes = snap.docs.filter(d => d.data().carteira !== undefined).length;
+    const { data: usuarios, error } = await supabase.from('usuarios').select('data');
+    if (error) throw error;
+    const pendentes = (usuarios || []).filter(u => u.data && u.data.carteira !== undefined).length;
     return { necessaria: pendentes > 0, pendentes };
   } catch {
     return { necessaria: false, pendentes: 0 };

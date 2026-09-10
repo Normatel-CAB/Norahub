@@ -2,13 +2,23 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, RotateCcw, AlertTriangle, FolderX } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import { collection, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import ActivityLogger from '../services/activityLogger';
+
+function mapProjetoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    ativa: row.ativa,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(row.data || {}),
+  };
+}
 
 function formatDate(ts) {
   if (!ts) return '—';
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const d = new Date(ts);
   return d.toLocaleString('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -38,21 +48,15 @@ function Lixeira() {
     if (!canAccess) { navigate('/selecao-projeto', { replace: true }); return; }
     fetchDeleted();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
+  }, [authLoading, userProfile?.id, userProfile?.funcao]);
 
   const fetchDeleted = async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'projetos'));
-      const deleted = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(p => p.deletedAt);
-      // sort by deletedAt desc
-      deleted.sort((a, b) => {
-        const ta = a.deletedAt?.toDate?.() ?? new Date(a.deletedAt);
-        const tb = b.deletedAt?.toDate?.() ?? new Date(b.deletedAt);
-        return tb - ta;
-      });
+      const { data, error } = await supabase.from('projetos').select('*');
+      if (error) throw error;
+      const deleted = (data || []).map(mapProjetoRow).filter(p => p.deletedAt);
+      deleted.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
       setProjetos(deleted);
     } catch {
       setProjetos([]);
@@ -64,11 +68,12 @@ function Lixeira() {
   const handleRestore = async (projeto) => {
     setWorking(projeto.id);
     try {
-      await updateDoc(doc(db, 'projetos', projeto.id), {
-        deletedAt: null,
-        deletedBy: null,
-      });
-      ActivityLogger.projectRestored(projeto.nome, userProfile?.uid, userProfile?.nome);
+      const { data: existingRow, error: fetchErr } = await supabase.from('projetos').select('data').eq('id', projeto.id).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const { deletedAt, deletedBy, ...rest } = existingRow?.data || {};
+      const { error } = await supabase.from('projetos').update({ data: rest }).eq('id', projeto.id);
+      if (error) throw error;
+      ActivityLogger.projectRestored(projeto.nome, userProfile?.id, userProfile?.nome);
       setProjetos(prev => prev.filter(p => p.id !== projeto.id));
     } catch {
       showError('Erro ao restaurar o projeto. Tente novamente.');
@@ -81,8 +86,9 @@ function Lixeira() {
     setWorking(projeto.id);
     setConfirmPerm(null);
     try {
-      await deleteDoc(doc(db, 'projetos', projeto.id));
-      ActivityLogger.projectDeleted(projeto.nome, userProfile?.uid, userProfile?.nome);
+      const { error } = await supabase.from('projetos').delete().eq('id', projeto.id);
+      if (error) throw error;
+      ActivityLogger.projectDeleted(projeto.nome, userProfile?.id, userProfile?.nome);
       setProjetos(prev => prev.filter(p => p.id !== projeto.id));
     } catch {
       showError('Erro ao excluir o projeto. Tente novamente.');

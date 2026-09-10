@@ -2,8 +2,21 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Shield, Briefcase, ChevronRight, Lock, Activity, Trash2, TrendingUp, Layers } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
+
+function mapCargoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    canManageUsers: row.can_manage_users,
+    canManagePermissions: row.can_manage_permissions,
+    canManageProjectMembers: row.can_manage_project_members,
+    canChangeCarteiras: row.can_change_carteiras,
+    canCreateCargos: row.can_create_cargos,
+    canCreateProjetos: row.can_create_projetos,
+    ...(row.data || {}),
+  };
+}
 
 const OPCOES = [
   {
@@ -93,10 +106,8 @@ function Gerencia() {
       if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
       try {
         if (!isAdmin) {
-          const snap = await getDocs(
-            query(collection(db, 'cargos'), where('nome', '==', userProfile.funcao))
-          );
-          if (!snap.empty) setCargoData(snap.docs[0].data());
+          const { data: row } = await supabase.from('cargos').select('*').eq('nome', userProfile.funcao).maybeSingle();
+          if (row) setCargoData(mapCargoRow(row));
         }
       } catch {
         // falha silenciosa — usuário verá opções sem permissão
@@ -106,7 +117,7 @@ function Gerencia() {
     };
     fetchCargo();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
+  }, [authLoading, userProfile?.id, userProfile?.funcao]);
 
   const hasPermission = (opcao) => {
     if (isAdmin) return true;

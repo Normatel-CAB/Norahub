@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, Briefcase, Activity, Mail, Shield } from 'lucide-react';
-import { db } from '../services/firebase';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
+
+function mapActivityRow(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type,
+    createdAt: row.created_at,
+    ...(row.data || {}),
+  };
+}
 
 function avatarColor(name = '') {
   const colors = [
@@ -17,7 +26,7 @@ function avatarColor(name = '') {
 
 function formatDate(ts) {
   if (!ts) return '—';
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const d = new Date(ts);
   const diff = Math.floor((Date.now() - d.getTime()) / 60000);
   if (diff < 2) return 'agora';
   if (diff < 60) return `há ${diff}min`;
@@ -47,14 +56,14 @@ function UserProfileDrawer({ user, projetos, onClose }) {
     setActivities([]);
     const fetchActs = async () => {
       try {
-        const q = query(
-          collection(db, 'activities'),
-          where('userId', '==', user.id),
-          orderBy('timestamp', 'desc'),
-          limit(8)
-        );
-        const snap = await getDocs(q);
-        setActivities(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const { data, error } = await supabase
+          .from('activities')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(8);
+        if (error) throw error;
+        setActivities((data || []).map(mapActivityRow));
       } catch {
         setActivities([]);
       } finally {
@@ -165,7 +174,7 @@ function UserProfileDrawer({ user, projetos, onClose }) {
                     <span className={`flex-shrink-0 mt-0.5 w-1.5 h-1.5 rounded-full ${(ACTION_COLORS[act.action] || '').includes('green') ? 'bg-green-400' : (ACTION_COLORS[act.action] || '').includes('blue') ? 'bg-blue-400' : (ACTION_COLORS[act.action] || '').includes('red') ? 'bg-red-400' : 'bg-white/20'}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-400 leading-snug">{act.description || act.message || act.title || '—'}</p>
-                      <p className="text-[10px] text-gray-700 mt-0.5">{formatDate(act.timestamp || act.createdAt)}</p>
+                      <p className="text-[10px] text-gray-700 mt-0.5">{formatDate(act.createdAt)}</p>
                     </div>
                   </div>
                 ))}

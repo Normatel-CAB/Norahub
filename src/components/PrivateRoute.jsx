@@ -1,15 +1,14 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { supabase } from '../services/supabase';
 
-// Avalia permissão de admin/gerente de forma síncrona, sem Firestore
+// Avalia permissão de admin/gerente de forma síncrona, sem ir ao banco
 function quickAdminCheck(userProfile, pathname) {
   if (!userProfile || !pathname.startsWith('/admin')) return null; // inconclusivo
   if (userProfile.funcao === 'admin') return true;
   if (typeof userProfile.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')) return true;
-  return null; // precisa checar cargos no Firestore
+  return null; // precisa checar cargos no banco
 }
 
 function PrivateRoute({ children, requiredRole, requiredPermission }) {
@@ -19,12 +18,12 @@ function PrivateRoute({ children, requiredRole, requiredPermission }) {
   // Tenta resolver permissão admin de forma síncrona a partir do perfil em memória
   const quickResult = useMemo(
     () => quickAdminCheck(userProfile, location.pathname),
-    // funcao é o único campo usado por quickAdminCheck — evita recalcular em todo snapshot
+    // funcao é o único campo usado por quickAdminCheck — evita recalcular à toa
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [userProfile?.funcao, location.pathname]
   );
 
-  // Apenas chega aqui se quickResult === null (cargo custom que precisa de Firestore)
+  // Apenas chega aqui se quickResult === null (cargo custom que precisa do banco)
   const [cargoPermission, setCargoPermission] = useState(null);
   const [cargoLoading, setCargoLoading] = useState(false);
 
@@ -40,28 +39,34 @@ function PrivateRoute({ children, requiredRole, requiredPermission }) {
       return;
     }
 
+    let cancelled = false;
     setCargoLoading(true);
-    const cargosQuery = query(collection(db, 'cargos'), where('nome', '==', userProfile.funcao));
-    getDocs(cargosQuery)
-      .then(snap => {
-        if (!snap.empty) {
-          const c = snap.docs[0].data();
-          // Se a rota exige uma permissão específica, verifica só ela
-          // Caso contrário, verifica permissões genéricas de área admin
+    supabase
+      .from('cargos')
+      .select('*')
+      .eq('nome', userProfile.funcao)
+      .maybeSingle()
+      .then(({ data: c }) => {
+        if (cancelled) return;
+        if (c) {
+          // Se a rota exige uma permissão específica, verifica só ela.
+          // Caso contrário, verifica permissões genéricas de área admin.
           const granted = requiredPermission
             ? !!c[requiredPermission]
-            : (c.canManageUsers || c.canManagePermissions || false);
+            : (c.can_manage_users || c.can_manage_permissions || false);
           setCargoPermission(granted);
         } else {
           setCargoPermission(false);
         }
       })
-      .catch(() => setCargoPermission(false))
-      .finally(() => setCargoLoading(false));
+      .catch(() => { if (!cancelled) setCargoPermission(false); })
+      .finally(() => { if (!cancelled) setCargoLoading(false); });
+
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.funcao, location.pathname, quickResult, requiredPermission]);
 
-  // Spinner enquanto Firebase Auth ou perfil carrega
+  // Spinner enquanto a sessão ou o perfil carregam
   const spinner = (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-900">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952]" />
@@ -71,7 +76,7 @@ function PrivateRoute({ children, requiredRole, requiredPermission }) {
   if (loading) return spinner;
   if (!currentUser) return <Navigate to="/login" replace />;
 
-  // Aguarda cargos do Firestore apenas quando necessário
+  // Aguarda cargos do banco apenas quando necessário
   if (cargoLoading) return spinner;
 
   // Rota /admin

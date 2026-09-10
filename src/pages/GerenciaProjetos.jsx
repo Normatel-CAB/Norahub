@@ -5,8 +5,18 @@ import {
   ChevronDown, LayoutGrid, CheckCircle, ExternalLink, Briefcase,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
+
+function mapProjetoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    ativa: row.ativa,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(row.data || {}),
+  };
+}
 
 function Toast({ toast }) {
   if (!toast.show) return null;
@@ -83,8 +93,9 @@ function GerenciaProjetos() {
 
   const fetchProjetos = async () => {
     try {
-      const snap = await getDocs(collection(db, 'projetos'));
-      setAllProjetos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const { data, error } = await supabase.from('projetos').select('*');
+      if (error) throw error;
+      setAllProjetos((data || []).map(mapProjetoRow));
     } catch {
       showToast('Erro ao carregar projetos.', 'error');
     } finally {
@@ -98,7 +109,7 @@ function GerenciaProjetos() {
     if (!isAuthorized) { navigate('/selecao-projeto', { replace: true }); return; }
     fetchProjetos();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
+  }, [authLoading, userProfile?.id, userProfile?.funcao]);
 
   const closeCreate = () => { setCreateModal(false); setCreateForm({ ...EMPTY_PROJECT }); setCreateExtras([]); };
 
@@ -110,7 +121,8 @@ function GerenciaProjetos() {
       const extras = createExtras
         .filter(c => c.nome.trim())
         .map(c => ({ name: c.nome.trim(), description: c.descricao.trim(), url: c.url.trim(), type: c.tipo || 'link', files: [], formFields: [], formResponses: [] }));
-      await addDoc(collection(db, 'projetos'), { nome: createForm.nome.trim(), extras, criadoEm: new Date(), deletedAt: null });
+      const { error } = await supabase.from('projetos').insert({ nome: createForm.nome.trim(), ativa: true, data: { extras } });
+      if (error) throw error;
       closeCreate();
       showToast('Projeto criado!');
       fetchProjetos();
@@ -134,7 +146,8 @@ function GerenciaProjetos() {
     e.preventDefault();
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'projetos', editModal.projeto.id), { nome: editForm.nome.trim() });
+      const { error } = await supabase.from('projetos').update({ nome: editForm.nome.trim() }).eq('id', editModal.projeto.id);
+      if (error) throw error;
       setAllProjetos(prev => prev.map(p =>
         p.id === editModal.projeto.id ? { ...p, nome: editForm.nome.trim() } : p
       ));
@@ -149,12 +162,15 @@ function GerenciaProjetos() {
 
   const handleDelete = async () => {
     try {
-      await updateDoc(doc(db, 'projetos', confirmDelete.projetoId), {
-        deletedAt: new Date(),
-        deletedBy: userProfile?.uid || null,
-      });
+      const { data: existingRow, error: fetchErr } = await supabase.from('projetos').select('data').eq('id', confirmDelete.projetoId).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const deletedAt = new Date().toISOString();
+      const { error } = await supabase.from('projetos').update({
+        data: { ...(existingRow?.data || {}), deletedAt, deletedBy: userProfile?.id || null },
+      }).eq('id', confirmDelete.projetoId);
+      if (error) throw error;
       setAllProjetos(prev => prev.map(p =>
-        p.id === confirmDelete.projetoId ? { ...p, deletedAt: new Date() } : p
+        p.id === confirmDelete.projetoId ? { ...p, deletedAt } : p
       ));
       setConfirmDelete({ open: false, projetoId: null, nome: '' });
       showToast('Projeto movido para a lixeira.');
@@ -167,19 +183,25 @@ function GerenciaProjetos() {
     e.preventDefault();
     setSavingCard(true);
     try {
-      const projeto = allProjetos.find(p => p.id === cardModal.projetoId);
-      const extras = projeto?.extras || [];
-      await updateDoc(doc(db, 'projetos', cardModal.projetoId), {
-        extras: [...extras, {
-          name: cardForm.nome.trim(),
-          description: cardForm.descricao.trim(),
-          url: cardForm.url.trim(),
-          type: cardForm.tipo || 'link',
-          files: [],
-          formFields: [],
-          formResponses: [],
-        }],
-      });
+      const { data: existingRow, error: fetchErr } = await supabase.from('projetos').select('data').eq('id', cardModal.projetoId).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const currentData = existingRow?.data || {};
+      const extras = currentData.extras || [];
+      const { error } = await supabase.from('projetos').update({
+        data: {
+          ...currentData,
+          extras: [...extras, {
+            name: cardForm.nome.trim(),
+            description: cardForm.descricao.trim(),
+            url: cardForm.url.trim(),
+            type: cardForm.tipo || 'link',
+            files: [],
+            formFields: [],
+            formResponses: [],
+          }],
+        },
+      }).eq('id', cardModal.projetoId);
+      if (error) throw error;
       setCardModal({ open: false, projetoId: null });
       setCardForm({ ...EMPTY_CARD });
       showToast('Card adicionado!');

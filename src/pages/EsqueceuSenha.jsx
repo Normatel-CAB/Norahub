@@ -3,10 +3,7 @@ import { Mail, Send, ArrowLeft, CheckCircle, AlertTriangle, X } from 'lucide-rea
 import { useState } from 'react';
 // ThemeToggle removed: app forced to light mode
 import { useTheme } from '../context/ThemeContext';
-
-// Imports do Firebase
-import { auth } from '../services/firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { supabase } from '../services/supabase';
 
 function EsqueceuSenha() {
   const { theme } = useTheme();
@@ -20,7 +17,7 @@ function EsqueceuSenha() {
   const showToast = (message, type = 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
-  }; 
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,28 +25,24 @@ function EsqueceuSenha() {
     setSuccess(false);
 
     try {
-      // Configurações opcionais para o email (redirecionar de volta para o site após a troca)
-      const actionCodeSettings = {
-        url: window.location.origin + '/login', // Redireciona para o login após resetar
-        handleCodeInApp: true,
-      };
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      if (error) throw error;
 
-      await sendPasswordResetEmail(auth, email, actionCodeSettings);
-      
       setSuccess(true);
-      setEmail(''); 
+      setEmail('');
 
     } catch (error) {
       console.error("Erro ao recuperar senha:", error);
-      
+
       let mensagem = "Erro ao enviar e-mail. Tente novamente.";
-      
-      if (error.code === 'auth/user-not-found') {
-        mensagem = "Este e-mail não está cadastrado.";
-      } else if (error.code === 'auth/invalid-email') {
-        mensagem = "E-mail inválido.";
-      } else if (error.code === 'auth/too-many-requests') {
+      const msg = error.message?.toLowerCase() || '';
+
+      if (msg.includes('rate limit') || error.status === 429) {
         mensagem = "Muitas tentativas. Aguarde um pouco.";
+      } else if (msg.includes('email')) {
+        mensagem = "E-mail inválido.";
       }
 
       showToast(mensagem, 'error');
@@ -65,23 +58,23 @@ function EsqueceuSenha() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl"></div>
       </div>
-      
+
       {/* ThemeToggle removed */}
 
         <header className="relative w-full flex justify-center py-8 md:py-12 shrink-0 z-10">
         <Link to="/">
-          <img 
-            src={isDark ? "/img/Normatel Engenharia_BRANCO.png" : "/img/Normatel Engenharia_PRETO.png"} 
-            alt="Logo Normatel" 
-            className="h-6 sm:h-8 md:h-10 w-auto object-contain drop-shadow-lg" 
+          <img
+            src={isDark ? "/img/Normatel Engenharia_BRANCO.png" : "/img/Normatel Engenharia_PRETO.png"}
+            alt="Logo Normatel"
+            className="h-6 sm:h-8 md:h-10 w-auto object-contain drop-shadow-lg"
           />
         </Link>
       </header>
 
       <main className="relative z-10 flex-grow flex flex-col items-center justify-center p-3 md:p-4">
-        
+
         <div className="w-full max-w-sm bg-white/10 backdrop-blur-xl p-4 md:p-8 rounded-xl shadow-2xl border border-white/20">
-          
+
           <div className="text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Recuperar Senha</h2>
             {!success && <p className="text-sm text-gray-300 mb-6">Digite seu e-mail para enviarmos o link de recuperação.</p>}
@@ -94,7 +87,7 @@ function EsqueceuSenha() {
                 <CheckCircle size={48} className="text-[#57B952]" />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">E-mail Enviado!</h3>
-              
+
               <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-6 w-full">
                 <div className="flex items-center justify-center gap-2 text-yellow-400 font-semibold mb-1">
                     <AlertTriangle size={18} />
@@ -105,14 +98,14 @@ function EsqueceuSenha() {
                 </p>
               </div>
 
-              <button 
+              <button
                 onClick={() => setSuccess(false)}
                 className="text-[#57B952] hover:underline font-medium mb-4"
               >
                 Tentar outro e-mail
               </button>
-              
-              <Link 
+
+              <Link
                 to="/login"
                 className="w-full flex items-center justify-center gap-2 bg-[#57B952] text-white font-bold py-3 px-4 rounded-md hover:bg-green-600 transition-colors shadow-md"
               >
@@ -128,8 +121,8 @@ function EsqueceuSenha() {
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3">
                     <Mail className="h-5 w-5 text-gray-400" />
                   </span>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -140,8 +133,8 @@ function EsqueceuSenha() {
                 </div>
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 bg-[#57B952] text-white font-bold py-3 px-4 rounded-md hover:bg-green-600 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -152,7 +145,7 @@ function EsqueceuSenha() {
                     </>
                 )}
               </button>
-              
+
               <div className="text-center mt-6 text-sm">
                 <Link to="/login" className="font-medium text-gray-600 text-gray-400 hover:text-[#57B952] hover:text-[#57B952] transition-colors flex items-center justify-center gap-1">
                   <ArrowLeft size={16} />

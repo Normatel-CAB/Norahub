@@ -1,19 +1,14 @@
-import { db } from './firebase';
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot, 
-  updateDoc, 
-  doc, 
-  serverTimestamp,
-  getDocs,
-  limit
-} from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from './firebase';
+import { supabase } from './supabase';
+
+function mapNotificationRow(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    read: row.lida,
+    createdAt: row.created_at,
+    ...(row.data || {}),
+  };
+}
 
 /**
  * Criar uma notificação
@@ -26,27 +21,25 @@ import { functions } from './firebase';
  */
 export const createNotification = async (userId, type, title, message, link = null, metadata = {}) => {
   try {
-    await addDoc(collection(db, 'notifications'), {
-      userId,
-      type,
-      title,
-      message,
-      link,
-      metadata,
-      read: false,
-      createdAt: serverTimestamp()
+    const { error } = await supabase.from('notifications').insert({
+      user_id: userId,
+      lida: false,
+      data: { type, title, message, link, metadata },
     });
+    if (error) throw error;
   } catch (error) {
     console.error('Erro ao criar notificação:', error);
   }
 };
 
-// Enviar notificação por e-mail via Resend (Cloud Function)
+// Enviar notificação por e-mail via Resend (Edge Function)
 export const sendEmailNotification = async ({ to, subject, html, from }) => {
   try {
-    const sendEmail = httpsCallable(functions, 'sendEmailResend');
-    const res = await sendEmail({ to, subject, html, from });
-    return res.data;
+    const { data, error } = await supabase.functions.invoke('send-email', {
+      body: { to, subject, html, from },
+    });
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Erro ao enviar notificação por e-mail:', error);
     return { success: false, error: error.message };
@@ -80,10 +73,13 @@ export const sendEmailToCollaborator = async ({ email, title, message, actionUrl
  */
 export const createBulkNotifications = async (userIds, type, title, message, link = null, metadata = {}) => {
   try {
-    const promises = userIds.map(userId => 
-      createNotification(userId, type, title, message, link, metadata)
-    );
-    await Promise.all(promises);
+    const rows = userIds.map(userId => ({
+      user_id: userId,
+      lida: false,
+      data: { type, title, message, link, metadata },
+    }));
+    const { error } = await supabase.from('notifications').insert(rows);
+    if (error) throw error;
   } catch (error) {
     console.error('Erro ao criar notificações em lote:', error);
   }
@@ -94,10 +90,8 @@ export const createBulkNotifications = async (userIds, type, title, message, lin
  */
 export const markNotificationAsRead = async (notificationId) => {
   try {
-    await updateDoc(doc(db, 'notifications', notificationId), {
-      read: true,
-      readAt: serverTimestamp()
-    });
+    const { error } = await supabase.from('notifications').update({ lida: true }).eq('id', notificationId);
+    if (error) throw error;
   } catch (error) {
     console.error('Erro ao marcar notificação como lida:', error);
   }
@@ -108,47 +102,69 @@ export const markNotificationAsRead = async (notificationId) => {
  */
 export const markAllNotificationsAsRead = async (userId) => {
   try {
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', userId),
-      where('read', '==', false)
-    );
-    
-    const snapshot = await getDocs(q);
-    const promises = snapshot.docs.map(doc => 
-      updateDoc(doc.ref, { read: true, readAt: serverTimestamp() })
-    );
-    
-    await Promise.all(promises);
+    const { error } = await supabase
+      .from('notifications')
+      .update({ lida: true })
+      .eq('user_id', userId)
+      .eq('lida', false);
+    if (error) throw error;
   } catch (error) {
     console.error('Erro ao marcar todas como lidas:', error);
   }
 };
 
 /**
- * Obter notificações em tempo real
+ * Obter notificações em tempo real (busca inicial + subscription do Realtime).
+ * Retorna uma função de unsubscribe (mesmo formato do onSnapshot do Firestore).
  */
 export const subscribeToNotifications = (userId, callback) => {
-  const q = query(
-    collection(db, 'notifications'),
-    where('userId', '==', userId),
-    limit(50)
-  );
-  
-  return onSnapshot(q, (snapshot) => {
-    // Ordenar manualmente no lado do cliente
-    const notifications = snapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
-      .sort((a, b) => {
-        const dateA = a.createdAt?.toDate?.() || new Date(0);
-        const dateB = b.createdAt?.toDate?.() || new Date(0);
-        return dateB - dateA;
-      });
-    callback(notifications);
-  });
+  let notifications = [];
+
+  const emit = () => {
+    const sorted = [...notifications].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    callback(sorted.map(mapNotificationRow));
+  };
+
+  const upsertLocal = (row) => {
+    const idx = notifications.findIndex(n => n.id === row.id);
+    if (idx >= 0) notifications[idx] = row;
+    else notifications = [row, ...notifications];
+    if (notifications.length > 50) notifications = notifications.slice(0, 50);
+  };
+
+  const removeLocal = (id) => {
+    notifications = notifications.filter(n => n.id !== id);
+  };
+
+  supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50)
+    .then(({ data, error }) => {
+      if (error) { console.error('Erro ao buscar notificações:', error); return; }
+      notifications = data || [];
+      emit();
+    });
+
+  const channel = supabase
+    .channel(`notifications-${userId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+      (payload) => {
+        if (payload.eventType === 'DELETE') {
+          removeLocal(payload.old.id);
+        } else {
+          upsertLocal(payload.new);
+        }
+        emit();
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
 };
 
 /**

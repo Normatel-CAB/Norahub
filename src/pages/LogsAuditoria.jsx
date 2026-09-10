@@ -5,10 +5,19 @@ import {
   FileText, CheckCircle, Trash2, Plus, Edit2, LogIn, Shield, X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import { collection, query, orderBy, limit, getDocs, startAfter } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 
 const PAGE_SIZE = 25;
+
+function mapActivityRow(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type,
+    createdAt: row.created_at,
+    ...(row.data || {}),
+  };
+}
 
 const ACTION_META = {
   project_created:   { label: 'Projeto Criado',    icon: Plus,         color: 'text-green-400',  bg: 'bg-green-500/10'  },
@@ -44,7 +53,7 @@ const TYPE_FILTERS = [
 
 function formatDate(ts) {
   if (!ts) return '—';
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const d = new Date(ts);
   return d.toLocaleString('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -75,7 +84,7 @@ function LogsAuditoria() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [page, setPage] = useState(0);
-  const [cursors, setCursors] = useState([null]); // stack of page cursors
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -84,32 +93,25 @@ function LogsAuditoria() {
     if (!canAccess) { navigate('/selecao-projeto', { replace: true }); return; }
     fetchLogs(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, userProfile?.uid, userProfile?.funcao, typeFilter]);
+  }, [authLoading, userProfile?.id, userProfile?.funcao, typeFilter]);
 
-  const fetchLogs = async (pageIndex, cursorDoc = null) => {
+  const fetchLogs = async (pageIndex) => {
     setLoading(true);
     try {
-      let q = query(
-        collection(db, 'activities'),
-        orderBy('timestamp', 'desc'),
-        limit(PAGE_SIZE + 1)
-      );
-      if (cursorDoc) q = query(q, startAfter(cursorDoc));
+      const from = pageIndex * PAGE_SIZE;
+      const to = from + PAGE_SIZE; // busca 1 a mais pra saber se há próxima página
+      const { data, error } = await supabase
+        .from('activities')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      if (error) throw error;
 
-      const snap = await getDocs(q);
-      const hasMore = snap.docs.length > PAGE_SIZE;
-      const docs = snap.docs.slice(0, PAGE_SIZE).map(d => ({ id: d.id, ...d.data(), _ref: d }));
-
-      setLogs(docs);
+      const rows = data || [];
+      const more = rows.length > PAGE_SIZE;
+      setLogs(rows.slice(0, PAGE_SIZE).map(mapActivityRow));
       setPage(pageIndex);
-
-      if (hasMore) {
-        setCursors(prev => {
-          const next = [...prev];
-          next[pageIndex + 1] = snap.docs[PAGE_SIZE - 1];
-          return next;
-        });
-      }
+      setHasMore(more);
     } catch {
       setLogs([]);
     } finally {
@@ -117,8 +119,8 @@ function LogsAuditoria() {
     }
   };
 
-  const goNext = () => fetchLogs(page + 1, cursors[page + 1] ?? null);
-  const goPrev = () => fetchLogs(page - 1, cursors[page - 1] ?? null);
+  const goNext = () => { if (hasMore) fetchLogs(page + 1); };
+  const goPrev = () => fetchLogs(Math.max(page - 1, 0));
 
   const filtered = logs.filter(log => {
     const matchType = actionMatchesFilter(log.action, typeFilter);
@@ -177,7 +179,7 @@ function LogsAuditoria() {
             {TYPE_FILTERS.map(f => (
               <button
                 key={f.value}
-                onClick={() => { setTypeFilter(f.value); setCursors([null]); }}
+                onClick={() => setTypeFilter(f.value)}
                 className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
                   typeFilter === f.value
                     ? 'bg-[#57B952] border-[#57B952] text-white'
@@ -221,7 +223,7 @@ function LogsAuditoria() {
                       </p>
                     </div>
                     <span className="text-xs text-gray-700 flex-shrink-0 mt-1">
-                      {formatDate(log.timestamp || log.createdAt)}
+                      {formatDate(log.createdAt)}
                     </span>
                   </div>
                 );
@@ -243,7 +245,7 @@ function LogsAuditoria() {
                 </button>
                 <button
                   onClick={goNext}
-                  disabled={logs.length < PAGE_SIZE}
+                  disabled={!hasMore}
                   className="px-4 py-1.5 rounded-lg border border-white/20 text-xs text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   Próximo →

@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as firebaseFirestore from 'firebase/firestore';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { setTableResult, resetSupabaseMock } from './mocks/supabaseMock';
 
 // ── Favorites service ─────────────────────────────────────────────────────────
 describe('favorites service', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => resetSupabaseMock());
 
-  it('getFavorites retorna array vazio quando doc não existe', async () => {
-    firebaseFirestore.getDoc.mockResolvedValue({ exists: () => false, data: () => ({}) });
+  it('getFavorites retorna array vazio quando a linha ainda não existe', async () => {
+    setTableResult('favorites', { data: null, error: null });
     const { getFavorites } = await import('../services/favorites');
     const result = await getFavorites('uid123', 'project');
     expect(result.success).toBe(true);
@@ -16,10 +16,10 @@ describe('favorites service', () => {
 
 // ── activityLogger ────────────────────────────────────────────────────────────
 describe('activityLogger', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => resetSupabaseMock());
 
   it('não lança exceção ao logar atividade', async () => {
-    firebaseFirestore.addDoc.mockResolvedValue({ id: 'log-id' });
+    setTableResult('activities', { data: { id: 'log-id' }, error: null });
     const { default: ActivityLogger } = await import('../services/activityLogger');
     await expect(
       ActivityLogger.projectCreated('Projeto Teste', 'uid123', 'João')

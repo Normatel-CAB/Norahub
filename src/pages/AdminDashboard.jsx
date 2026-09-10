@@ -7,16 +7,54 @@ import {
 } from 'lucide-react';
 import UserProfileDrawer from '../components/UserProfileDrawer';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import { SETORES_PADRAO } from '../services/carteirasDeProjeto';
 import { migrarCarteiraParaCargo, verificarMigracaoNecessaria } from '../services/migration';
 
 const PAGE_SIZE = 15;
 
+function mapUsuarioRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    email: row.email,
+    funcao: row.funcao,
+    fotoUrl: row.foto_url,
+    lastSeen: row.last_seen,
+    statusAcesso: row.status_acesso,
+    createdAt: row.created_at,
+    ...(row.data || {}),
+  };
+}
+
+function mapProjetoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    ativa: row.ativa,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(row.data || {}),
+  };
+}
+
+function mapCargoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    canManageUsers: row.can_manage_users,
+    canManagePermissions: row.can_manage_permissions,
+    canManageProjectMembers: row.can_manage_project_members,
+    canChangeCarteiras: row.can_change_carteiras,
+    canCreateCargos: row.can_create_cargos,
+    canCreateProjetos: row.can_create_projetos,
+    ...(row.data || {}),
+  };
+}
+
 function formatLastSeen(ts) {
   if (!ts) return '—';
-  const date = ts.toDate ? ts.toDate() : new Date(ts);
+  const date = new Date(ts);
   const diffMin = Math.floor((Date.now() - date.getTime()) / 60000);
   const diffH = Math.floor(diffMin / 60);
   const diffD = Math.floor(diffH / 24);
@@ -111,26 +149,26 @@ function AdminDashboard() {
       const canAccess = isAdmin || userProfile?.funcao?.toLowerCase().includes('gerente');
       if (!canAccess) { navigate('/selecao-projeto', { replace: true }); return; }
       try {
-        const [userSnap, projetoSnap, cargosSnap, settingSnap, noticeSnap] = await Promise.all([
-          getDocs(collection(db, 'usuarios')),
-          getDocs(collection(db, 'projetos')),
-          getDocs(collection(db, 'cargos')),
-          getDoc(doc(db, 'settings', 'autoApproval')),
-          getDoc(doc(db, 'settings', 'globalNotice')),
+        const [userRes, projetoRes, cargosRes, settingRes, noticeRes] = await Promise.all([
+          supabase.from('usuarios').select('*'),
+          supabase.from('projetos').select('*'),
+          supabase.from('cargos').select('*'),
+          supabase.from('settings').select('data').eq('id', 'autoApproval').maybeSingle(),
+          supabase.from('settings').select('data').eq('id', 'globalNotice').maybeSingle(),
         ]);
-        setAutoApproval(settingSnap.exists() ? settingSnap.data().enabled === true : false);
-        if (noticeSnap.exists()) {
-          const nd = noticeSnap.data();
+        setAutoApproval(settingRes.data?.data?.enabled === true);
+        if (noticeRes.data?.data) {
+          const nd = noticeRes.data.data;
           setNoticeMsg(nd.message || '');
           setNoticeType(nd.type || 'info');
           setNoticeActive(nd.active || false);
         }
-        let userList = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        let userList = (userRes.data || []).map(mapUsuarioRow);
         if (!isAdmin) userList = userList.filter(u => u.funcao !== 'admin');
         userList.sort((a, b) => (a.statusAcesso === 'pendente' ? -1 : 1));
         setUsers(userList);
-        setProjetos(projetoSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-        let cargosList = cargosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setProjetos((projetoRes.data || []).map(mapProjetoRow));
+        let cargosList = (cargosRes.data || []).map(mapCargoRow);
         if (cargosList.length === 0) cargosList = [{ id: 'default', nome: 'Colaborador' }];
         setCargos(cargosList);
 
@@ -147,14 +185,15 @@ function AdminDashboard() {
     if (!authLoading) fetchData();
   // Primitivos estáveis: evita refetch completo a cada snapshot do perfil
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, userProfile?.uid, userProfile?.funcao, navigate]);
+  }, [authLoading, userProfile?.id, userProfile?.funcao, navigate]);
 
   useEffect(() => { setPage(0); }, [searchTerm, statusFilter]);
 
   const handleApprove = async (user, newRole) => {
     try {
       if (!isAdmin && newRole === 'admin') { showToast('Sem permissão para este cargo.', 'error'); return; }
-      await updateDoc(doc(db, 'usuarios', user.id), { statusAcesso: 'ativo', funcao: newRole || user.funcao });
+      const { error } = await supabase.from('usuarios').update({ status_acesso: 'ativo', funcao: newRole || user.funcao }).eq('id', user.id);
+      if (error) throw error;
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, statusAcesso: 'ativo', funcao: newRole || u.funcao } : u));
       showToast(`${user.nome} aprovado!`);
     } catch { showToast('Erro ao aprovar.', 'error'); }
@@ -165,7 +204,8 @@ function AdminDashboard() {
       const user = users.find(u => u.id === userId);
       if (!isAdmin && newRole === 'admin') { showToast('Sem permissão.', 'error'); return; }
       if (!isAdmin && user?.funcao === 'admin') { showToast('Não pode modificar administradores.', 'error'); return; }
-      await updateDoc(doc(db, 'usuarios', userId), { funcao: newRole });
+      const { error } = await supabase.from('usuarios').update({ funcao: newRole }).eq('id', userId);
+      if (error) throw error;
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, funcao: newRole } : u));
       showToast('Cargo atualizado.');
     } catch { showToast('Erro ao atualizar cargo.', 'error'); }
@@ -176,7 +216,8 @@ function AdminDashboard() {
     try {
       const user = users.find(u => u.id === userId);
       if (!isAdmin && user?.funcao === 'admin') { showToast('Não pode excluir administradores.', 'error'); return; }
-      await deleteDoc(doc(db, 'usuarios', userId));
+      const { error } = await supabase.from('usuarios').delete().eq('id', userId);
+      if (error) throw error;
       setUsers(prev => prev.filter(u => u.id !== userId));
       showToast(`${userName} removido.`);
     } catch { showToast('Erro ao remover.', 'error'); }
@@ -205,9 +246,11 @@ function AdminDashboard() {
 
   const salvarSetores = async () => {
     try {
-      await updateDoc(doc(db, 'usuarios', modalSetores.userId), {
-        setores: modalSetores.setores,
-      });
+      const { data: row, error: fetchErr } = await supabase.from('usuarios').select('data').eq('id', modalSetores.userId).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const mergedData = { ...(row?.data || {}), setores: modalSetores.setores };
+      const { error } = await supabase.from('usuarios').update({ data: mergedData }).eq('id', modalSetores.userId);
+      if (error) throw error;
       setUsers(prev => prev.map(u =>
         u.id === modalSetores.userId ? { ...u, setores: modalSetores.setores } : u
       ));
@@ -218,7 +261,11 @@ function AdminDashboard() {
 
   const salvarProjetos = async () => {
     try {
-      await updateDoc(doc(db, 'usuarios', modalProjetos.userId), { projetos: modalProjetos.projetosAtuais });
+      const { data: row, error: fetchErr } = await supabase.from('usuarios').select('data').eq('id', modalProjetos.userId).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const mergedData = { ...(row?.data || {}), projetos: modalProjetos.projetosAtuais };
+      const { error } = await supabase.from('usuarios').update({ data: mergedData }).eq('id', modalProjetos.userId);
+      if (error) throw error;
       setUsers(prev => prev.map(u => u.id === modalProjetos.userId ? { ...u, projetos: modalProjetos.projetosAtuais } : u));
       showToast('Projetos salvos!');
       setModalProjetos({ open: false, userId: null, userName: '', projetosAtuais: [] });
@@ -228,12 +275,11 @@ function AdminDashboard() {
   const saveNotice = async () => {
     setSavingNotice(true);
     try {
-      await setDoc(doc(db, 'settings', 'globalNotice'), {
-        message: noticeMsg.trim(),
-        type: noticeType,
-        active: noticeActive,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      const { error } = await supabase.from('settings').upsert({
+        id: 'globalNotice',
+        data: { message: noticeMsg.trim(), type: noticeType, active: noticeActive },
+      });
+      if (error) throw error;
       showToast('Aviso salvo!');
     } catch {
       showToast('Erro ao salvar aviso.', 'error');
@@ -260,7 +306,8 @@ function AdminDashboard() {
     setTogglingApproval(true);
     try {
       const novo = !autoApproval;
-      await setDoc(doc(db, 'settings', 'autoApproval'), { enabled: novo }, { merge: true });
+      const { error } = await supabase.from('settings').upsert({ id: 'autoApproval', data: { enabled: novo } });
+      if (error) throw error;
       setAutoApproval(novo);
       showToast(novo ? 'Aprovação automática ativada.' : 'Aprovação manual reativada.');
     } catch { showToast('Erro ao alterar configuração.', 'error'); }

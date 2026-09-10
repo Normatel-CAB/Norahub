@@ -1,16 +1,28 @@
-import { db } from './firebase';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from './supabase';
 
 const genId = () => `c_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 const genLinkId = () => `l_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+// `carteiras` de um projeto vivem dentro de `projetos.data.carteiras` (jsonb) —
+// não é coluna própria, então cada operação é ler → alterar → gravar `data` inteiro.
+async function loadProjeto(projetoId) {
+  const { data: row, error } = await supabase.from('projetos').select('data').eq('id', projetoId).maybeSingle();
+  if (error) throw error;
+  return row ? (row.data || {}) : null; // null = projeto não existe
+}
+
+async function saveProjetoData(projetoId, newData) {
+  const { error } = await supabase.from('projetos').update({ data: newData }).eq('id', projetoId);
+  if (error) throw error;
+}
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function getCarteiras(projetoId) {
   try {
-    const snap = await getDoc(doc(db, 'projetos', projetoId));
-    if (!snap.exists()) return { success: false, carteiras: [] };
-    const list = (snap.data().carteiras || []).sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99));
+    const projetoData = await loadProjeto(projetoId);
+    if (projetoData === null) return { success: false, carteiras: [] };
+    const list = (projetoData.carteiras || []).sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99));
     return { success: true, carteiras: list };
   } catch (err) {
     return { success: false, carteiras: [], error: err.message };
@@ -19,37 +31,37 @@ export async function getCarteiras(projetoId) {
 
 // ─── Carteira CRUD ────────────────────────────────────────────────────────────
 
-export async function createCarteira(projetoId, data, userId) {
+export async function createCarteira(projetoId, payload, userId) {
   try {
-    const snap = await getDoc(doc(db, 'projetos', projetoId));
-    if (!snap.exists()) return { success: false };
+    const projetoData = await loadProjeto(projetoId);
+    if (projetoData === null) return { success: false };
     const nova = {
       id: genId(),
-      nome: data.nome.trim(),
-      descricao: (data.descricao || '').trim(),
-      cor: data.cor || '#57B952',
-      ordem: data.ordem ?? 99,
+      nome: payload.nome.trim(),
+      descricao: (payload.descricao || '').trim(),
+      cor: payload.cor || '#57B952',
+      ordem: payload.ordem ?? 99,
       links: [],
       criadoEm: new Date().toISOString(),
       criadoPor: userId,
     };
-    const existing = snap.data().carteiras || [];
+    const existing = projetoData.carteiras || [];
     const carteiras = [...existing, nova].sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99));
-    await updateDoc(doc(db, 'projetos', projetoId), { carteiras, updatedAt: serverTimestamp() });
+    await saveProjetoData(projetoId, { ...projetoData, carteiras });
     return { success: true, carteira: nova };
   } catch (err) {
     return { success: false, error: err.message };
   }
 }
 
-export async function updateCarteira(projetoId, carteiraId, data) {
+export async function updateCarteira(projetoId, carteiraId, payload) {
   try {
-    const snap = await getDoc(doc(db, 'projetos', projetoId));
-    if (!snap.exists()) return { success: false };
-    const carteiras = (snap.data().carteiras || []).map(c =>
-      c.id === carteiraId ? { ...c, ...data } : c
+    const projetoData = await loadProjeto(projetoId);
+    if (projetoData === null) return { success: false };
+    const carteiras = (projetoData.carteiras || []).map(c =>
+      c.id === carteiraId ? { ...c, ...payload } : c
     );
-    await updateDoc(doc(db, 'projetos', projetoId), { carteiras, updatedAt: serverTimestamp() });
+    await saveProjetoData(projetoId, { ...projetoData, carteiras });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -58,10 +70,10 @@ export async function updateCarteira(projetoId, carteiraId, data) {
 
 export async function deleteCarteira(projetoId, carteiraId) {
   try {
-    const snap = await getDoc(doc(db, 'projetos', projetoId));
-    if (!snap.exists()) return { success: false };
-    const carteiras = (snap.data().carteiras || []).filter(c => c.id !== carteiraId);
-    await updateDoc(doc(db, 'projetos', projetoId), { carteiras, updatedAt: serverTimestamp() });
+    const projetoData = await loadProjeto(projetoId);
+    if (projetoData === null) return { success: false };
+    const carteiras = (projetoData.carteiras || []).filter(c => c.id !== carteiraId);
+    await saveProjetoData(projetoId, { ...projetoData, carteiras });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -72,8 +84,8 @@ export async function deleteCarteira(projetoId, carteiraId) {
 
 export async function addLink(projetoId, carteiraId, linkData, userId) {
   try {
-    const snap = await getDoc(doc(db, 'projetos', projetoId));
-    if (!snap.exists()) return { success: false };
+    const projetoData = await loadProjeto(projetoId);
+    if (projetoData === null) return { success: false };
     const link = {
       id: genLinkId(),
       nome: linkData.nome.trim(),
@@ -83,10 +95,10 @@ export async function addLink(projetoId, carteiraId, linkData, userId) {
       criadoEm: new Date().toISOString(),
       criadoPor: userId,
     };
-    const carteiras = (snap.data().carteiras || []).map(c =>
+    const carteiras = (projetoData.carteiras || []).map(c =>
       c.id === carteiraId ? { ...c, links: [...(c.links || []), link] } : c
     );
-    await updateDoc(doc(db, 'projetos', projetoId), { carteiras, updatedAt: serverTimestamp() });
+    await saveProjetoData(projetoId, { ...projetoData, carteiras });
     return { success: true, link };
   } catch (err) {
     return { success: false, error: err.message };
@@ -95,14 +107,14 @@ export async function addLink(projetoId, carteiraId, linkData, userId) {
 
 export async function updateLink(projetoId, carteiraId, linkId, data) {
   try {
-    const snap = await getDoc(doc(db, 'projetos', projetoId));
-    if (!snap.exists()) return { success: false };
-    const carteiras = (snap.data().carteiras || []).map(c =>
+    const projetoData = await loadProjeto(projetoId);
+    if (projetoData === null) return { success: false };
+    const carteiras = (projetoData.carteiras || []).map(c =>
       c.id === carteiraId
-        ? { ...c, links: (c.links || []).map(l => l.id === linkId ? { ...l, ...data } : l) }
+        ? { ...c, links: (c.links || []).map(l => (l.id === linkId ? { ...l, ...data } : l)) }
         : c
     );
-    await updateDoc(doc(db, 'projetos', projetoId), { carteiras, updatedAt: serverTimestamp() });
+    await saveProjetoData(projetoId, { ...projetoData, carteiras });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -111,14 +123,14 @@ export async function updateLink(projetoId, carteiraId, linkId, data) {
 
 export async function removeLink(projetoId, carteiraId, linkId) {
   try {
-    const snap = await getDoc(doc(db, 'projetos', projetoId));
-    if (!snap.exists()) return { success: false };
-    const carteiras = (snap.data().carteiras || []).map(c =>
+    const projetoData = await loadProjeto(projetoId);
+    if (projetoData === null) return { success: false };
+    const carteiras = (projetoData.carteiras || []).map(c =>
       c.id === carteiraId
         ? { ...c, links: (c.links || []).filter(l => l.id !== linkId) }
         : c
     );
-    await updateDoc(doc(db, 'projetos', projetoId), { carteiras, updatedAt: serverTimestamp() });
+    await saveProjetoData(projetoId, { ...projetoData, carteiras });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -174,9 +186,9 @@ export const LINK_TIPOS = [
 
 export async function seedCarteiras(projetoId, userId) {
   try {
-    const snap = await getDoc(doc(db, 'projetos', projetoId));
-    if (!snap.exists()) return { success: false };
-    const existing = snap.data().carteiras || [];
+    const projetoData = await loadProjeto(projetoId);
+    if (projetoData === null) return { success: false };
+    const existing = projetoData.carteiras || [];
     if (existing.length > 0) return { success: false, reason: 'already_seeded' };
     const carteiras = CARTEIRAS_PADRAO_PROJETO.map(c => ({
       id: genId(),
@@ -185,7 +197,7 @@ export async function seedCarteiras(projetoId, userId) {
       criadoEm: new Date().toISOString(),
       criadoPor: userId,
     }));
-    await updateDoc(doc(db, 'projetos', projetoId), { carteiras, updatedAt: serverTimestamp() });
+    await saveProjetoData(projetoId, { ...projetoData, carteiras });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };

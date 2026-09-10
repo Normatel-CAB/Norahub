@@ -7,8 +7,7 @@ import {
   ChevronUp, Phone, Mail, Link2, Plus, Lock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import { doc, updateDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import NotificationCenter from '../components/NotificationCenter';
 import { UserPageHeader } from '../components/UserPageHeader';
 import { Breadcrumb } from '../components/Breadcrumb';
@@ -18,6 +17,33 @@ import { CardFieldsForm } from '../components/CardFieldsForm';
 import ActivityLogger from '../services/activityLogger';
 import { trackLinkAccess, getRecentLinks } from '../services/favorites';
 import { SETORES_PADRAO } from '../services/carteirasDeProjeto';
+
+// `nome`/`ativa` são colunas reais em `projetos`; o resto (carteiras, extras,
+// tags, deadline, hiddenBuiltIns, urlForms...) vive em `data` (jsonb).
+function mapProjetoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    ativa: row.ativa,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(row.data || {}),
+  };
+}
+
+function mapCargoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    canManageUsers: row.can_manage_users,
+    canManagePermissions: row.can_manage_permissions,
+    canManageProjectMembers: row.can_manage_project_members,
+    canChangeCarteiras: row.can_change_carteiras,
+    canCreateCargos: row.can_create_cargos,
+    canCreateProjetos: row.can_create_projetos,
+    ...(row.data || {}),
+  };
+}
 
 // ─── Configs dos cards legados ─────────────────────────────────────────────────
 const GREEN = { bgColor: 'bg-[#57B952]/20', textColor: 'text-[#57B952]', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]' };
@@ -170,7 +196,7 @@ function PainelProjeto() {
   const isAdmin = userProfile?.funcao === 'admin';
   const isManager = typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente');
   const canManageCarteiras = isAdmin || isManager;
-  const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.displayName?.split(' ')[0] || 'Usuário';
+  const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.user_metadata?.full_name?.split(' ')[0] || 'Usuário';
 
   // Hooks MUST be declared before any conditional returns
   const projetoCarteiras = useMemo(
@@ -189,32 +215,47 @@ function PainelProjeto() {
   useEffect(() => {
     if (!projetoId) { navigate('/selecao-projeto', { replace: true }); return; }
     setLoading(true);
-    const unsub = onSnapshot(
-      doc(db, 'projetos', projetoId),
-      (snap) => {
-        if (!snap.exists() || snap.data()?.deletedAt) { setErrorType('notfound'); setLoading(false); return; }
-        setProjeto({ id: snap.id, ...snap.data() });
-        setLoading(false);
-      },
-      (err) => {
-        setErrorType(err.code === 'permission-denied' ? 'permission' : 'generic');
-        setLoading(false);
-      }
-    );
-    return () => unsub();
+    let cancelled = false;
+
+    const fetchProjeto = async () => {
+      const { data, error } = await supabase.from('projetos').select('*').eq('id', projetoId).maybeSingle();
+      if (cancelled) return;
+      if (error) { setErrorType(error.code === '42501' ? 'permission' : 'generic'); setLoading(false); return; }
+      if (!data || data.data?.deletedAt) { setErrorType('notfound'); setLoading(false); return; }
+      setProjeto(mapProjetoRow(data));
+      setLoading(false);
+    };
+    fetchProjeto();
+
+    const channel = supabase
+      .channel(`projeto-${projetoId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'projetos', filter: `id=eq.${projetoId}` },
+        (payload) => {
+          if (payload.eventType === 'DELETE') { setErrorType('notfound'); return; }
+          if (payload.new?.data?.deletedAt) { setErrorType('notfound'); return; }
+          setProjeto(mapProjetoRow(payload.new));
+        }
+      )
+      .subscribe();
+
+    return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [projetoId, navigate]);
 
   // ─── Load cargos list (for card restriction UI) ───────────────────────────────
   useEffect(() => {
-    getDocs(collection(db, 'cargos'))
-      .then(snap => setCargosLista(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-      .catch(() => {});
+    supabase.from('cargos').select('*')
+      .then(({ data, error }) => {
+        if (error) return;
+        setCargosLista((data || []).map(mapCargoRow));
+      });
   }, []);
 
   // ─── Access counters ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!currentUser || !projeto) return;
-    getRecentLinks(currentUser.uid).then(res => {
+    getRecentLinks(currentUser.id).then(res => {
       if (!res.success) return;
       const counts = {};
       res.recentLinks.forEach(l => { if (l.projetoId === projeto.id) counts[l.id] = l.accessCount || 0; });
@@ -228,18 +269,17 @@ function PainelProjeto() {
       if (!userProfile || !projetoId) return;
       if (isAdmin || isManager) { setCanEdit(true); setCanEditCards(true); return; }
       try {
-        const snap = await getDocs(query(collection(db, 'cargos'), where('nome', '==', userProfile.funcao)));
-        if (!snap.empty) {
-          const cargo = snap.docs[0].data();
+        const { data: cargo } = await supabase.from('cargos').select('*').eq('nome', userProfile.funcao).maybeSingle();
+        if (cargo) {
           setCanEdit(true);
-          setCanEditCards(cargo.canEditCardsProjetos || false);
+          setCanEditCards((cargo.data || {}).canEditCardsProjetos || false);
         }
       } catch { setCanEdit(false); setCanEditCards(false); }
     };
     check();
   // Primitivos estáveis: evita nova consulta de cargos a cada snapshot do projeto
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.uid, userProfile?.funcao, projetoId, isAdmin, isManager]);
+  }, [userProfile?.id, userProfile?.funcao, projetoId, isAdmin, isManager]);
 
   // ─── Legacy edit modal helpers ───────────────────────────────────────────────
   const openEditModal = () => {
@@ -283,10 +323,16 @@ function PainelProjeto() {
           notificationEmails: original?.notificationEmails || '',
         };
       });
-      await updateDoc(doc(db, 'projetos', projeto.id), { nome: editedName, extras: filteredExtras, updatedAt: new Date() });
+
+      const { data: existingRow, error: fetchErr } = await supabase.from('projetos').select('data').eq('id', projeto.id).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const mergedData = { ...(existingRow?.data || {}), extras: filteredExtras };
+
+      const { error } = await supabase.from('projetos').update({ nome: editedName, data: mergedData }).eq('id', projeto.id);
+      if (error) throw error;
       setIsEditModalOpen(false);
       showToast(`Projeto salvo!`);
-      ActivityLogger.projectEdited(editedName, currentUser.uid, primeiroNome);
+      ActivityLogger.projectEdited(editedName, currentUser.id, primeiroNome);
     } catch { showToast('Erro ao salvar.', 'error'); }
     finally { setSaving(false); }
   };
@@ -302,7 +348,7 @@ function PainelProjeto() {
 
   const trackAccess = (card) => {
     if (!currentUser || !card.url || card.url === '#') return;
-    trackLinkAccess(currentUser.uid, { projetoId: projeto.id, projetoNome: projeto.nome, cardName: card.name, url: card.url, type: card.type || 'link' });
+    trackLinkAccess(currentUser.id, { projetoId: projeto.id, projetoNome: projeto.nome, cardName: card.name, url: card.url, type: card.type || 'link' });
   };
 
   const handleDeleteExtraCard = (e, card) => {
@@ -313,13 +359,19 @@ function PainelProjeto() {
 
   const confirmDeleteCard = async () => {
     try {
+      const { data: existingRow, error: fetchErr } = await supabase.from('projetos').select('data').eq('id', projeto.id).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const currentData = existingRow?.data || {};
+
       if (confirmDelete.isBuiltIn) {
-        const current = Array.isArray(projeto.hiddenBuiltIns) ? projeto.hiddenBuiltIns : [];
-        await updateDoc(doc(db, 'projetos', projeto.id), { hiddenBuiltIns: [...current, confirmDelete.builtInKey] });
+        const current = Array.isArray(currentData.hiddenBuiltIns) ? currentData.hiddenBuiltIns : [];
+        const { error } = await supabase.from('projetos').update({ data: { ...currentData, hiddenBuiltIns: [...current, confirmDelete.builtInKey] } }).eq('id', projeto.id);
+        if (error) throw error;
       } else {
         const updatedExtras = (projeto.extras || []).filter((_, idx) => idx !== confirmDelete.cardIndex);
-        await updateDoc(doc(db, 'projetos', projeto.id), { extras: updatedExtras, updatedAt: new Date() });
-        ActivityLogger.cardDeleted('card', projeto.nome, currentUser.uid, primeiroNome);
+        const { error } = await supabase.from('projetos').update({ data: { ...currentData, extras: updatedExtras } }).eq('id', projeto.id);
+        if (error) throw error;
+        ActivityLogger.cardDeleted('card', projeto.nome, currentUser.id, primeiroNome);
       }
       showToast('Card removido.');
     } catch { showToast('Erro ao excluir card.', 'error'); }
@@ -354,7 +406,7 @@ function PainelProjeto() {
   );
 
   // ─── Carteiras: filtro por acesso do usuário ──────────────────────────────────
-  const userCarteiraIds = new Set(userProfile?.carteirasPorProjeto?.[projetoId] || []);
+  const userCarteiraIds = new Set(userProfile?.data?.carteirasPorProjeto?.[projetoId] || []);
   const visibleCarteiras = canManageCarteiras
     ? projetoCarteiras
     : projetoCarteiras.filter(c => userCarteiraIds.has(c.id));
@@ -366,7 +418,7 @@ function PainelProjeto() {
     : [];
 
   // Filter legacy extras by sector and cargo
-  const userSetores = new Set(userProfile?.setores || []);
+  const userSetores = new Set(userProfile?.data?.setores || []);
   const extras = extrasRaw.filter(card => {
     if (canManageCarteiras) return true;
     if (card.carteiraId && !userSetores.has(card.carteiraId)) return false;

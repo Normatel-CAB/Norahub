@@ -6,9 +6,22 @@ import {
   UserMinus, Layers, UsersRound, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import { seedCargos } from '../services/carteiras';
+
+function mapCargoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    canManageUsers: row.can_manage_users,
+    canManagePermissions: row.can_manage_permissions,
+    canManageProjectMembers: row.can_manage_project_members,
+    canChangeCarteiras: row.can_change_carteiras,
+    canCreateCargos: row.can_create_cargos,
+    canCreateProjetos: row.can_create_projetos,
+    ...(row.data || {}),
+  };
+}
 
 const PERMISSOES = [
   { id: 'canManageUsers',           label: 'Gerenciar Usuários',        desc: 'Aprovar cadastros e atribuir cargos',            icon: Users2 },
@@ -100,8 +113,8 @@ function AdminCargos() {
       if (!userProfile) { navigate('/selecao-projeto', { replace: true }); return; }
       if (isAdmin) { fetchData(); return; }
       try {
-        const snap = await getDocs(query(collection(db, 'cargos'), where('nome', '==', userProfile.funcao)));
-        if (!snap.empty && snap.docs[0].data().canCreateCargos) {
+        const { data: row } = await supabase.from('cargos').select('*').eq('nome', userProfile.funcao).maybeSingle();
+        if (row && mapCargoRow(row).canCreateCargos) {
           fetchData();
         } else {
           navigate('/selecao-projeto', { replace: true });
@@ -110,13 +123,14 @@ function AdminCargos() {
     };
     checkAccess();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, userProfile?.uid, userProfile?.funcao, navigate]);
+  }, [authLoading, userProfile?.id, userProfile?.funcao, navigate]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'cargos'));
-      setCargos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const { data, error } = await supabase.from('cargos').select('*');
+      if (error) throw error;
+      setCargos((data || []).map(mapCargoRow));
     } catch {
       showToast('Erro ao carregar cargos.', 'error');
     } finally {
@@ -187,21 +201,35 @@ function AdminCargos() {
     if (!formNome.trim()) return;
     setSaving(true);
     try {
-      const data = {
+      const realCols = {
         nome: formNome.trim(),
+        can_manage_users: formPerms.canManageUsers,
+        can_manage_permissions: formPerms.canManagePermissions,
+        can_manage_project_members: formPerms.canManageProjectMembers,
+        can_change_carteiras: formPerms.canChangeCarteiras,
+        can_create_cargos: formPerms.canCreateCargos,
+        can_create_projetos: formPerms.canCreateProjetos,
+      };
+      const extraData = {
         descricao: formDescricao.trim(),
         status: formStatus,
         tipo: 'colaborador',
-        ...formPerms,
-        updatedAt: new Date(),
+        canDeleteUsers: formPerms.canDeleteUsers,
+        canEditCardsProjetos: formPerms.canEditCardsProjetos,
       };
+
       if (modal.cargo) {
-        await updateDoc(doc(db, 'cargos', modal.cargo.id), data);
-        setCargos(prev => prev.map(c => c.id === modal.cargo.id ? { ...c, ...data } : c));
+        const { data: existingRow, error: fetchErr } = await supabase.from('cargos').select('data').eq('id', modal.cargo.id).maybeSingle();
+        if (fetchErr) throw fetchErr;
+        const mergedData = { ...(existingRow?.data || {}), ...extraData };
+        const { error } = await supabase.from('cargos').update({ ...realCols, data: mergedData }).eq('id', modal.cargo.id);
+        if (error) throw error;
+        setCargos(prev => prev.map(c => c.id === modal.cargo.id ? mapCargoRow({ id: c.id, ...realCols, data: mergedData }) : c));
         showToast('Cargo atualizado!');
       } else {
-        const ref = await addDoc(collection(db, 'cargos'), { ...data, createdAt: new Date() });
-        setCargos(prev => [...prev, { id: ref.id, ...data, createdAt: new Date() }]);
+        const { data: inserted, error } = await supabase.from('cargos').insert({ ...realCols, data: extraData }).select().single();
+        if (error) throw error;
+        setCargos(prev => [...prev, mapCargoRow(inserted)]);
         showToast('Cargo criado!');
       }
       setModal({ open: false, cargo: null });
@@ -215,13 +243,15 @@ function AdminCargos() {
   const handleDelete = async () => {
     const { cargo } = confirmDelete;
     try {
-      const usersSnap = await getDocs(query(collection(db, 'usuarios'), where('funcao', '==', cargo.nome)));
-      if (!usersSnap.empty) {
-        showToast(`${usersSnap.size} usuário(s) com este cargo. Reatribua antes de excluir.`, 'error');
+      const { data: usersWithCargo, error: userErr } = await supabase.from('usuarios').select('id').eq('funcao', cargo.nome);
+      if (userErr) throw userErr;
+      if ((usersWithCargo || []).length > 0) {
+        showToast(`${usersWithCargo.length} usuário(s) com este cargo. Reatribua antes de excluir.`, 'error');
         setConfirmDelete({ open: false, cargo: null });
         return;
       }
-      await deleteDoc(doc(db, 'cargos', cargo.id));
+      const { error } = await supabase.from('cargos').delete().eq('id', cargo.id);
+      if (error) throw error;
       setCargos(prev => prev.filter(c => c.id !== cargo.id));
       showToast('Cargo excluído.');
     } catch {

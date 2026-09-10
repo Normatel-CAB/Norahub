@@ -3,19 +3,18 @@ import { UserCheck, ShoppingCart, ArrowLeft, User, LogOut, ChevronRight } from '
 // ThemeToggle removed: app forced to light mode
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { auth } from '../services/firebase';
-import { signOut } from 'firebase/auth';
+import { supabase } from '../services/supabase';
 
 function MenuNormatel() {
   const { theme } = useTheme();
   const { currentUser, userProfile } = useAuth();
-  const fotoURL = currentUser?.photoURL || userProfile?.fotoURL;
-  const primeiroNome = (currentUser?.displayName || userProfile?.nome || 'Usuário').split(' ')[0];
+  const fotoURL = currentUser?.user_metadata?.avatar_url || currentUser?.user_metadata?.picture || userProfile?.foto_url;
+  const primeiroNome = (currentUser?.user_metadata?.full_name || userProfile?.nome || 'Usuário').split(' ')[0];
   const isDark = theme === 'dark';
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     navigate('/login');
   };
 

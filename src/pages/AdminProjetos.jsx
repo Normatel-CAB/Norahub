@@ -2,9 +2,30 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, X, Save, Trash2, Users } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { db } from '../services/firebase';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import Alert from '../components/Alert';
+
+function mapProjetoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    ativa: row.ativa,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(row.data || {}),
+  };
+}
+
+function mapUsuarioRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    email: row.email,
+    funcao: row.funcao,
+    fotoUrl: row.foto_url,
+    ...(row.data || {}),
+  };
+}
 
 function AdminProjetos() {
   const { theme } = useTheme();
@@ -26,12 +47,14 @@ function AdminProjetos() {
 
   const fetchData = async () => {
     try {
-      const [projSnapshot, userSnapshot] = await Promise.all([
-        getDocs(collection(db, 'projetos')),
-        getDocs(collection(db, 'usuarios')),
+      const [projRes, userRes] = await Promise.all([
+        supabase.from('projetos').select('*'),
+        supabase.from('usuarios').select('*'),
       ]);
-      setProjetos(projSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-      setUsuarios(userSnapshot.docs.map(d => ({ id: d.id, uid: d.data()?.uid || d.id, ...d.data() })));
+      if (projRes.error) throw projRes.error;
+      if (userRes.error) throw userRes.error;
+      setProjetos((projRes.data || []).map(mapProjetoRow));
+      setUsuarios((userRes.data || []).map(mapUsuarioRow));
     } catch (error) {
       setAlertInfo({ message: 'Erro ao carregar dados.', type: 'error' });
     } finally {
@@ -77,9 +100,11 @@ function AdminProjetos() {
 
     setSavingLoading(true);
     try {
-      await updateDoc(doc(db, 'projetos', projetoSelecionado.id), {
-        membros: membrosAdicionados,
-      });
+      const { data: row, error: fetchErr } = await supabase.from('projetos').select('data').eq('id', projetoSelecionado.id).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const mergedData = { ...(row?.data || {}), membros: membrosAdicionados };
+      const { error } = await supabase.from('projetos').update({ data: mergedData }).eq('id', projetoSelecionado.id);
+      if (error) throw error;
       setProjetos(prev =>
         prev.map(p => p.id === projetoSelecionado.id ? { ...p, membros: membrosAdicionados } : p)
       );
@@ -94,7 +119,7 @@ function AdminProjetos() {
 
   const getNomeUsuario = (memberId) => {
     const memberIdStr = String(memberId);
-    const user = usuarios.find(u => String(u.uid || u.id) === memberIdStr);
+    const user = usuarios.find(u => String(u.id) === memberIdStr);
     return user ? `${user.nome} (${user.email})` : 'Usuário desconhecido';
   };
 
@@ -193,11 +218,11 @@ function AdminProjetos() {
                   className="flex-1 px-3 py-2 rounded-lg border border-white/20 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
                   style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: '#f9fafb' }}
                 >
-                  <option value="" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Selecione um usuário... ({usuarios.filter(u => !membrosAdicionados.includes(String(u.uid || u.id))).length} disponíveis)</option>
+                  <option value="" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Selecione um usuário... ({usuarios.filter(u => !membrosAdicionados.includes(String(u.id))).length} disponíveis)</option>
                   {usuarios
-                    .filter(u => !membrosAdicionados.includes(String(u.uid || u.id)))
+                    .filter(u => !membrosAdicionados.includes(String(u.id)))
                     .map(u => (
-                      <option key={u.uid || u.id} value={u.uid || u.id} style={{ backgroundColor: '#ffffff', color: '#111827' }}>
+                      <option key={u.id} value={u.id} style={{ backgroundColor: '#ffffff', color: '#111827' }}>
                         {u.nome} ({u.email})
                       </option>
                     ))}

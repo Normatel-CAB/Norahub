@@ -2,11 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2, Plus, Briefcase, Settings, X, Save, Trash2, Shield, Calendar,
-  Tag, RotateCcw, LayoutDashboard, Search, Star, Layers,
+  Tag, RotateCcw, LayoutDashboard, LayoutGrid, Search, Star, Layers,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import NotificationCenter from '../components/NotificationCenter';
 import { UserPageHeader } from '../components/UserPageHeader';
 import { SkeletonProjectCard } from '../components/Skeleton';
@@ -18,6 +17,19 @@ const NO_URL_TYPES = new Set(['documents', 'files', 'spreadsheets']);
 
 const inputCls =
   'w-full px-4 py-3 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all';
+
+// Uma linha de `projetos` vira um objeto "achatado": nome/ativa são colunas reais,
+// o resto (tags, deadline, extras, carteiras, deletedAt...) vive em `data` (jsonb).
+function mapProjetoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    ativa: row.ativa,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(row.data || {}),
+  };
+}
 
 // ─── DeadlineBadge ────────────────────────────────────────────────────────────
 function DeadlineBadge({ deadline }) {
@@ -62,7 +74,7 @@ function SelecaoProjeto() {
   const { currentUser, userProfile } = useAuth();
   const navigate = useNavigate();
   const isAdmin = userProfile?.funcao === 'admin';
-  const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.displayName?.split(' ')[0] || 'Usuário';
+  const primeiroNome = userProfile?.nome?.split(' ')[0] || currentUser?.user_metadata?.full_name?.split(' ')[0] || 'Usuário';
 
   const [projetos, setProjetos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -122,11 +134,11 @@ function SelecaoProjeto() {
     if (activeTagFilter) list = list.filter(p => (p.tags || []).includes(activeTagFilter));
 
     if (sortBy === 'name') list.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-    else if (sortBy === 'date') list.sort((a, b) => (b.createdAt?.toDate?.() || new Date(0)) - (a.createdAt?.toDate?.() || new Date(0)));
+    else if (sortBy === 'date') list.sort((a, b) => (b.createdAt ? new Date(b.createdAt) : new Date(0)) - (a.createdAt ? new Date(a.createdAt) : new Date(0)));
     else if (sortBy === 'recent') {
       list.sort((a, b) => {
-        const da = a.updatedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
-        const db_ = b.updatedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
+        const da = a.updatedAt ? new Date(a.updatedAt) : a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const db_ = b.updatedAt ? new Date(b.updatedAt) : b.createdAt ? new Date(b.createdAt) : new Date(0);
         return db_ - da;
       });
     } else if (sortBy === 'deadline') {
@@ -151,13 +163,13 @@ function SelecaoProjeto() {
       checkPermissions();
       loadFavorites();
     }
-  // Apenas primitivos como dependências — arrays como projetos causam re-run a cada snapshot
+  // Apenas primitivos como dependências — arrays como projetos causam re-run à toa
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.uid, userProfile?.funcao, (userProfile?.projetos || []).join(',')]);
+  }, [userProfile?.id, userProfile?.funcao, (userProfile?.data?.projetos || []).join(',')]);
 
   const loadFavorites = async () => {
     if (!currentUser) { setFavIds(new Set()); return; }
-    const res = await getFavorites(currentUser.uid, 'project');
+    const res = await getFavorites(currentUser.id, 'project');
     if (res.success) setFavIds(new Set(res.favorites.map(f => f.id)));
   };
 
@@ -168,12 +180,12 @@ function SelecaoProjeto() {
       setCanManageProjects(true); setCanAccessAdmin(true); return;
     }
     try {
-      const snap = await getDocs(query(collection(db, 'cargos'), where('nome', '==', userProfile.funcao)));
-      if (!snap.empty) {
-        const cargo = snap.docs[0].data();
-        setProjetosPermitidos(cargo.projetos || []);
-        setCanManageProjects(cargo.canCreateProjetos || (cargo.projetos || []).length > 0);
-        setCanAccessAdmin(cargo.canManageUsers || cargo.canManagePermissions);
+      const { data: cargo } = await supabase.from('cargos').select('*').eq('nome', userProfile.funcao).maybeSingle();
+      if (cargo) {
+        const cargoExtra = cargo.data || {};
+        setProjetosPermitidos(cargoExtra.projetos || []);
+        setCanManageProjects(cargo.can_create_projetos || (cargoExtra.projetos || []).length > 0);
+        setCanAccessAdmin(cargo.can_manage_users || cargo.can_manage_permissions);
       }
     } catch {
       setCanManageProjects(false);
@@ -183,12 +195,13 @@ function SelecaoProjeto() {
 
   const fetchProjetos = async () => {
     try {
-      const snap = await getDocs(collection(db, 'projetos'));
-      let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const { data, error } = await supabase.from('projetos').select('*');
+      if (error) throw error;
+      let list = (data || []).map(mapProjetoRow);
 
       const isManager = typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente');
       if (!isAdmin && !isManager) {
-        const userProjetos = userProfile?.projetos || [];
+        const userProjetos = userProfile?.data?.projetos || [];
         list = userProjetos.length > 0 ? list.filter(p => userProjetos.includes(p.id)) : [];
       }
 
@@ -231,25 +244,23 @@ function SelecaoProjeto() {
               formResponses: orig?.formResponses || [],
             };
           });
-        await updateDoc(doc(db, 'projetos', editingProject.id), {
-          nome: newProjectName,
-          tags,
-          deadline,
-          extras,
-          updatedAt: new Date(),
-        });
-        ActivityLogger.projectEdited(newProjectName, currentUser.uid, primeiroNome);
+
+        const { data: existingRow, error: fetchErr } = await supabase.from('projetos').select('data').eq('id', editingProject.id).maybeSingle();
+        if (fetchErr) throw fetchErr;
+        const mergedData = { ...(existingRow?.data || {}), tags, deadline, extras };
+
+        const { error } = await supabase.from('projetos').update({ nome: newProjectName, data: mergedData }).eq('id', editingProject.id);
+        if (error) throw error;
+        ActivityLogger.projectEdited(newProjectName, currentUser.id, primeiroNome);
         showToast('Projeto atualizado!');
       } else {
-        await addDoc(collection(db, 'projetos'), {
+        const { error } = await supabase.from('projetos').insert({
           nome: newProjectName,
-          tags,
-          deadline,
-          extras: [],
           ativa: true,
-          createdAt: new Date(),
+          data: { tags, deadline, extras: [] },
         });
-        ActivityLogger.projectCreated(newProjectName, currentUser.uid, primeiroNome);
+        if (error) throw error;
+        ActivityLogger.projectCreated(newProjectName, currentUser.id, primeiroNome);
         showToast('Projeto criado!');
       }
 
@@ -265,14 +276,18 @@ function SelecaoProjeto() {
   // Soft delete — move para lixeira em vez de apagar
   const confirmSoftDelete = async () => {
     try {
-      await updateDoc(doc(db, 'projetos', confirmDelete.projetoId), {
-        deletedAt: new Date(),
-        deletedBy: currentUser.uid,
-      });
+      const { data: existingRow, error: fetchErr } = await supabase.from('projetos').select('data').eq('id', confirmDelete.projetoId).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const deletedAt = new Date().toISOString();
+      const mergedData = { ...(existingRow?.data || {}), deletedAt, deletedBy: currentUser.id };
+
+      const { error } = await supabase.from('projetos').update({ data: mergedData }).eq('id', confirmDelete.projetoId);
+      if (error) throw error;
+
       setProjetos(prev =>
-        prev.map(p => p.id === confirmDelete.projetoId ? { ...p, deletedAt: new Date() } : p)
+        prev.map(p => p.id === confirmDelete.projetoId ? { ...p, deletedAt } : p)
       );
-      ActivityLogger.projectDeleted(confirmDelete.nome, currentUser.uid, primeiroNome);
+      ActivityLogger.projectDeleted(confirmDelete.nome, currentUser.id, primeiroNome);
       showToast('Projeto movido para a lixeira.');
     } catch {
       showToast('Erro ao excluir projeto.', 'error');
@@ -347,7 +362,10 @@ function SelecaoProjeto() {
               <Link to="/meu-painel" className="bg-[#57B952]/20 text-[#57B952] px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-[#57B952]/30 text-xs sm:text-sm border border-[#57B952]/30">
                 <LayoutDashboard size={15} /><span className="hidden sm:inline">Meu Painel</span><span className="sm:hidden">Painel</span>
               </Link>
-              {(isAdmin || (userProfile?.carteiras?.length > 0) || typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')) && (
+              <Link to="/aplicativos" className="bg-white/10 text-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-white/20 text-xs sm:text-sm border border-white/20">
+                <LayoutGrid size={15} /><span className="hidden sm:inline">Aplicativos</span><span className="sm:hidden">Apps</span>
+              </Link>
+              {(isAdmin || (userProfile?.data?.carteiras?.length > 0) || typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')) && (
                 <Link to="/minhas-carteiras" className="bg-cyan-500/20 text-cyan-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-cyan-500/30 text-xs sm:text-sm border border-cyan-500/30">
                   <Layers size={15} /><span className="hidden sm:inline">Carteiras</span><span className="sm:hidden">Cart.</span>
                 </Link>

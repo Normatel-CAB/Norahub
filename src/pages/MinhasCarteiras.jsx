@@ -5,8 +5,21 @@ import {
   UsersRound, Layers, FolderPlus, LayoutTemplate, Info,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../services/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
+
+function mapCargoRow(row) {
+  return {
+    id: row.id,
+    nome: row.nome,
+    canManageUsers: row.can_manage_users,
+    canManagePermissions: row.can_manage_permissions,
+    canManageProjectMembers: row.can_manage_project_members,
+    canChangeCarteiras: row.can_change_carteiras,
+    canCreateCargos: row.can_create_cargos,
+    canCreateProjetos: row.can_create_projetos,
+    ...(row.data || {}),
+  };
+}
 
 const PERMISSOES = [
   { id: 'canManageUsers',          label: 'Gerenciar Usuários',    icon: Users2        },
@@ -53,12 +66,8 @@ export default function MinhasCarteiras() {
 
     const fetchCargo = async () => {
       try {
-        const snap = await getDocs(
-          query(collection(db, 'cargos'), where('nome', '==', nomeCargo))
-        );
-        if (!snap.empty) {
-          setCargoData(snap.docs[0].data());
-        }
+        const { data: row } = await supabase.from('cargos').select('*').eq('nome', nomeCargo).maybeSingle();
+        if (row) setCargoData(mapCargoRow(row));
       } catch {
         // falha silenciosa
       } finally {
@@ -68,7 +77,7 @@ export default function MinhasCarteiras() {
 
     fetchCargo();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, userProfile?.uid, userProfile?.funcao]);
+  }, [authLoading, userProfile?.id, userProfile?.funcao]);
 
   const permsAtivas = PERMISSOES.filter(p => cargoData?.[p.id]);
 

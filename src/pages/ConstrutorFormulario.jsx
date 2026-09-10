@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Eye, Settings, FileText, Download, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db, storage } from '../services/firebase';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { supabase } from '../services/supabase';
 import { sendEmailToCollaborator } from '../services/notifications';
+
+const BUCKET = 'projetos';
+const SIGNED_URL_EXPIRY = 60 * 60 * 24 * 365 * 5; // 5 anos
 
 function ConstrutorFormulario() {
   const location = useLocation();
@@ -32,20 +33,20 @@ function ConstrutorFormulario() {
   const loadFormFields = async () => {
     setLoading(true);
     try {
-      const projetoDoc = await getDoc(doc(db, 'projetos', projeto.id));
-      if (!projetoDoc.exists()) {
+      const { data: projetoRow, error } = await supabase.from('projetos').select('data').eq('id', projeto.id).maybeSingle();
+      if (error || !projetoRow) {
         showToast('Projeto não encontrado', 'error');
         navigate(-1);
         return;
       }
 
-      const projetoData = projetoDoc.data();
+      const projetoData = projetoRow.data || {};
       const extras = projetoData.extras || [];
       const formData = extras.find(e => e.name === card.name) || {};
 
       const loadedFields = formData.formFields || [];
       const loadedResponses = formData.formResponses || [];
-      
+
       // Log para debug
       console.log('✅ Formulário carregado:', {
         campos: loadedFields.length,
@@ -60,8 +61,8 @@ function ConstrutorFormulario() {
 
       const userFuncao = userProfile?.funcao || userProfile?.role;
       const userCanEdit = !!(
-        projetoData.ownerId === currentUser?.uid ||
-        formData.createdBy === currentUser?.uid ||
+        projetoData.ownerId === currentUser?.id ||
+        formData.createdBy === currentUser?.id ||
         userFuncao === 'admin' ||
         userFuncao === 'gerente-projeto' ||
         userFuncao === 'gerente-usuario' ||
@@ -86,7 +87,7 @@ function ConstrutorFormulario() {
     // Recarrega quando dados do usuário chegarem para garantir que admin/owner tenha permissão
     loadFormFields();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card?.name, projeto?.id, currentUser?.uid, userProfile?.role]);
+  }, [card?.name, projeto?.id, currentUser?.id, userProfile?.role]);
   const sendEmailNotification = async (responseName, responseData) => {
     if (!emailNotifications || !notificationEmails.trim()) return;
 
@@ -159,9 +160,10 @@ function ConstrutorFormulario() {
 
     setSaving(true);
     try {
-      const projetoDoc = await getDoc(doc(db, 'projetos', projeto.id));
-      const projetoData = projetoDoc.data();
-      
+      const { data: projetoRow, error: fetchErr } = await supabase.from('projetos').select('data').eq('id', projeto.id).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const projetoData = projetoRow?.data || {};
+
       const responseId = Date.now();
       const processedAnswers = { ...currentResponse };
 
@@ -173,11 +175,12 @@ function ConstrutorFormulario() {
             const uploadedUrls = [];
             for (const file of value) {
               if (file instanceof File) {
-                const storagePath = `projetos/${projeto.id}/forms/${card.name}/responses/${responseId}/${file.name}`;
-                const storageRef = ref(storage, storagePath);
-                await uploadBytes(storageRef, file);
-                const downloadURL = await getDownloadURL(storageRef);
-                uploadedUrls.push({ name: file.name, url: downloadURL, type: file.type });
+                const storagePath = `${projeto.id}/forms/${card.name}/responses/${responseId}/${file.name}`;
+                const { error: uploadErr } = await supabase.storage.from(BUCKET).upload(storagePath, file, { upsert: true, contentType: file.type });
+                if (uploadErr) throw uploadErr;
+                const { data: signedData, error: signErr } = await supabase.storage.from(BUCKET).createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
+                if (signErr) throw signErr;
+                uploadedUrls.push({ name: file.name, url: signedData.signedUrl, path: storagePath, type: file.type });
               }
             }
             processedAnswers[fieldId] = uploadedUrls;
@@ -189,28 +192,29 @@ function ConstrutorFormulario() {
           }
         }
       }
-      
+
       const newResponse = {
         id: responseId,
         submittedAt: new Date().toISOString(),
         submittedBy: currentUser.email,
-        userName: userProfile?.nome || currentUser.displayName || 'Anônimo',
+        userName: userProfile?.nome || currentUser.user_metadata?.full_name || 'Anônimo',
         answers: processedAnswers
       };
 
-      const updatedExtras = projetoData.extras.map(e => 
-        e.name === card.name 
-          ? { 
-              ...e, 
+      const updatedExtras = (projetoData.extras || []).map(e =>
+        e.name === card.name
+          ? {
+              ...e,
               formResponses: [...(e.formResponses || []), newResponse]
-            } 
+            }
           : e
       );
 
-      await updateDoc(doc(db, 'projetos', projeto.id), {
-        extras: updatedExtras,
-        updatedAt: new Date()
-      });
+      const { error: updateErr } = await supabase
+        .from('projetos')
+        .update({ data: { ...projetoData, extras: updatedExtras } })
+        .eq('id', projeto.id);
+      if (updateErr) throw updateErr;
 
       showToast('Resposta enviada com sucesso!', 'success');
       
@@ -304,19 +308,21 @@ function ConstrutorFormulario() {
 
     setSaving(true);
     try {
-      const projetoDoc = await getDoc(doc(db, 'projetos', projeto.id));
-      const projetoData = projetoDoc.data();
-      
-      const updatedExtras = projetoData.extras.map(e => 
-        e.name === card.name 
-          ? { ...e, formFields, emailNotifications, notificationEmails } 
+      const { data: projetoRow, error: fetchErr } = await supabase.from('projetos').select('data').eq('id', projeto.id).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      const projetoData = projetoRow?.data || {};
+
+      const updatedExtras = (projetoData.extras || []).map(e =>
+        e.name === card.name
+          ? { ...e, formFields, emailNotifications, notificationEmails }
           : e
       );
 
-      await updateDoc(doc(db, 'projetos', projeto.id), {
-        extras: updatedExtras,
-        updatedAt: new Date()
-      });
+      const { error: updateErr } = await supabase
+        .from('projetos')
+        .update({ data: { ...projetoData, extras: updatedExtras } })
+        .eq('id', projeto.id);
+      if (updateErr) throw updateErr;
 
       showToast('Formulário salvo com sucesso!', 'success');
     } catch (error) {

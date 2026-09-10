@@ -1,23 +1,20 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { auth, db } from '../services/firebase';
-import {
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  OAuthProvider,
-  signOut,
-} from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useRecaptcha } from '../components/RecaptchaLoader';
 import { encryptCPF } from '../services/encryptionService';
 
 // Mínimo 8 caracteres, pelo menos: 1 maiúscula, 1 minúscula, 1 número, 1 caractere especial
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+
+const AUTH_ERROR_MESSAGES = {
+  'dominio-invalido': 'Acesso restrito a contas @normatel.com.br.',
+  'email-indisponivel': 'A Microsoft não retornou seu e-mail. Verifique as permissões da conta.',
+  'pendente': 'Cadastro realizado! Aguarde aprovação do administrador.',
+};
 
 function getPasswordStrength(password) {
   if (!password) return { score: 0, label: '', color: '' };
@@ -37,7 +34,7 @@ function Cadastro() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile, loading: authLoading, authError, clearAuthError } = useAuth();
 
   const { executeRecaptcha } = useRecaptcha();
   const [nome, setNome] = useState('');
@@ -47,8 +44,6 @@ function Cadastro() {
   const [funcao, setFuncao] = useState('');
   const [loading, setLoading] = useState(false);
   const [alertInfo, setAlertInfo] = useState(null);
-  // Evita que o useEffect de signOut dispare durante o fluxo Microsoft
-  const inMicrosoftFlow = useRef(false);
   const passwordStrength = getPasswordStrength(senha);
 
   const formatCPF = (value) => {
@@ -66,108 +61,50 @@ function Cadastro() {
 
   const getAutoApprovalStatus = async () => {
     try {
-      const snap = await getDoc(doc(db, 'settings', 'autoApproval'));
-      return snap.exists() && snap.data().enabled === true;
+      const { data } = await supabase.from('settings').select('data').eq('id', 'autoApproval').maybeSingle();
+      return data?.data?.enabled === true;
     } catch {
       return false;
     }
   };
 
-  // Cria perfil no Firestore após autenticação Microsoft
-  const saveMicrosoftUser = async (user) => {
-    const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
-    if (userDoc.exists()) {
-      setAlertInfo({ message: 'Este usuário já está cadastrado. Faça login.', type: 'error' });
-      await signOut(auth);
-      return;
+  // Erros de domínio/conta pendente do fluxo Microsoft resolvidos centralmente no
+  // AuthContext (mesmo mecanismo usado no Login) — aqui só exibimos a mensagem.
+  useEffect(() => {
+    if (!authError) return;
+    const message = AUTH_ERROR_MESSAGES[authError] || 'Não foi possível cadastrar com Microsoft. Tente novamente.';
+    setAlertInfo({ message, type: authError === 'pendente' ? 'success' : 'error' });
+    clearAuthError();
+    if (authError === 'pendente') {
+      setTimeout(() => navigate('/login', { replace: true }), 1500);
     }
-    const autoApprove = await getAutoApprovalStatus();
-    await setDoc(doc(db, 'usuarios', user.uid), {
-      nome: user.displayName || '',
-      email: user.email || '',
-      cpfMatricula: '',
-      cargo: '',
-      funcao: 'colaborador',
-      statusAcesso: autoApprove ? 'ativo' : 'pendente',
-      uid: user.uid,
-      createdAt: new Date(),
-    });
-    setAlertInfo({
-      message: autoApprove
-        ? 'Cadastro realizado! Você já pode fazer login.'
-        : 'Cadastro realizado! Aguarde aprovação do administrador.',
-      type: 'success',
-    });
-    setTimeout(() => navigate('/login', { replace: true }), 1200);
-  };
+  }, [authError, clearAuthError, navigate]);
 
-  // Captura resultado do signInWithRedirect ao voltar da Microsoft
+  // Se já está logado (ex: voltou de um cadastro Microsoft bem-sucedido e já aprovado),
+  // manda direto pro sistema em vez de deixar na tela de cadastro.
   useEffect(() => {
-    const handleRedirect = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (!result?.user) return;
-        setLoading(true);
-        await saveMicrosoftUser(result.user);
-      } catch {
-        setAlertInfo({ message: 'Erro ao cadastrar com Microsoft.', type: 'error' });
-      } finally {
-        setLoading(false);
-      }
-    };
-    handleRedirect();
+    if (!authLoading && currentUser && userProfile) {
+      navigate('/selecao-projeto');
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Desloga se já houver sessão ativa ao entrar na página
-  // (mas não durante o fluxo Microsoft, que precisa estar logado para gravar no Firestore)
-  useEffect(() => {
-    if (currentUser && !inMicrosoftFlow.current) signOut(auth).catch(() => {});
-  }, [currentUser]);
+  }, [authLoading, currentUser?.id, navigate]);
 
   const handleMicrosoftRegister = async () => {
     setLoading(true);
     setAlertInfo(null);
-    inMicrosoftFlow.current = true; // protege contra o signOut automático
-
-    const provider = new OAuthProvider('microsoft.com');
-    provider.setCustomParameters({ prompt: 'select_account' });
-
     try {
-      const result = await signInWithPopup(auth, provider);
-      await saveMicrosoftUser(result.user);
-    } catch (error) {
-      // Popup bloqueado → tenta redirect
-      const popupBloqueado =
-        error?.code === 'auth/popup-blocked' ||
-        error?.code === 'auth/cancelled-popup-request' ||
-        error?.message?.includes('window.closed') ||
-        error?.message?.includes('popup');
-
-      if (popupBloqueado) {
-        try {
-          const p2 = new OAuthProvider('microsoft.com');
-          p2.setCustomParameters({ prompt: 'select_account' });
-          await signInWithRedirect(auth, p2);
-          return;
-        } catch {
-          setAlertInfo({ message: 'Não foi possível abrir a janela da Microsoft. Tente novamente.', type: 'error' });
-        }
-      } else if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
-        setAlertInfo({ message: 'Cadastro cancelado.', type: 'error' });
-      } else if (error?.code === 'auth/account-exists-with-different-credential') {
-        setAlertInfo({ message: 'Este e-mail já tem cadastro com senha. Vá para Login.', type: 'error' });
-      } else if (error?.code === 'auth/invalid-credential' || error?.code === 'auth/invalid-oauth-client-id') {
-        setAlertInfo({ message: 'Conta Microsoft não autorizada. Contate o administrador do sistema.', type: 'error' });
-      } else if (error?.code === 'auth/unauthorized-domain') {
-        setAlertInfo({ message: 'Domínio não autorizado. Contate o administrador.', type: 'error' });
-      } else if (error?.code === 'auth/too-many-requests') {
-        setAlertInfo({ message: 'Muitas tentativas. Aguarde alguns minutos.', type: 'error' });
-      } else {
-        setAlertInfo({ message: 'Não foi possível cadastrar com Microsoft. Tente novamente.', type: 'error' });
-      }
-    } finally {
-      inMicrosoftFlow.current = false;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          scopes: 'email',
+          redirectTo: `${window.location.origin}/cadastro`,
+        },
+      });
+      if (error) throw error;
+      // Daqui em diante o navegador é redirecionado pra Microsoft — a volta é tratada
+      // pelo AuthContext (cria o perfil pendente automaticamente) e pelo useEffect acima.
+    } catch {
+      setAlertInfo({ message: 'Não foi possível abrir a janela da Microsoft. Tente novamente.', type: 'error' });
       setLoading(false);
     }
   };
@@ -191,41 +128,46 @@ function Cadastro() {
         return;
       }
 
-      const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
-      const user = userCredential.user;
-      if (!user?.uid) throw new Error('Usuário não autenticado após cadastro.');
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password: senha,
+      });
+      if (signUpError) throw signUpError;
+
+      const user = signUpData?.user;
+      if (!user?.id) throw new Error('Usuário não autenticado após cadastro.');
+      if (!signUpData.session) {
+        // Projeto está com confirmação de e-mail ativada: não há sessão ainda pra
+        // gravar o perfil (a RLS exige auth.uid() = id). O perfil "pendente" será
+        // criado automaticamente no primeiro login, após a confirmação.
+        throw new Error('sem-sessao');
+      }
 
       const [autoApprove, encryptedCPF] = await Promise.all([
         getAutoApprovalStatus(),
         encryptCPF(cpfMatricula),
       ]);
 
-      const userData = {
+      const usuarioData = {
+        id: user.id,
         nome,
         email,
-        cpfMatricula: encryptedCPF,
-        cargo: funcao,
         funcao: 'colaborador',
-        statusAcesso: autoApprove ? 'ativo' : 'pendente',
-        uid: user.uid,
-        createdAt: new Date(),
+        status_acesso: autoApprove ? 'ativo' : 'pendente',
+        data: { cargo: funcao, cpfMatricula: encryptedCPF },
       };
 
       let success = false;
       let lastError = null;
       for (let i = 0; i < 3; i++) {
-        try {
-          await setDoc(doc(db, 'usuarios', user.uid), userData);
-          success = true;
-          break;
-        } catch (err) {
-          lastError = err;
-          if (i < 2) await new Promise((r) => setTimeout(r, 800));
-        }
+        const { error: insertError } = await supabase.from('usuarios').insert(usuarioData);
+        if (!insertError) { success = true; break; }
+        lastError = insertError;
+        if (i < 2) await new Promise((r) => setTimeout(r, 800));
       }
       if (!success) throw lastError;
 
-      await signOut(auth);
+      await supabase.auth.signOut();
       setAlertInfo({
         message: autoApprove
           ? 'Cadastro realizado! Você já pode fazer login.'
@@ -234,12 +176,17 @@ function Cadastro() {
       });
       setTimeout(() => navigate('/login', { replace: true }), 1200);
     } catch (error) {
-      if (error.code === 'auth/email-already-in-use') {
+      if (error.message === 'sem-sessao') {
+        setAlertInfo({ message: 'Cadastro criado! Confirme seu e-mail para poder acessar.', type: 'success' });
+        setTimeout(() => navigate('/login', { replace: true }), 1500);
+      } else if (error.message?.toLowerCase().includes('already registered')) {
         setAlertInfo({ message: 'Este e-mail já está cadastrado.', type: 'error' });
-      } else if (error.code === 'auth/weak-password') {
+      } else if (error.message?.toLowerCase().includes('password')) {
         setAlertInfo({ message: 'A senha deve ter pelo menos 6 caracteres.', type: 'error' });
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (error.message?.toLowerCase().includes('email')) {
         setAlertInfo({ message: 'E-mail inválido.', type: 'error' });
+      } else if (error.status === 429 || error.message?.toLowerCase().includes('rate limit')) {
+        setAlertInfo({ message: 'Muitas tentativas. Aguarde alguns minutos.', type: 'error' });
       } else {
         setAlertInfo({ message: 'Erro ao criar conta. Tente novamente.', type: 'error' });
       }

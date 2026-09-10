@@ -1,8 +1,4 @@
-import { db } from './firebase';
-import {
-  collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
+import { supabase } from './supabase';
 
 // ─── Paleta de cores disponíveis ─────────────────────────────────────────────
 export const CORES_CARTEIRA = [
@@ -113,13 +109,19 @@ export const CARGOS_PADRAO = [
   },
 ];
 
+// `nome` é coluna real na tabela `carteiras`; o resto vive em `data` (jsonb).
+function mapCarteiraRow(row) {
+  return { id: row.id, nome: row.nome, ...(row.data || {}) };
+}
+
 // ─── CRUD de Carteiras ────────────────────────────────────────────────────────
 
 export const getCarteiras = async () => {
   try {
-    const snap = await getDocs(collection(db, 'carteiras'));
-    const carteiras = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
+    const { data, error } = await supabase.from('carteiras').select('*');
+    if (error) throw error;
+    const carteiras = (data || [])
+      .map(mapCarteiraRow)
       .sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99));
     return { success: true, carteiras };
   } catch (err) {
@@ -129,35 +131,52 @@ export const getCarteiras = async () => {
 
 export const getCarteira = async (id) => {
   try {
-    const snap = await getDoc(doc(db, 'carteiras', id));
-    if (!snap.exists()) return { success: false, carteira: null };
-    return { success: true, carteira: { id: snap.id, ...snap.data() } };
+    const { data, error } = await supabase.from('carteiras').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    if (!data) return { success: false, carteira: null };
+    return { success: true, carteira: mapCarteiraRow(data) };
   } catch (err) {
     return { success: false, carteira: null, error: err.message };
   }
 };
 
-export const createCarteira = async (data, userId) => {
+export const createCarteira = async (payload, userId) => {
   try {
-    const ref = await addDoc(collection(db, 'carteiras'), {
-      nome: data.nome.trim(),
-      descricao: (data.descricao || '').trim(),
-      cor: data.cor || '#57B952',
-      ordem: data.ordem ?? 99,
-      links: [],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      createdBy: userId,
-    });
-    return { success: true, id: ref.id };
+    const { data, error } = await supabase
+      .from('carteiras')
+      .insert({
+        nome: payload.nome.trim(),
+        data: {
+          descricao: (payload.descricao || '').trim(),
+          cor: payload.cor || '#57B952',
+          ordem: payload.ordem ?? 99,
+          links: [],
+          createdBy: userId,
+        },
+      })
+      .select('id')
+      .single();
+    if (error) throw error;
+    return { success: true, id: data.id };
   } catch (err) {
     return { success: false, error: err.message };
   }
 };
 
-export const updateCarteira = async (id, data) => {
+export const updateCarteira = async (id, payload) => {
   try {
-    await updateDoc(doc(db, 'carteiras', id), { ...data, updatedAt: serverTimestamp() });
+    const { data: existing, error: fetchError } = await supabase.from('carteiras').select('data').eq('id', id).maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!existing) return { success: false, error: 'Carteira não encontrada' };
+    const { nome, ...rest } = payload;
+    const { error } = await supabase
+      .from('carteiras')
+      .update({
+        ...(nome !== undefined ? { nome } : {}),
+        data: { ...(existing.data || {}), ...rest },
+      })
+      .eq('id', id);
+    if (error) throw error;
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -166,7 +185,8 @@ export const updateCarteira = async (id, data) => {
 
 export const deleteCarteira = async (id) => {
   try {
-    await deleteDoc(doc(db, 'carteiras', id));
+    const { error } = await supabase.from('carteiras').delete().eq('id', id);
+    if (error) throw error;
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -179,8 +199,9 @@ const genLinkId = () => `lk_${Date.now()}_${Math.random().toString(36).substr(2,
 
 export const addLink = async (carteiraId, linkData, userId) => {
   try {
-    const snap = await getDoc(doc(db, 'carteiras', carteiraId));
-    if (!snap.exists()) return { success: false, error: 'Carteira não encontrada' };
+    const { data: existing, error: fetchError } = await supabase.from('carteiras').select('data').eq('id', carteiraId).maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!existing) return { success: false, error: 'Carteira não encontrada' };
     const link = {
       id: genLinkId(),
       nome: linkData.nome.trim(),
@@ -190,8 +211,9 @@ export const addLink = async (carteiraId, linkData, userId) => {
       criadoEm: new Date().toISOString(),
       criadoPor: userId,
     };
-    const links = [...(snap.data().links || []), link];
-    await updateDoc(doc(db, 'carteiras', carteiraId), { links, updatedAt: serverTimestamp() });
+    const links = [...((existing.data || {}).links || []), link];
+    const { error } = await supabase.from('carteiras').update({ data: { ...(existing.data || {}), links } }).eq('id', carteiraId);
+    if (error) throw error;
     return { success: true, link };
   } catch (err) {
     return { success: false, error: err.message };
@@ -200,12 +222,12 @@ export const addLink = async (carteiraId, linkData, userId) => {
 
 export const updateLink = async (carteiraId, linkId, linkData) => {
   try {
-    const snap = await getDoc(doc(db, 'carteiras', carteiraId));
-    if (!snap.exists()) return { success: false };
-    const links = (snap.data().links || []).map(l =>
-      l.id === linkId ? { ...l, ...linkData } : l
-    );
-    await updateDoc(doc(db, 'carteiras', carteiraId), { links, updatedAt: serverTimestamp() });
+    const { data: existing, error: fetchError } = await supabase.from('carteiras').select('data').eq('id', carteiraId).maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!existing) return { success: false };
+    const links = ((existing.data || {}).links || []).map(l => (l.id === linkId ? { ...l, ...linkData } : l));
+    const { error } = await supabase.from('carteiras').update({ data: { ...(existing.data || {}), links } }).eq('id', carteiraId);
+    if (error) throw error;
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -214,10 +236,12 @@ export const updateLink = async (carteiraId, linkId, linkData) => {
 
 export const removeLink = async (carteiraId, linkId) => {
   try {
-    const snap = await getDoc(doc(db, 'carteiras', carteiraId));
-    if (!snap.exists()) return { success: false };
-    const links = (snap.data().links || []).filter(l => l.id !== linkId);
-    await updateDoc(doc(db, 'carteiras', carteiraId), { links, updatedAt: serverTimestamp() });
+    const { data: existing, error: fetchError } = await supabase.from('carteiras').select('data').eq('id', carteiraId).maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!existing) return { success: false };
+    const links = ((existing.data || {}).links || []).filter(l => l.id !== linkId);
+    const { error } = await supabase.from('carteiras').update({ data: { ...(existing.data || {}), links } }).eq('id', carteiraId);
+    if (error) throw error;
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -228,18 +252,15 @@ export const removeLink = async (carteiraId, linkId) => {
 
 export const seedCarteiras = async (userId) => {
   try {
-    const existing = await getDocs(collection(db, 'carteiras'));
-    if (!existing.empty) return { success: false, reason: 'already_seeded' };
-    await Promise.all(
-      CARTEIRAS_PADRAO.map(c =>
-        addDoc(collection(db, 'carteiras'), {
-          ...c, links: [],
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          createdBy: userId,
-        })
-      )
-    );
+    const { data: existing, error: fetchError } = await supabase.from('carteiras').select('id').limit(1);
+    if (fetchError) throw fetchError;
+    if (existing && existing.length > 0) return { success: false, reason: 'already_seeded' };
+    const rows = CARTEIRAS_PADRAO.map(c => ({
+      nome: c.nome,
+      data: { descricao: c.descricao, cor: c.cor, ordem: c.ordem, links: [], createdBy: userId },
+    }));
+    const { error } = await supabase.from('carteiras').insert(rows);
+    if (error) throw error;
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -248,19 +269,29 @@ export const seedCarteiras = async (userId) => {
 
 export const seedCargos = async () => {
   try {
-    const existing = await getDocs(collection(db, 'cargos'));
-    const existingNames = new Set(existing.docs.map(d => d.data().nome));
+    const { data: existing, error: fetchError } = await supabase.from('cargos').select('nome');
+    if (fetchError) throw fetchError;
+    const existingNames = new Set((existing || []).map(c => c.nome));
     const toCreate = CARGOS_PADRAO.filter(c => !existingNames.has(c.nome));
     if (toCreate.length === 0) return { success: true, created: 0 };
-    await Promise.all(
-      toCreate.map(c =>
-        addDoc(collection(db, 'cargos'), {
-          ...c,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        })
-      )
-    );
+    const rows = toCreate.map(c => ({
+      nome: c.nome,
+      can_manage_users: c.canManageUsers,
+      can_manage_permissions: c.canManagePermissions,
+      can_manage_project_members: c.canManageProjectMembers,
+      can_change_carteiras: c.canChangeCarteiras,
+      can_create_cargos: c.canCreateCargos,
+      can_create_projetos: c.canCreateProjetos,
+      data: {
+        descricao: c.descricao,
+        status: c.status,
+        tipo: c.tipo,
+        canDeleteUsers: c.canDeleteUsers,
+        canEditCardsProjetos: c.canEditCardsProjetos,
+      },
+    }));
+    const { error } = await supabase.from('cargos').insert(rows);
+    if (error) throw error;
     return { success: true, created: toCreate.length };
   } catch (err) {
     return { success: false, error: err.message };

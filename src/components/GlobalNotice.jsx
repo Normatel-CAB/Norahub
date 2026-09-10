@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Info, AlertTriangle, Megaphone } from 'lucide-react';
-import { db } from '../services/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 
 const TYPES = {
@@ -16,22 +15,27 @@ function GlobalNotice() {
   const [dismissedMsg, setDismissedMsg] = useState('');
 
   useEffect(() => {
-    if (!userProfile?.uid) return;
-    const unsub = onSnapshot(doc(db, 'settings', 'globalNotice'), snap => {
-      if (snap.exists()) {
-        const d = snap.data();
-        if (d.active && d.message) {
-          setNotice(d);
-        } else {
-          setNotice(null);
-        }
-      } else {
-        setNotice(null);
-      }
-    });
-    return unsub;
-  // userProfile?.uid: listener recriado só no login/logout, não a cada update de perfil
-  }, [userProfile?.uid]);
+    if (!userProfile?.id) return;
+
+    const applyRow = (row) => {
+      const d = row?.data;
+      if (d && d.active && d.message) setNotice(d);
+      else setNotice(null);
+    };
+
+    supabase.from('settings').select('data').eq('id', 'globalNotice').maybeSingle()
+      .then(({ data }) => applyRow(data));
+
+    const channel = supabase
+      .channel('global-notice')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: 'id=eq.globalNotice' }, (payload) => {
+        applyRow(payload.new);
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  // userProfile?.id: listener recriado só no login/logout, não a cada update de perfil
+  }, [userProfile?.id]);
 
   if (!notice || dismissedMsg === notice.message) return null;
 

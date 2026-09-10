@@ -30,7 +30,7 @@ function Chatbot() {
   const loadChatHistory = async () => {
     if (!currentUser) return;
     
-    const { success, messages: historyMessages } = await getChatHistory(currentUser.uid, 10);
+    const { success, messages: historyMessages } = await getChatHistory(currentUser.id, 10);
     
     if (success && historyMessages.length > 0) {
       setMessages(historyMessages);
@@ -245,7 +245,7 @@ ${chatbotConfig.aiSettings.customInstructions}
    **INTEGRAÇÃO EMAIL**:
    • **EmailJS**: Envia email automático ao submeter formulário
    • Configurar destinatário, template, service
-   • Respostas salvas no **Firestore** (coleção do projeto)
+   • Respostas salvas no banco de dados (Supabase, dentro do projeto)
    
    **PREENCHER FORMULÁRIO**:
    • Usuários acessam e preenchem campos
@@ -260,7 +260,7 @@ ${chatbotConfig.aiSettings.customInstructions}
    • Marcar como lida individualmente
    • Marcar todas como lidas
    • Data/hora de cada notificação
-   • Sistema persistente (Firebase)
+   • Sistema persistente (Supabase)
 
 ⌨️ **9. ATALHOS DE TECLADO** (? para ver todos)
    • **Ctrl+K / Cmd+K**: Busca global
@@ -329,7 +329,7 @@ ${chatbotConfig.aiSettings.customInstructions}
    
    **CONFIGURAÇÕES GLOBAIS**:
    • **EmailJS**: Configurar service, template, public key
-   • **Firebase**: Configurações de autenticação e storage
+   • **Supabase**: Configurações de autenticação e storage
    • **Temas**: Cores principais do sistema
    • **Notificações**: Configurações de notificações push
    
@@ -339,7 +339,7 @@ ${chatbotConfig.aiSettings.customInstructions}
    • **Exportar relatórios**: Download de dados
 
 🔒 **13. AUTENTICAÇÃO E SEGURANÇA**
-   • Login com email e senha (Firebase Auth)
+   • Login com email e senha (Supabase Auth)
    • Cadastro de novos usuários
    • Recuperação de senha por email
    • Sessões persistentes
@@ -650,7 +650,7 @@ ${conversationHistory || 'Nenhuma mensagem anterior.'}
 
     // Salvar mensagem do usuário no histórico
     if (currentUser) {
-      await saveChatMessage(currentUser.uid, userMessage);
+      await saveChatMessage(currentUser.id, userMessage);
     }
 
     try {
@@ -735,7 +735,7 @@ ${conversationHistory || 'Nenhuma mensagem anterior.'}
   const clearHistory = async () => {
     if (!currentUser) return;
     if (confirm('Deseja limpar o histórico de conversas?')) {
-      await clearOldChatHistory(currentUser.uid, 0); // Limpar tudo
+      await clearOldChatHistory(currentUser.id, 0); // Limpar tudo
       setMessages([{
         role: 'assistant',
         content: chatbotConfig.messages.welcomeMessage,

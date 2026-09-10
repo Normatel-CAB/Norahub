@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, File, Trash2, Download, Eye, Folder, FolderPlus, Edit2, ChevronRight, Home } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db, storage } from '../services/firebase';
-import { doc, updateDoc, collection, getDocs, query, where } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
+import { supabase } from '../services/supabase';
 import { notifyFileUpload } from '../services/notifications';
 import ActivityLogger from '../services/activityLogger';
+
+const BUCKET = 'projetos';
 
 function GerenciamentoArquivos() {
   const location = useLocation();
@@ -32,37 +32,44 @@ function GerenciamentoArquivos() {
     loadFilesAndFolders();
   }, [card, projeto, currentPath]);
 
+  // Caminho base "achatado" dentro do bucket `projetos` (o bucket já substitui o
+  // antigo prefixo "projetos/" do Firebase Storage).
+  const getBasePath = () => `${projeto.id}/cards/${card.name}${currentPath ? '/' + currentPath : ''}`;
+
   const loadFilesAndFolders = async () => {
     setLoading(true);
     try {
-      const storagePath = `projetos/${projeto.id}/cards/${card.name}${currentPath ? '/' + currentPath : ''}`;
-      const storageRef = ref(storage, storagePath);
-      const result = await listAll(storageRef);
-      
-      // Carregar arquivos
+      const basePath = getBasePath();
+      const { data: entries, error } = await supabase.storage.from(BUCKET).list(basePath, {
+        limit: 1000,
+        sortBy: { column: 'name', order: 'asc' },
+      });
+      if (error) throw error;
+
+      // No Supabase Storage, pastas aparecem como entradas com id === null
+      const fileEntries = (entries || []).filter(e => e.id !== null && e.name !== '.placeholder');
+      const folderEntries = (entries || []).filter(e => e.id === null);
+
       const filesData = await Promise.all(
-        result.items.map(async (item) => {
-          const url = await getDownloadURL(item);
+        fileEntries.map(async (item) => {
+          const fullPath = `${basePath}/${item.name}`;
+          const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(fullPath, 3600);
           return {
             name: item.name,
-            fullPath: item.fullPath,
-            url,
+            fullPath,
+            url: signed?.signedUrl || '',
             type: 'file',
-            uploadedAt: new Date()
+            uploadedAt: item.created_at ? new Date(item.created_at) : new Date(),
           };
         })
       );
-      
-      // Carregar pastas
-      const foldersData = result.prefixes.map((folderRef) => {
-        const folderName = folderRef.name;
-        return {
-          name: folderName,
-          fullPath: folderRef.fullPath,
-          type: 'folder'
-        };
-      });
-      
+
+      const foldersData = folderEntries.map((item) => ({
+        name: item.name,
+        fullPath: `${basePath}/${item.name}`,
+        type: 'folder',
+      }));
+
       setFiles(filesData);
       setFolders(foldersData);
     } catch (error) {
@@ -79,20 +86,21 @@ function GerenciamentoArquivos() {
     }
 
     try {
-      // Criar um arquivo .placeholder para forçar a criação da pasta no Firebase Storage
-      const folderPath = `projetos/${projeto.id}/cards/${card.name}${currentPath ? '/' + currentPath : ''}/${newFolderName}/.placeholder`;
-      const folderRef = ref(storage, folderPath);
+      // Um arquivo .placeholder força a "pasta" a existir (Supabase Storage não
+      // tem pastas reais — são só prefixos de caminho).
+      const folderPath = `${getBasePath()}/${newFolderName}/.placeholder`;
       const placeholderBlob = new Blob([''], { type: 'text/plain' });
-      await uploadBytes(folderRef, placeholderBlob);
-      
+      const { error } = await supabase.storage.from(BUCKET).upload(folderPath, placeholderBlob, { upsert: true });
+      if (error) throw error;
+
       setNewFolderName('');
       setIsCreatingFolder(false);
       await loadFilesAndFolders();
       showToast('Pasta criada com sucesso!', 'success');
-      
+
       // Registrar atividade
-      const userName = userProfile?.nome || currentUser?.displayName || 'Usuário';
-      await ActivityLogger.folderCreated(newFolderName, card.name, projeto.nome, currentUser?.uid, userName);
+      const userName = userProfile?.nome || currentUser?.user_metadata?.full_name || 'Usuário';
+      await ActivityLogger.folderCreated(newFolderName, card.name, projeto.nome, currentUser?.id, userName);
     } catch (error) {
       console.error('Erro ao criar pasta:', error);
       showToast('Erro ao criar pasta', 'error');
@@ -151,6 +159,7 @@ function GerenciamentoArquivos() {
 
     setUploading(true);
     try {
+      const basePath = getBasePath();
       for (const file of selectedFiles) {
         // Validar tamanho do arquivo (máx 10MB)
         if (file.size > 10 * 1024 * 1024) {
@@ -158,26 +167,27 @@ function GerenciamentoArquivos() {
           continue;
         }
 
-        const storagePath = `projetos/${projeto.id}/cards/${card.name}${currentPath ? '/' + currentPath : ''}/${file.name}`;
-        const storageRef = ref(storage, storagePath);
-        await uploadBytes(storageRef, file);
+        const { error } = await supabase.storage.from(BUCKET).upload(`${basePath}/${file.name}`, file, {
+          upsert: true,
+          contentType: file.type,
+        });
+        if (error) throw error;
       }
-      
+
       await loadFilesAndFolders();
       showToast('Arquivo(s) enviado(s) com sucesso!', 'success');
-      
+
       // Registrar atividade no dashboard
-      const userName = userProfile?.nome || currentUser?.displayName || 'Usuário';
+      const userName = userProfile?.nome || currentUser?.user_metadata?.full_name || 'Usuário';
       for (const file of selectedFiles) {
-        await ActivityLogger.fileUploaded(file.name, card.name, projeto.nome, currentUser?.uid, userName);
+        await ActivityLogger.fileUploaded(file.name, card.name, projeto.nome, currentUser?.id, userName);
       }
-      
+
       // Notificar gerentes do projeto sobre o upload
       try {
-        const usersQuery = query(collection(db, 'usuarios'), where('funcao', '==', 'gerente'));
-        const usersSnapshot = await getDocs(usersQuery);
-        const managerIds = usersSnapshot.docs.map(doc => doc.id);
-        
+        const { data: gerentes } = await supabase.from('usuarios').select('id').eq('funcao', 'gerente');
+        const managerIds = (gerentes || []).map(u => u.id);
+
         if (managerIds.length > 0) {
           const uploaderName = userProfile?.nome || 'Um usuário';
           await notifyFileUpload(managerIds, selectedFiles[0].name, uploaderName, projeto.id);
@@ -187,19 +197,7 @@ function GerenciamentoArquivos() {
       }
     } catch (error) {
       console.error('Erro completo ao fazer upload:', error);
-      console.error('Código do erro:', error.code);
-      console.error('Mensagem do erro:', error.message);
-      
-      let errorMessage = 'Erro ao enviar arquivo(s).';
-      if (error.code === 'storage/unauthorized') {
-        errorMessage = 'Sem permissão para fazer upload. Configure as regras do Firebase Storage.';
-      } else if (error.code === 'storage/canceled') {
-        errorMessage = 'Upload cancelado.';
-      } else if (error.code === 'storage/unknown') {
-        errorMessage = 'Erro desconhecido. Verifique sua conexão ou as regras do Firebase.';
-      }
-      
-      showToast(errorMessage, 'error');
+      showToast('Erro ao enviar arquivo(s).', 'error');
     } finally {
       setUploading(false);
     }
@@ -208,90 +206,59 @@ function GerenciamentoArquivos() {
   const handleDeleteFile = async (filePath) => {
     try {
       const fileName = filePath.split('/').pop();
-      const fileRef = ref(storage, filePath);
-      await deleteObject(fileRef);
+      const { error } = await supabase.storage.from(BUCKET).remove([filePath]);
+      if (error) throw error;
       await loadFilesAndFolders();
       showToast('Arquivo excluído com sucesso!', 'success');
-      
+
       // Registrar atividade
-      const userName = userProfile?.nome || currentUser?.displayName || 'Usuário';
-      await ActivityLogger.fileDeleted(fileName, card.name, projeto.nome, currentUser?.uid, userName);
+      const userName = userProfile?.nome || currentUser?.user_metadata?.full_name || 'Usuário';
+      await ActivityLogger.fileDeleted(fileName, card.name, projeto.nome, currentUser?.id, userName);
     } catch (error) {
       console.error('Erro ao excluir arquivo:', error);
       showToast('Erro ao excluir arquivo.', 'error');
     }
   };
 
+  // Lista recursivamente todos os caminhos de arquivo sob um prefixo (pastas no
+  // Supabase Storage são só prefixos — não existe operação nativa "deletar pasta").
+  const listAllFilesRecursive = async (prefix) => {
+    const { data: entries, error } = await supabase.storage.from(BUCKET).list(prefix, { limit: 1000 });
+    if (error) throw error;
+    let paths = [];
+    for (const item of entries || []) {
+      const itemPath = `${prefix}/${item.name}`;
+      if (item.id === null) {
+        const sub = await listAllFilesRecursive(itemPath);
+        paths = paths.concat(sub);
+      } else {
+        paths.push(itemPath);
+      }
+    }
+    return paths;
+  };
+
   const handleDeleteFolder = async (folderPath) => {
     try {
-      console.log('🗑️ Iniciando exclusão da pasta:', folderPath);
-      const deletedCount = await handleDeleteFolderRecursive(folderPath);
-      console.log(`✅ Total de arquivos excluídos: ${deletedCount}`);
-      
+      const allPaths = await listAllFilesRecursive(folderPath);
+      if (allPaths.length > 0) {
+        const { error } = await supabase.storage.from(BUCKET).remove(allPaths);
+        if (error) throw error;
+      }
+
       // Aguarda um momento antes de recarregar
       await new Promise(resolve => setTimeout(resolve, 500));
       await loadFilesAndFolders();
-      
-      if (deletedCount > 0) {
-        showToast(`Pasta excluída com sucesso! (${deletedCount} arquivo(s))`, 'success');
+
+      if (allPaths.length > 0) {
+        showToast(`Pasta excluída com sucesso! (${allPaths.length} arquivo(s))`, 'success');
       } else {
         showToast('Pasta vazia foi removida.', 'success');
       }
     } catch (error) {
-      console.error('❌ Erro ao excluir pasta:', error);
-      console.error('Código do erro:', error.code);
-      console.error('Mensagem:', error.message);
-      
-      let errorMessage = 'Erro ao excluir pasta.';
-      if (error.code === 'storage/unauthorized') {
-        errorMessage = 'Sem permissão para excluir. Verifique as regras do Firebase Storage.';
-      } else if (error.code === 'storage/object-not-found') {
-        errorMessage = 'Pasta não encontrada.';
-      }
-      
-      showToast(errorMessage, 'error');
+      console.error('Erro ao excluir pasta:', error);
+      showToast('Erro ao excluir pasta.', 'error');
       await loadFilesAndFolders(); // Recarrega mesmo com erro
-    }
-  };
-
-  const handleDeleteFolderRecursive = async (folderPath) => {
-    let totalDeleted = 0;
-    
-    try {
-      const folderRef = ref(storage, folderPath);
-      const result = await listAll(folderRef);
-      
-      console.log(`📂 Pasta ${folderPath}: ${result.items.length} arquivo(s), ${result.prefixes.length} subpasta(s)`);
-      
-      // Excluir todos os arquivos
-      for (const item of result.items) {
-        console.log(`🗑️ Tentando excluir: ${item.fullPath}`);
-        try {
-          await deleteObject(item);
-          totalDeleted++;
-          console.log(`✅ Excluído: ${item.name}`);
-        } catch (err) {
-          console.error(`❌ Erro ao excluir ${item.name}:`, err);
-          console.error('Detalhes do erro:', {
-            code: err.code,
-            message: err.message,
-            path: item.fullPath
-          });
-        }
-      }
-      
-      // Excluir subpastas recursivamente
-      for (const prefix of result.prefixes) {
-        console.log(`📁 Entrando na subpasta: ${prefix.fullPath}`);
-        const subCount = await handleDeleteFolderRecursive(prefix.fullPath);
-        totalDeleted += subCount;
-      }
-      
-      console.log(`✅ Pasta ${folderPath} processada - ${totalDeleted} arquivo(s) excluído(s)`);
-      return totalDeleted;
-    } catch (error) {
-      console.error(`❌ Erro ao processar pasta ${folderPath}:`, error);
-      throw error;
     }
   };
 
@@ -308,27 +275,20 @@ function GerenciamentoArquivos() {
 
     try {
       if (renamingItem.type === 'file') {
-        // Para arquivos, precisamos copiar e depois deletar
-        const oldRef = ref(storage, renamingItem.fullPath);
-        const url = await getDownloadURL(oldRef);
-        const response = await fetch(url);
-        const blob = await response.blob();
-        
         const pathParts = renamingItem.fullPath.split('/');
         pathParts[pathParts.length - 1] = renameValue;
         const newPath = pathParts.join('/');
-        
-        const newRef = ref(storage, newPath);
-        await uploadBytes(newRef, blob);
-        await deleteObject(oldRef);
-        
+
+        const { error } = await supabase.storage.from(BUCKET).move(renamingItem.fullPath, newPath);
+        if (error) throw error;
+
         showToast('Arquivo renomeado com sucesso!', 'success');
       } else {
-        // Para pastas, copiar todo o conteúdo
+        // Para pastas, move cada arquivo (recursivamente) pro novo prefixo
         await renameFolderRecursive(renamingItem.fullPath, renameValue);
         showToast('Pasta renomeada com sucesso!', 'success');
       }
-      
+
       setRenamingItem(null);
       await loadFilesAndFolders();
     } catch (error) {
@@ -338,32 +298,17 @@ function GerenciamentoArquivos() {
   };
 
   const renameFolderRecursive = async (oldFolderPath, newFolderName) => {
-    const oldRef = ref(storage, oldFolderPath);
-    const result = await listAll(oldRef);
-    
-    // Determinar novo caminho base
+    const allPaths = await listAllFilesRecursive(oldFolderPath);
+
     const pathParts = oldFolderPath.split('/');
     pathParts[pathParts.length - 1] = newFolderName;
     const newBasePath = pathParts.join('/');
-    
-    // Copiar todos os arquivos
-    for (const item of result.items) {
-      const url = await getDownloadURL(item);
-      const response = await fetch(url);
-      const blob = await response.blob();
-      
-      const relativePath = item.fullPath.replace(oldFolderPath, '');
+
+    for (const oldPath of allPaths) {
+      const relativePath = oldPath.slice(oldFolderPath.length); // já começa com '/'
       const newPath = newBasePath + relativePath;
-      const newRef = ref(storage, newPath);
-      await uploadBytes(newRef, blob);
-      await deleteObject(item);
-    }
-    
-    // Copiar subpastas
-    for (const prefix of result.prefixes) {
-      const subFolderName = prefix.name;
-      const newSubPath = `${newBasePath}/${subFolderName}`;
-      await renameFolderRecursive(prefix.fullPath, subFolderName);
+      const { error } = await supabase.storage.from(BUCKET).move(oldPath, newPath);
+      if (error) throw error;
     }
   };
 
