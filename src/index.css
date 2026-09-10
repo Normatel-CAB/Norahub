@@ -25,6 +25,122 @@
   --border-color: #374151;
 }
 
+/* ===== DESIGN SYSTEM NORMATEL (design-normatel) =====
+   Tokens da identidade visual oficial da Normatel Engenharia. O app roda só em
+   modo escuro, então os valores ficam direto em :root (sem variante clara).
+   Componentes que usam esses tokens levam o prefixo "nt-" pra não colidir com
+   as classes .glass/.card/.btn-primary já usadas no resto do app. */
+:root {
+  --brand: #4caf50;
+  --brand-lite: #8bc34a;
+  --brand-glow: #6fe07a;
+  --brand-deep: #1a3a1a;
+
+  --viz-green: #4caf50;
+  --viz-lime: #8bc34a;
+  --viz-teal: #23c4a0;
+  --viz-amber: #f0b429;
+  --viz-red: #f2645f;
+
+  --bg-deep: #050b06;
+  --bg: #0a150b;
+  --surface: rgba(255, 255, 255, 0.042);
+  --surface-2: rgba(255, 255, 255, 0.075);
+  --surface-solid: #1b271d;
+  --surface-card: #18241b;
+  --hairline: rgba(255, 255, 255, 0.085);
+  --hairline-hi: rgba(139, 195, 74, 0.3);
+  --txt: #e8f2ea;
+  --txt-dim: #8fa894;
+  --txt-faint: #5e7563;
+  --grid: rgba(255, 255, 255, 0.045);
+  --grid-lit: rgba(139, 195, 74, 0.5);
+  --halo-1: rgba(76, 175, 80, 0.22);
+  --halo-2: rgba(35, 196, 160, 0.14);
+  --halo-3: rgba(139, 195, 74, 0.1);
+}
+
+/* Cartão opaco com filete de luz no topo (regra 1 da seção 9 do design system:
+   fundo SEMPRE sólido, nunca translúcido — senão a grade do fundo atravessa). */
+.nt-glass {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.85);
+  transition: border-color .35s cubic-bezier(.4,0,.2,1),
+              transform .4s cubic-bezier(.22,.75,.28,1),
+              box-shadow .4s cubic-bezier(.22,.75,.28,1);
+}
+.nt-glass::before {
+  content: '';
+  position: absolute; top: 0; left: 12%; right: 12%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(139,195,74,.55), transparent);
+  pointer-events: none;
+}
+
+/* Anel de luz na borda, só ativo (girando) no hover — parado não custa frame. */
+.nt-beam {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden;
+  border-radius: inherit; opacity: 0; pointer-events: none;
+  transition: opacity .4s cubic-bezier(.4,0,.2,1);
+}
+.nt-beam::before {
+  content: '';
+  position: absolute; left: 50%; top: 50%;
+  width: 200%; aspect-ratio: 1; translate: -50% -50%;
+  background: conic-gradient(from 0deg, transparent 0 60%,
+              rgba(139,195,74,.85) 79%, var(--brand-glow) 85%, transparent 93%);
+  animation: nt-beam-spin 4s linear infinite;
+  animation-play-state: paused;
+}
+.nt-beam::after {
+  content: ''; position: absolute; inset: 1px; border-radius: inherit;
+  background: var(--surface-card);
+}
+.nt-beam-host:hover > .nt-beam { opacity: 1; }
+.nt-beam-host:hover > .nt-beam::before { animation-play-state: running; }
+.nt-beam-host > .nt-beam-content { position: relative; z-index: 1; }
+@keyframes nt-beam-spin { to { rotate: 360deg; } }
+
+/* Botão magnético com brilho — a assinatura de interação da marca. */
+.nt-glow-btn {
+  position: relative; overflow: hidden; isolation: isolate;
+  transform: translate3d(var(--dx, 0), var(--dy, 0), 0);
+  transition: transform .35s cubic-bezier(.22,.75,.28,1),
+              box-shadow .35s cubic-bezier(.22,.75,.28,1);
+}
+.nt-glow-btn:hover {
+  box-shadow: 0 0 0 1px rgba(255,255,255,.14) inset,
+              0 10px 26px -10px var(--brand),
+              0 0 26px -4px var(--brand-glow);
+  transform: translate3d(var(--dx, 0), var(--dy, 0), 0);
+}
+.nt-glow-btn-sheen {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  opacity: var(--glow, 0);
+  transition: opacity .3s cubic-bezier(.4,0,.2,1);
+  background: radial-gradient(130px circle at var(--gx,50%) var(--gy,50%),
+                              rgba(255,255,255,.32), transparent 65%);
+}
+
+.nt-chip {
+  display: inline-flex; align-items: center; gap: .375rem;
+  font-size: .7rem; font-weight: 600; letter-spacing: .02em;
+  padding: .25rem .7rem; border-radius: 999px;
+  background: rgba(76,175,80,.13);
+  color: var(--brand-lite);
+  border: 1px solid rgba(76,175,80,.26);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nt-beam, .nt-beam::before, .nt-glow-btn, .nt-glow-btn-sheen {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+
 /* Garante que HTML e BODY ocupem tudo e tenham a cor certa */
 html, body {
   margin: 0;

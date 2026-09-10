@@ -1,119 +1,165 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, Building2, HardHat, ChevronRight } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { LogIn, Building2, ChevronRight } from 'lucide-react';
+
+const PULL = 6; // deslocamento máximo do botão magnético, em px
+
+function useMagneticGlow(comEfeito) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !comEfeito) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    let agendado = false;
+    let mx = 0, my = 0, dx = 0, dy = 0;
+
+    const pintar = () => {
+      agendado = false;
+      el.style.setProperty('--gx', `${mx}px`);
+      el.style.setProperty('--gy', `${my}px`);
+      el.style.setProperty('--dx', `${dx}px`);
+      el.style.setProperty('--dy', `${dy}px`);
+    };
+    const agendar = () => {
+      if (!agendado) { agendado = true; requestAnimationFrame(pintar); }
+    };
+    const aoMover = (e) => {
+      const r = el.getBoundingClientRect();
+      mx = e.clientX - r.left;
+      my = e.clientY - r.top;
+      dx = ((mx - r.width / 2) / (r.width / 2)) * PULL;
+      dy = ((my - r.height / 2) / (r.height / 2)) * PULL;
+      agendar();
+    };
+    const aoEntrar = () => el.style.setProperty('--glow', '1');
+    const aoSair = () => {
+      el.style.setProperty('--glow', '0');
+      dx = 0; dy = 0;
+      agendar();
+    };
+
+    el.addEventListener('mousemove', aoMover, { passive: true });
+    el.addEventListener('mouseenter', aoEntrar);
+    el.addEventListener('mouseleave', aoSair);
+    return () => {
+      el.removeEventListener('mousemove', aoMover);
+      el.removeEventListener('mouseenter', aoEntrar);
+      el.removeEventListener('mouseleave', aoSair);
+    };
+  }, [comEfeito]);
+
+  return ref;
+}
 
 function Capa() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const navigate = useNavigate();
+  const btnRef = useMagneticGlow(true);
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 transition-colors duration-200">
-      {/* Background decorativo com gradiente */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/5 rounded-full blur-3xl"></div>
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden relative transition-colors duration-200" style={{ background: 'var(--bg-deep)' }}>
+      {/* Fundo decorativo — halos estáticos + grade sutil (seção 6 do design system) */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(900px 520px at 12% -8%,   var(--halo-1), transparent 62%),
+              radial-gradient(800px 500px at 88% 4%,    var(--halo-2), transparent 60%),
+              radial-gradient(1100px 700px at 60% 108%, var(--halo-3), transparent 66%),
+              var(--bg)`,
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(var(--grid) 1px, transparent 1px),
+                              linear-gradient(90deg, var(--grid) 1px, transparent 1px)`,
+            backgroundSize: '104px 104px',
+            maskImage: 'linear-gradient(180deg, #000 0%, transparent 78%)',
+            WebkitMaskImage: 'linear-gradient(180deg, #000 0%, transparent 78%)',
+          }}
+        />
       </div>
-      
-    {/* ThemeToggle removed */}
 
-    <header className="relative w-full flex items-center justify-center py-4 sm:py-5 md:py-8 px-2 sm:px-4 md:px-8 min-h-[56px] sm:min-h-[64px] md:h-24 bg-gray-900/50 backdrop-blur-md border-b border-gray-700 transition-all duration-200 z-20">
-        <button 
-            onClick={() => navigate('/login')} 
-            className="absolute left-2 sm:left-4 md:left-8 flex items-center gap-2 text-gray-300 hover:text-[#57B952] hover:bg-white/5 px-4 py-2 rounded-lg transition-all font-semibold text-xs sm:text-sm backdrop-blur-sm"
+      <header
+        className="relative w-full flex items-center justify-center py-4 sm:py-5 md:py-8 px-2 sm:px-4 md:px-8 min-h-[56px] sm:min-h-[64px] md:h-24 border-b z-20 backdrop-blur-md"
+        style={{ background: 'rgba(9, 22, 11, 0.6)', borderColor: 'var(--hairline)' }}
+      >
+        <button
+          onClick={() => navigate('/login')}
+          className="absolute left-2 sm:left-4 md:left-8 flex items-center gap-2 px-4 py-2 rounded-lg transition-all font-semibold text-xs sm:text-sm"
+          style={{ color: 'var(--txt-dim)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--brand-lite)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--txt-dim)'; }}
         >
-            <LogIn size={18} className="sm:w-5 sm:h-5" /> <span className="hidden sm:inline">Login</span>
+          <LogIn size={18} className="sm:w-5 sm:h-5" /> <span className="hidden sm:inline">Login</span>
         </button>
 
-        {/* Logos Centralizadas (Parceria) */}
-        <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
-            <img src="/img/Designer (6).png" alt="Logo Petrobras" className="h-10 sm:h-12 md:h-14 w-auto object-contain drop-shadow-lg" />
-            <div className="h-8 sm:h-10 md:h-12 w-px bg-gradient-to-b from-[#57B952]/0 via-[#57B952]/50 to-[#57B952]/0"></div>
-            <img 
-              src={isDark ? "/img/Normatel Engenharia_BRANCO.png" : "/img/Normatel Engenharia_PRETO.png"} 
-              alt="Logo Normatel" 
-              className="h-6 sm:h-8 md:h-10 w-auto object-contain drop-shadow-lg" 
-            />
-        </div>
+        <img
+          src="/img/Normatel Engenharia_BRANCO.png"
+          alt="Normatel Engenharia"
+          className="h-7 sm:h-9 md:h-11 w-auto object-contain drop-shadow-lg"
+        />
       </header>
 
-    <main className="flex-grow flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 relative z-10">
-        <div className="text-center mb-12 sm:mb-16 md:mb-20 px-2 max-w-3xl">
-            <div className="inline-block mb-4 px-4 py-2 bg-[#57B952]/20 border border-[#57B952]/50 rounded-full backdrop-blur-sm">
-              <p className="text-xs sm:text-sm font-semibold text-[#57B952] uppercase tracking-wider">Portal Integrado</p>
-            </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 sm:mb-6 leading-tight">
-              Bem-vindo ao <span className="bg-gradient-to-r from-[#57B952] to-[#3d8c38] bg-clip-text text-transparent">NoraHub</span>
-            </h1>
-            <p className="text-sm sm:text-base md:text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
-              Selecione sua organização para acessar os serviços e gerenciar seus projetos de forma integrada.
-            </p>
+      <main className="flex-grow flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 relative z-10">
+        <div className="text-center mb-10 sm:mb-14 px-2 max-w-2xl">
+          <div className="nt-chip mb-4">Portal Integrado</div>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-4 sm:mb-6 leading-tight" style={{ color: 'var(--txt)' }}>
+            Bem-vindo ao{' '}
+            <span className="bg-gradient-to-r from-[var(--brand-lite)] to-[var(--brand-deep)] bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, var(--brand-lite), var(--brand))' }}>
+              NoraHub
+            </span>
+          </h1>
+          <p className="text-sm sm:text-base md:text-lg leading-relaxed" style={{ color: 'var(--txt-dim)' }}>
+            Acesso exclusivo para colaboradores Normatel. Faça login com sua conta
+            Microsoft pra acessar todos os aplicativos da sua área.
+          </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 md:gap-8 justify-center items-stretch w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-5xl px-2">
-            
-            {/* Card PETROBRAS */}
-            <Link 
-                to="/tutoriais" 
-                className="group relative w-full lg:w-96 h-64 sm:h-80 md:h-96 lg:h-96 rounded-2xl sm:rounded-3xl overflow-hidden no-underline transition-all duration-500 hover:-translate-y-2 focus:outline-none focus:ring-2 focus:ring-[#008542] focus:ring-offset-2 focus:ring-offset-gray-900"
+        <div className="nt-glass nt-beam-host w-full max-w-sm sm:max-w-md rounded-3xl overflow-hidden">
+          <span className="nt-beam" aria-hidden />
+          <div className="nt-beam-content relative p-8 sm:p-10 flex flex-col items-center text-center gap-6">
+            <div
+              className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center border"
+              style={{ background: 'var(--surface-2)', borderColor: 'var(--hairline)' }}
             >
-                {/* Gradient Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#008542] via-[#006b38] to-[#005030]"></div>
-                {/* Shine effect */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-[#00A854] via-transparent to-[#004d2a] opacity-0 group-hover:opacity-20 blur transition-opacity duration-500"></div>
-                {/* Content */}
-                <div className="relative h-full p-6 sm:p-8 md:p-8 flex flex-col items-center text-center justify-between z-10 backdrop-blur-sm">
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 bg-white/15 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 flex items-center justify-center group-hover:bg-white/25 group-hover:scale-110 transition-all duration-500 backdrop-blur-md border border-white/20">
-                        <HardHat size={56} className="sm:w-16 sm:h-16 md:w-20 md:h-20 text-white drop-shadow-lg" />
-                      </div>
-                    </div>
-                    <div className="space-y-3 md:space-y-4">
-                      <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white drop-shadow-lg">Sou Petrobras</h2>
-                      <p className="text-sm sm:text-base text-white/90 leading-relaxed">Acesso à base de conhecimento e tutoriais.</p>
-                    </div>
-                    <div className="w-full">
-                      <div className="inline-flex items-center gap-2 sm:gap-3 font-bold bg-white/20 hover:bg-white/30 text-white px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-xl transition-all duration-300 backdrop-blur-md border border-white/30 group-hover:border-white/50 shadow-lg">
-                        Acessar Tutoriais <ChevronRight size={18} className="sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                </div>
-            </Link>
+              <Building2 size={44} className="sm:w-12 sm:h-12" style={{ color: 'var(--brand-lite)' }} />
+            </div>
 
-            {/* Card NORMATEL */}
-            <Link 
-                to="/login" 
-                className="group relative w-full lg:w-96 h-64 sm:h-80 md:h-96 lg:h-96 rounded-2xl sm:rounded-3xl overflow-hidden text-white no-underline transition-all duration-500 hover:-translate-y-2 focus:outline-none focus:ring-2 focus:ring-[#57B952] focus:ring-offset-2 focus:ring-offset-gray-900"
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: 'var(--txt)' }}>Sou Normatel</h2>
+              <p className="text-sm" style={{ color: 'var(--txt-faint)' }}>
+                Gestão de compras, projetos e solicitações internas.
+              </p>
+            </div>
+
+            <button
+              ref={btnRef}
+              onClick={() => navigate('/login')}
+              className="nt-glow-btn w-full inline-flex items-center justify-center gap-2 font-semibold text-white px-6 py-3.5 rounded-xl text-sm sm:text-base"
+              style={{ background: 'linear-gradient(90deg, var(--brand-lite), var(--brand), var(--brand-deep))' }}
             >
-                {/* Gradient Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#57B952] via-[#4a9c46] to-[#3d8c38]"></div>
-                {/* Shine effect */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-[#6BC962] via-transparent to-[#2d6a28] opacity-0 group-hover:opacity-20 blur transition-opacity duration-500"></div>
-                {/* Content */}
-                <div className="relative h-full p-6 sm:p-8 md:p-8 flex flex-col items-center text-center justify-between z-10 backdrop-blur-sm">
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 bg-white/15 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 flex items-center justify-center group-hover:bg-white/25 group-hover:scale-110 transition-all duration-500 backdrop-blur-md border border-white/20">
-                        <Building2 size={56} className="sm:w-16 sm:h-16 md:w-20 md:h-20 text-white drop-shadow-lg" />
-                      </div>
-                    </div>
-                    <div className="space-y-3 md:space-y-4">
-                      <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white drop-shadow-lg">Sou Normatel</h2>
-                      <p className="text-sm sm:text-base text-white/90 leading-relaxed">Gestão de compras e solicitações.</p>
-                    </div>
-                    <div className="w-full">
-                      <div className="inline-flex items-center gap-2 sm:gap-3 font-bold bg-white/20 hover:bg-white/30 text-white px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-xl transition-all duration-300 backdrop-blur-md border border-white/30 group-hover:border-white/50 shadow-lg">
-                        Fazer Login <ChevronRight size={18} className="sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                </div>
-            </Link>
-
+              <span className="nt-glow-btn-sheen" aria-hidden />
+              <span className="relative z-[1] inline-flex items-center gap-2">
+                Fazer Login <ChevronRight size={18} />
+              </span>
+            </button>
+          </div>
         </div>
       </main>
-      <footer className="w-full py-4 sm:py-6 text-center text-gray-400 text-xs shrink-0 bg-gray-900/50 backdrop-blur-md border-t border-gray-700 transition-all duration-200 px-2 z-20">
-        <p>&copy; 2025 Parceria Petrobras &amp; Normatel Engenharia</p>
+
+      <footer
+        className="w-full py-4 sm:py-6 text-center text-xs shrink-0 border-t z-20 px-2 backdrop-blur-md"
+        style={{ background: 'rgba(9, 22, 11, 0.6)', borderColor: 'var(--hairline)', color: 'var(--txt-faint)' }}
+      >
+        <p>&copy; {new Date().getFullYear()} Normatel Engenharia</p>
       </footer>
     </div>
   );
 }
+
 export default Capa;
