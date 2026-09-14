@@ -79,10 +79,10 @@ function Aplicativos() {
   }, [visiveis]);
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden nt-page-bg">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand-deep/10 rounded-full blur-3xl" />
       </div>
 
       <UserPageHeader backTo="/selecao-projeto" />
@@ -91,11 +91,11 @@ function Aplicativos() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 md:mb-8 gap-3">
             <div>
-              <h1 className="text-2xl md:text-4xl font-bold text-white flex items-center gap-3">
-                <Grid3x3 size={32} className="md:w-10 md:h-10 text-[#57B952]" />
+              <h1 className="text-2xl md:text-4xl font-bold text-txt flex items-center gap-3">
+                <Grid3x3 size={32} className="md:w-10 md:h-10 text-brand-lite" />
                 Aplicativos
               </h1>
-              <p className="text-sm md:text-base text-gray-400 mt-2">
+              <p className="text-sm md:text-base text-txt-dim mt-2">
                 Sistemas da Normatel liberados para o seu cargo.
               </p>
             </div>
@@ -112,7 +112,7 @@ function Aplicativos() {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-40 rounded-2xl bg-white/[0.05] animate-pulse" />
+                <div key={i} className="h-40 rounded-2xl bg-surface animate-pulse" />
               ))}
             </div>
           ) : error ? (
@@ -120,16 +120,16 @@ function Aplicativos() {
               <p className="text-red-400 font-medium">{error}</p>
             </div>
           ) : visiveis.length === 0 ? (
-            <div className="text-center py-20 bg-white/5 border border-white/10 rounded-2xl">
-              <Grid3x3 size={40} className="mx-auto text-gray-600 mb-4" />
-              <p className="text-gray-300 font-medium">Nenhum sistema liberado para o seu cargo ainda.</p>
-              <p className="text-gray-500 text-sm mt-1">Fale com o administrador se você esperava ver algo aqui.</p>
+            <div className="text-center py-20 nt-glass">
+              <Grid3x3 size={40} className="mx-auto text-txt-faint mb-4" />
+              <p className="text-txt-dim font-medium">Nenhum sistema liberado para o seu cargo ainda.</p>
+              <p className="text-txt-faint text-sm mt-1">Fale com o administrador se você esperava ver algo aqui.</p>
             </div>
           ) : (
             <div className="space-y-8 md:space-y-10">
               {porCategoria.map(([categoria, appsDaCategoria]) => (
                 <div key={categoria}>
-                  <h2 className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-wider mb-3 md:mb-4">
+                  <h2 className="text-sm md:text-base font-bold text-txt-dim uppercase tracking-wider mb-3 md:mb-4">
                     {categoria}
                   </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -139,16 +139,16 @@ function Aplicativos() {
                         href={app.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 flex flex-col text-left transition-all transform hover:-translate-y-1 hover:border-[#57B952]/40"
+                        className="group nt-glass p-6 flex flex-col text-left transition-all transform hover:-translate-y-1 hover:border-hairline-hi"
                       >
-                        <div className="bg-green-900/30 p-3 rounded-xl mb-4 w-fit group-hover:scale-110 transition-transform text-[#57B952]">
+                        <div className="bg-brand/15 p-3 rounded-xl mb-4 w-fit group-hover:scale-110 transition-transform text-brand-lite">
                           <AppIcon name={app.icone} />
                         </div>
-                        <h3 className="text-lg font-bold text-white mb-1">{app.nome}</h3>
+                        <h3 className="text-lg font-bold text-txt mb-1">{app.nome}</h3>
                         {app.descricao && (
-                          <p className="text-gray-500 text-sm mb-4 flex-grow">{app.descricao}</p>
+                          <p className="text-txt-faint text-sm mb-4 flex-grow">{app.descricao}</p>
                         )}
-                        <span className="text-[#57B952] font-semibold text-sm flex items-center gap-1 mt-auto">
+                        <span className="text-brand-lite font-semibold text-sm flex items-center gap-1 mt-auto">
                           Abrir <ExternalLink size={14} />
                         </span>
                       </a>

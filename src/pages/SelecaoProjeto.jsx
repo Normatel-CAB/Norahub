@@ -16,7 +16,7 @@ import { getFavorites } from '../services/favorites';
 const NO_URL_TYPES = new Set(['documents', 'files', 'spreadsheets']);
 
 const inputCls =
-  'w-full px-4 py-3 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all';
+  'w-full px-4 py-3 bg-surface-2 border border-hairline rounded-xl text-sm text-txt placeholder-txt-faint focus:outline-none focus:border-brand/60 focus:bg-hairline-hi/10 transition-all';
 
 // Uma linha de `projetos` vira um objeto "achatado": nome/ativa são colunas reais,
 // o resto (tags, deadline, extras, carteiras, deletedAt...) vive em `data` (jsonb).
@@ -44,7 +44,7 @@ function DeadlineBadge({ deadline }) {
         ? 'bg-red-500/15 text-red-400 border-red-500/25'
         : diff <= 3
         ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/25'
-        : 'bg-white/10 text-gray-500 border-white/15'
+        : 'bg-surface-2 text-txt-faint border-hairline'
     }`}>
       <Calendar size={9} />
       {isOverdue ? `Atrasado` : diff === 0 ? 'Hoje' : `${diff}d`}
@@ -57,13 +57,13 @@ function Toast({ toast }) {
   if (!toast.show) return null;
   return (
     <div className="fixed top-8 right-8 z-[200] animate-fade-in">
-      <div className={`border-l-4 ${toast.type === 'error' ? 'bg-red-500/20 border-red-500' : 'bg-green-500/20 border-[#57B952]'} rounded-lg shadow-2xl p-4 flex items-center gap-3 min-w-[300px] text-white`}>
-        <div className={`${toast.type === 'error' ? 'bg-red-500/20' : 'bg-green-500/20'} p-2 rounded-full`}>
-          {toast.type === 'error' ? <X size={20} className="text-red-400" /> : <Building2 size={20} className="text-[#57B952]" />}
+      <div className={`border-l-4 ${toast.type === 'error' ? 'bg-red-500/20 border-red-500' : 'bg-brand/20 border-brand'} rounded-lg shadow-2xl p-4 flex items-center gap-3 min-w-[300px] text-txt`}>
+        <div className={`${toast.type === 'error' ? 'bg-red-500/20' : 'bg-brand/20'} p-2 rounded-full`}>
+          {toast.type === 'error' ? <X size={20} className="text-red-400" /> : <Building2 size={20} className="text-brand-lite" />}
         </div>
         <div>
-          <p className="font-bold text-white">{toast.type === 'error' ? 'Erro!' : 'Sucesso!'}</p>
-          <p className="text-sm text-gray-100">{toast.message}</p>
+          <p className="font-bold text-txt">{toast.type === 'error' ? 'Erro!' : 'Sucesso!'}</p>
+          <p className="text-sm text-txt-dim">{toast.message}</p>
         </div>
       </div>
     </div>
@@ -340,10 +340,10 @@ function SelecaoProjeto() {
   const visibleProjetos = projetos.filter(p => !p.deletedAt);
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden relative nt-page-bg text-txt">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand-deep/10 rounded-full blur-3xl" />
       </div>
 
       <Toast toast={toast} />
@@ -355,14 +355,14 @@ function SelecaoProjeto() {
           {/* Título + Botões */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-3 md:mb-6 gap-3">
             <div className="flex-1 w-full">
-              <h1 className="text-lg sm:text-xl md:text-3xl font-bold text-white">Seleção de projetos</h1>
-              <p className="text-xs sm:text-sm md:text-base text-gray-300 mt-1">Escolha o projeto para acessar o ambiente de trabalho.</p>
+              <h1 className="text-lg sm:text-xl md:text-3xl font-bold text-txt">Seleção de projetos</h1>
+              <p className="text-xs sm:text-sm md:text-base text-txt-dim mt-1">Escolha o projeto para acessar o ambiente de trabalho.</p>
             </div>
             <div className="flex gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end">
-              <Link to="/meu-painel" className="bg-[#57B952]/20 text-[#57B952] px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-[#57B952]/30 text-xs sm:text-sm border border-[#57B952]/30">
+              <Link to="/meu-painel" className="bg-brand/20 text-brand-lite px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-brand/30 text-xs sm:text-sm border border-brand/30">
                 <LayoutDashboard size={15} /><span className="hidden sm:inline">Meu Painel</span><span className="sm:hidden">Painel</span>
               </Link>
-              <Link to="/aplicativos" className="bg-white/10 text-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-white/20 text-xs sm:text-sm border border-white/20">
+              <Link to="/aplicativos" className="bg-surface-2 text-txt-dim px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 hover:bg-hairline-hi/20 text-xs sm:text-sm border border-hairline">
                 <LayoutGrid size={15} /><span className="hidden sm:inline">Aplicativos</span><span className="sm:hidden">Apps</span>
               </Link>
               {(isAdmin || (userProfile?.data?.carteiras?.length > 0) || typeof userProfile?.funcao === 'string' && userProfile.funcao.toLowerCase().includes('gerente')) && (
@@ -381,7 +381,7 @@ function SelecaoProjeto() {
                 </Link>
               )}
               {canManageProjects && (
-                <button onClick={openCreateModal} className="bg-[#57B952] hover:bg-green-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-transform hover:scale-105 text-xs sm:text-sm">
+                <button onClick={openCreateModal} className="nt-glow-btn bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold flex items-center gap-1.5 sm:gap-2 shadow transition-all hover:scale-105 text-xs sm:text-sm">
                   <Plus size={15} /> Novo Projeto
                 </button>
               )}
@@ -390,13 +390,13 @@ function SelecaoProjeto() {
 
           {/* Barra de busca destacada */}
           <div className="mb-4 relative">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-txt-faint pointer-events-none" />
             <input
               type="text"
               placeholder="Buscar projeto por nome..."
               value={searchFilter}
               onChange={e => setSearchFilter(e.target.value)}
-              className="w-full pl-11 pr-4 py-3.5 text-sm border border-white/20 rounded-xl focus:ring-2 focus:ring-[#57B952] outline-none bg-white/10 backdrop-blur-md text-white placeholder-gray-400 transition-all shadow-lg"
+              className="w-full pl-11 pr-4 py-3.5 text-sm border border-hairline rounded-xl focus:ring-2 focus:ring-brand outline-none bg-surface-2 backdrop-blur-md text-txt placeholder-txt-faint transition-all shadow-lg"
             />
           </div>
 
@@ -405,7 +405,7 @@ function SelecaoProjeto() {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <Star size={13} className="text-yellow-400 fill-yellow-400" />
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Favoritos</span>
+                <span className="text-xs font-semibold text-txt-dim uppercase tracking-wider">Favoritos</span>
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {projetos
@@ -425,15 +425,15 @@ function SelecaoProjeto() {
           )}
 
           {/* Filtros */}
-          <div className="mb-4 md:mb-6 bg-white/10 backdrop-blur-md rounded-xl shadow-lg border border-white/20 p-3 md:p-4 space-y-3">
+          <div className="mb-4 md:mb-6 nt-glass p-3 md:p-4 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-200 mb-1.5">Status</label>
+                <label className="block text-xs font-medium text-txt-dim mb-1.5">Status</label>
                 <select
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none transition-all"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: '#f9fafb' }}
+                  className="w-full px-3 py-2 text-sm border border-hairline rounded-lg focus:ring-2 focus:ring-brand outline-none transition-all"
+                  style={{ backgroundColor: 'var(--surface-2)', color: 'var(--txt)' }}
                 >
                   <option value="all" style={{ backgroundColor: '#fff', color: '#111' }}>Todos</option>
                   <option value="active" style={{ backgroundColor: '#fff', color: '#111' }}>Ativos</option>
@@ -441,12 +441,12 @@ function SelecaoProjeto() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-200 mb-1.5">Ordenar por</label>
+                <label className="block text-xs font-medium text-txt-dim mb-1.5">Ordenar por</label>
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-white/20 rounded-lg focus:ring-2 focus:ring-[#57B952] outline-none transition-all"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: '#f9fafb' }}
+                  className="w-full px-3 py-2 text-sm border border-hairline rounded-lg focus:ring-2 focus:ring-brand outline-none transition-all"
+                  style={{ backgroundColor: 'var(--surface-2)', color: 'var(--txt)' }}
                 >
                   <option value="name"      style={{ backgroundColor: '#fff', color: '#111' }}>Nome (A-Z)</option>
                   <option value="date"      style={{ backgroundColor: '#fff', color: '#111' }}>Data de Criação</option>
@@ -460,13 +460,13 @@ function SelecaoProjeto() {
             {/* Filtro por tag */}
             {allTags.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap pt-1">
-                <Tag size={12} className="text-gray-500 flex-shrink-0" />
+                <Tag size={12} className="text-txt-faint flex-shrink-0" />
                 <button
                   onClick={() => setActiveTagFilter('')}
                   className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                     !activeTagFilter
-                      ? 'bg-[#57B952]/20 text-[#57B952] border-[#57B952]/30'
-                      : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                      ? 'bg-brand/20 text-brand-lite border-brand/30'
+                      : 'bg-surface-2 text-txt-dim border-hairline hover:border-hairline-hi'
                   }`}
                 >
                   Todos
@@ -477,8 +477,8 @@ function SelecaoProjeto() {
                     onClick={() => setActiveTagFilter(t => t === tag ? '' : tag)}
                     className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                       activeTagFilter === tag
-                        ? 'bg-[#57B952]/20 text-[#57B952] border-[#57B952]/30'
-                        : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                        ? 'bg-brand/20 text-brand-lite border-brand/30'
+                        : 'bg-surface-2 text-txt-dim border-hairline hover:border-hairline-hi'
                     }`}
                   >
                     {tag}
@@ -494,14 +494,14 @@ function SelecaoProjeto() {
               {[1, 2, 3, 4, 5, 6].map(i => <SkeletonProjectCard key={i} />)}
             </div>
           ) : filteredAndSortedProjects.length === 0 ? (
-            <div className="text-center py-20 bg-white/10 backdrop-blur-md rounded-xl shadow border border-white/20">
-              <p className="text-gray-200 mb-4">
+            <div className="text-center py-20 nt-glass">
+              <p className="text-txt-dim mb-4">
                 {visibleProjetos.length === 0
                   ? 'Nenhuma base cadastrada ainda.'
                   : 'Nenhum projeto encontrado com os filtros aplicados.'}
               </p>
               {canManageProjects && visibleProjetos.length === 0 && (
-                <button onClick={openCreateModal} className="text-[#57B952] font-bold hover:underline">
+                <button onClick={openCreateModal} className="text-brand-lite font-bold hover:underline">
                   + Adicionar primeira base
                 </button>
               )}
@@ -512,15 +512,17 @@ function SelecaoProjeto() {
                 <div
                   key={projeto.id}
                   onClick={() => navigate(`/projeto/${projeto.id}`)}
-                  className="group bg-white/10 backdrop-blur-md p-4 sm:p-5 md:p-8 rounded-xl shadow-lg hover:shadow-xl border border-white/20 hover:border-white/40 text-left transition-all hover:-translate-y-1 flex flex-col h-full relative cursor-pointer"
+                  className="group nt-beam-host nt-glass p-4 sm:p-5 md:p-8 hover:shadow-xl hover:border-hairline-hi text-left transition-all hover:-translate-y-1 flex flex-col h-full relative cursor-pointer"
                 >
+                  <span className="nt-beam" aria-hidden="true" />
+                  <div className="nt-beam-content flex flex-col h-full">
                   <div className="flex items-start justify-between mb-2 sm:mb-3 md:mb-4">
-                    <div className="bg-[#57B952]/20 p-2 rounded-lg text-[#57B952] border border-[#57B952]/50">
+                    <div className="bg-brand/20 p-2 rounded-lg text-brand-lite border border-brand/50">
                       <Briefcase size={18} className="sm:w-5 sm:h-5" />
                     </div>
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <DeadlineBadge deadline={projeto.deadline} />
-                      <span className="text-[9px] sm:text-[10px] font-bold text-gray-300 uppercase tracking-wider hidden sm:inline">
+                      <span className="text-[9px] sm:text-[10px] font-bold text-txt-dim uppercase tracking-wider hidden sm:inline">
                         Base Ativa
                       </span>
                       <FavoriteButton
@@ -538,14 +540,14 @@ function SelecaoProjeto() {
                         <>
                           <button
                             onClick={e => openEditModal(e, projeto)}
-                            className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            className="p-1 sm:p-1.5 text-txt-dim hover:text-blue-400 hover:bg-blue-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                             title="Editar projeto"
                           >
                             <Settings size={12} className="sm:w-3.5 sm:h-3.5" />
                           </button>
                           <button
                             onClick={e => { e.stopPropagation(); setConfirmDelete({ open: true, projetoId: projeto.id, nome: projeto.nome }); }}
-                            className="p-1 sm:p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            className="p-1 sm:p-1.5 text-txt-dim hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                             title="Mover para lixeira"
                           >
                             <Trash2 size={12} className="sm:w-3.5 sm:h-3.5" />
@@ -555,10 +557,10 @@ function SelecaoProjeto() {
                     </div>
                   </div>
 
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-1.5 sm:mb-2 group-hover:text-[#57B952] transition-colors line-clamp-2">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-txt mb-1.5 sm:mb-2 group-hover:text-brand-lite transition-colors line-clamp-2">
                     {projeto.nome}
                   </h3>
-                  <p className="text-xs sm:text-sm text-gray-200 mb-3 flex-grow line-clamp-2">
+                  <p className="text-xs sm:text-sm text-txt-dim mb-3 flex-grow line-clamp-2">
                     {projeto.descricao || 'Acesso ao portal.'}
                   </p>
 
@@ -566,20 +568,21 @@ function SelecaoProjeto() {
                   {projeto.tags?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
                       {projeto.tags.slice(0, 3).map(tag => (
-                        <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-gray-400 border border-white/10">
+                        <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface-2 text-txt-dim border border-hairline">
                           {tag}
                         </span>
                       ))}
                       {projeto.tags.length > 3 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-gray-500">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface-2 text-txt-faint">
                           +{projeto.tags.length - 3}
                         </span>
                       )}
                     </div>
                   )}
 
-                  <div className="mt-auto w-full py-2 rounded-lg bg-white/10 text-center text-xs sm:text-sm font-medium text-white group-hover:bg-[#57B952] group-hover:text-white transition-colors border border-white/20 group-hover:border-[#57B952]/50">
+                  <div className="mt-auto w-full py-2 rounded-lg bg-surface-2 text-center text-xs sm:text-sm font-medium text-txt group-hover:bg-brand group-hover:text-white transition-colors border border-hairline group-hover:border-brand/50">
                     Acessar Projeto
+                  </div>
                   </div>
                 </div>
               ))}
@@ -588,29 +591,29 @@ function SelecaoProjeto() {
         </div>
       </main>
 
-      <footer className="w-full py-6 text-center text-gray-300 text-xs border-t border-gray-700 bg-gray-900/50 backdrop-blur-md z-20 relative">
-        &copy; 2025 Parceria Petrobras &amp; Normatel Engenharia
+      <footer className="w-full py-6 text-center text-txt-dim text-xs border-t border-hairline bg-surface-card/80 backdrop-blur-md z-20 relative">
+        &copy; {new Date().getFullYear()} Normatel Engenharia
       </footer>
 
       {/* ─── Modal criar/editar ──────────────────────────────────────────────── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#111114] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl border border-white/[0.10] flex flex-col max-h-[95vh] sm:max-h-[88vh]">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.07] flex-shrink-0">
+          <div className="bg-surface-solid rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl border border-hairline flex flex-col max-h-[95vh] sm:max-h-[88vh]">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-hairline flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center flex-shrink-0">
-                  {editingProject ? <Settings size={18} className="text-[#57B952]" /> : <Briefcase size={18} className="text-[#57B952]" />}
+                <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/20 flex items-center justify-center flex-shrink-0">
+                  {editingProject ? <Settings size={18} className="text-brand-lite" /> : <Briefcase size={18} className="text-brand-lite" />}
                 </div>
                 <div>
-                  <p className="font-bold text-white text-base leading-tight">
+                  <p className="font-bold text-txt text-base leading-tight">
                     {editingProject ? 'Editar Base' : 'Adicionar Nova Base'}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-txt-faint mt-0.5">
                     {editingProject ? editingProject.nome : 'Configure o projeto'}
                   </p>
                 </div>
               </div>
-              <button onClick={resetModal} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors">
+              <button onClick={resetModal} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-2 text-txt-faint hover:text-txt transition-colors">
                 <X size={16} />
               </button>
             </div>
@@ -620,8 +623,8 @@ function SelecaoProjeto() {
 
                 {/* Nome */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">
-                    Nome da Base <span className="text-[#57B952]">*</span>
+                  <label className="block text-xs font-semibold text-txt-dim uppercase tracking-widest">
+                    Nome da Base <span className="text-brand-lite">*</span>
                   </label>
                   <input
                     type="text"
@@ -635,8 +638,8 @@ function SelecaoProjeto() {
 
                 {/* Tags */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">
-                    Tags <span className="text-gray-600 font-normal normal-case">(separadas por vírgula)</span>
+                  <label className="block text-xs font-semibold text-txt-dim uppercase tracking-widest">
+                    Tags <span className="text-txt-faint font-normal normal-case">(separadas por vírgula)</span>
                   </label>
                   <input
                     type="text"
@@ -649,7 +652,7 @@ function SelecaoProjeto() {
 
                 {/* Prazo */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                  <label className="block text-xs font-semibold text-txt-dim uppercase tracking-widest">
                     Prazo / Deadline
                   </label>
                   <input
@@ -666,7 +669,7 @@ function SelecaoProjeto() {
                   <>
                     {editingCarteiras.length > 0 && (
                       <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <label className="text-xs font-semibold text-txt-dim uppercase tracking-widest flex items-center gap-1.5">
                           <Layers size={12} className="text-cyan-400" />
                           Setores desta base
                         </label>
@@ -697,11 +700,11 @@ function SelecaoProjeto() {
                 )}
               </div>
 
-              <div className="px-6 py-4 border-t border-white/[0.07] flex gap-3 flex-shrink-0">
-                <button type="button" onClick={resetModal} className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors">
+              <div className="px-6 py-4 border-t border-hairline flex gap-3 flex-shrink-0">
+                <button type="button" onClick={resetModal} className="flex-1 py-3 rounded-xl bg-surface-2 border border-hairline text-txt-dim text-sm font-medium hover:bg-hairline-hi/20 transition-colors">
                   Cancelar
                 </button>
-                <button type="submit" disabled={saving} className="flex-1 py-3 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
+                <button type="submit" disabled={saving} className="nt-glow-btn flex-1 py-3 rounded-xl bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 text-white text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-70">
                   {saving
                     ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Salvando...</>
                     : <><Save size={15} /> {editingProject ? 'Salvar Alterações' : 'Criar Base'}</>
@@ -716,21 +719,21 @@ function SelecaoProjeto() {
       {/* ─── Confirm soft delete ─────────────────────────────────────────────── */}
       {confirmDelete.open && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[300] p-4">
-          <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-gray-700">
+          <div className="bg-surface-solid rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-hairline">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center flex-shrink-0">
                 <Trash2 size={18} className="text-red-400" />
               </div>
               <div>
-                <p className="font-semibold text-white text-sm">Mover para lixeira?</p>
-                <p className="text-xs text-gray-500">O projeto pode ser restaurado pelo admin.</p>
+                <p className="font-semibold text-txt text-sm">Mover para lixeira?</p>
+                <p className="text-xs text-txt-faint">O projeto pode ser restaurado pelo admin.</p>
               </div>
             </div>
-            <p className="text-sm text-gray-300 mb-5">
-              <span className="text-white font-medium">{confirmDelete.nome}</span> será movido para a lixeira.
+            <p className="text-sm text-txt-dim mb-5">
+              <span className="text-txt font-medium">{confirmDelete.nome}</span> será movido para a lixeira.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete({ open: false, projetoId: null, nome: '' })} className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition-colors border border-white/20">
+              <button onClick={() => setConfirmDelete({ open: false, projetoId: null, nome: '' })} className="flex-1 py-2.5 rounded-xl bg-surface-2 hover:bg-hairline-hi/20 text-txt font-semibold transition-colors border border-hairline">
                 Cancelar
               </button>
               <button onClick={confirmSoftDelete} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">

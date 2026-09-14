@@ -51,7 +51,7 @@ function permCount(cargo) {
 
 function PermLevelBadge({ count }) {
   if (count === 0) return (
-    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-gray-500 border border-white/10">
+    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-2 text-txt-faint border border-hairline">
       Sem permissões
     </span>
   );
@@ -61,7 +61,7 @@ function PermLevelBadge({ count }) {
     </span>
   );
   return (
-    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#57B952]/15 text-[#57B952] border border-[#57B952]/20">
+    <span className="nt-chip">
       {count}/{PERMISSOES.length} permissões
     </span>
   );
@@ -72,13 +72,13 @@ function Toast({ toast }) {
   return (
     <div className={`fixed top-5 right-5 z-[300] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl ${
       toast.type === 'success'
-        ? 'bg-gray-900/95 border-green-500/30 text-green-400'
-        : 'bg-gray-900/95 border-red-500/30 text-red-400'
+        ? 'bg-surface-solid border-brand/30 text-brand-lite'
+        : 'bg-surface-solid border-red-500/30 text-red-400'
     }`}>
-      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${toast.type === 'success' ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${toast.type === 'success' ? 'bg-brand/20' : 'bg-red-500/20'}`}>
         {toast.type === 'success' ? <CheckCircle size={14} /> : <X size={14} />}
       </div>
-      <span className="font-medium text-sm text-white">{toast.message}</span>
+      <span className="font-medium text-sm text-txt">{toast.message}</span>
     </div>
   );
 }
@@ -264,38 +264,38 @@ function AdminCargos() {
   const totalPermissoes = cargos.reduce((acc, c) => acc + permCount(c), 0);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
+    <div className="min-h-screen flex items-center justify-center nt-page-bg">
+      <div className="relative z-10 animate-spin rounded-full h-8 w-8 border-2 border-brand-lite border-t-transparent" />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white font-[Outfit,sans-serif] relative overflow-hidden">
+    <div className="min-h-screen nt-page-bg text-txt font-[Outfit,sans-serif] relative overflow-hidden">
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/8 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#57B952]/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand/8 rounded-full blur-3xl pointer-events-none" />
       <Toast toast={toast} />
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-gray-900/70 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-hairline bg-[#050b06]/70 backdrop-blur-md">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
+              className="flex items-center gap-2 text-sm text-txt-dim hover:text-txt transition-colors group"
             >
-              <div className="w-8 h-8 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.10] flex items-center justify-center transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-surface group-hover:bg-surface-2 flex items-center justify-center transition-colors">
                 <ArrowLeft size={15} />
               </div>
               <span className="hidden sm:inline">Voltar</span>
             </button>
-            <div className="h-4 w-px bg-white/[0.08]" />
+            <div className="h-4 w-px bg-surface-2" />
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/25 flex items-center justify-center">
                 <Shield size={15} className="text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white leading-tight">Gestão de Cargos</p>
-                <p className="text-[10px] text-gray-500 leading-tight">
+                <p className="text-sm font-semibold text-txt leading-tight">Gestão de Cargos</p>
+                <p className="text-[10px] text-txt-faint leading-tight">
                   {cargos.length} cargo{cargos.length !== 1 ? 's' : ''} · {totalPermissoes} permissão(ões) ativas
                 </p>
               </div>
@@ -314,7 +314,7 @@ function AdminCargos() {
             )}
             <button
               onClick={openCreate}
-              className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white font-semibold transition-all hover:scale-[1.02] shadow-md shadow-[#57B952]/20"
+              className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 transition-all text-white font-semibold hover:scale-[1.02] shadow-md shadow-brand/20"
             >
               <Plus size={15} />
               <span className="hidden sm:inline">Novo</span> Cargo
@@ -323,18 +323,18 @@ function AdminCargos() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-4">
+      <main className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-4">
 
         {/* ── Stats ── */}
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Cargos', value: cargos.length, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
-            { label: 'Permissões ativas', value: totalPermissoes, color: 'text-[#57B952]', bg: 'bg-[#57B952]/10 border-[#57B952]/20' },
-            { label: 'Sem permissão', value: cargos.filter(c => permCount(c) === 0).length, color: 'text-gray-400', bg: 'bg-white/5 border-white/10' },
+            { label: 'Permissões ativas', value: totalPermissoes, color: 'text-brand-lite', bg: 'bg-brand/10 border-brand/20' },
+            { label: 'Sem permissão', value: cargos.filter(c => permCount(c) === 0).length, color: 'text-txt-dim', bg: 'bg-surface border-hairline' },
           ].map(s => (
             <div key={s.label} className={`${s.bg} border rounded-2xl px-4 py-3 text-center`}>
               <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{s.label}</p>
+              <p className="text-[10px] text-txt-faint mt-0.5 leading-tight">{s.label}</p>
             </div>
           ))}
         </div>
@@ -342,28 +342,28 @@ function AdminCargos() {
         {/* ── Search ── */}
         {cargos.length > 3 && (
           <div className="relative">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-txt-faint pointer-events-none" />
             <input
               type="text"
               placeholder="Buscar cargo..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm bg-white/[0.05] border border-white/[0.10] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/40 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 text-sm bg-surface border border-hairline rounded-xl text-txt placeholder-txt-faint focus:outline-none focus:border-purple-500/40 transition-all"
             />
           </div>
         )}
 
         {/* ── Lista ── */}
         {filteredCargos.length === 0 ? (
-          <div className="text-center py-20 bg-white/[0.04] border border-white/[0.07] rounded-2xl">
+          <div className="text-center py-20 bg-surface border border-hairline rounded-2xl">
             <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-4">
               <Shield size={22} className="text-purple-400" />
             </div>
-            <p className="text-gray-500 text-sm mb-4">
+            <p className="text-txt-faint text-sm mb-4">
               {search ? 'Nenhum cargo encontrado.' : 'Nenhum cargo criado ainda.'}
             </p>
             {!search && (
-              <button onClick={openCreate} className="text-[#57B952] text-sm font-semibold hover:underline">
+              <button onClick={openCreate} className="text-brand-lite text-sm font-semibold hover:underline">
                 + Criar primeiro cargo
               </button>
             )}
@@ -376,7 +376,7 @@ function AdminCargos() {
               return (
                 <div
                   key={cargo.id}
-                  className="bg-white/[0.05] border border-white/[0.09] rounded-2xl overflow-hidden transition-all hover:border-white/[0.15]"
+                  className="bg-surface border border-hairline rounded-2xl overflow-hidden transition-all hover:border-hairline-hi"
                 >
                   {/* Row header */}
                   <div
@@ -389,7 +389,7 @@ function AdminCargos() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-white text-sm truncate">{cargo.nome}</p>
+                        <p className="font-semibold text-txt text-sm truncate">{cargo.nome}</p>
                         {cargo.status === 'inativo' && (
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/20">
                             Inativo
@@ -397,7 +397,7 @@ function AdminCargos() {
                         )}
                       </div>
                       {cargo.descricao && (
-                        <p className="text-[11px] text-gray-500 truncate mt-0.5">{cargo.descricao}</p>
+                        <p className="text-[11px] text-txt-faint truncate mt-0.5">{cargo.descricao}</p>
                       )}
                       <div className="mt-1">
                         <PermLevelBadge count={count} />
@@ -407,19 +407,19 @@ function AdminCargos() {
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button
                         onClick={e => { e.stopPropagation(); openEdit(cargo); }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-500/15 transition-colors"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-faint hover:text-blue-400 hover:bg-blue-500/15 transition-colors"
                         title="Editar cargo"
                       >
                         <Edit2 size={14} />
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); setConfirmDelete({ open: true, cargo }); }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/15 transition-colors"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-faint hover:text-red-400 hover:bg-red-500/15 transition-colors"
                         title="Excluir cargo"
                       >
                         <Trash2 size={14} />
                       </button>
-                      <div className="w-7 h-7 flex items-center justify-center text-gray-600">
+                      <div className="w-7 h-7 flex items-center justify-center text-txt-faint">
                         {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                       </div>
                     </div>
@@ -427,8 +427,8 @@ function AdminCargos() {
 
                   {/* Expanded permissions detail */}
                   {expanded && (
-                    <div className="px-4 pb-4 border-t border-white/[0.06]">
-                      <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider pt-3 pb-2">
+                    <div className="px-4 pb-4 border-t border-hairline">
+                      <p className="text-[10px] font-semibold text-txt-faint uppercase tracking-wider pt-3 pb-2">
                         Permissões
                       </p>
                       <div className="space-y-1.5">
@@ -440,21 +440,21 @@ function AdminCargos() {
                               key={perm.id}
                               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
                                 active
-                                  ? 'bg-[#57B952]/[0.08] border-[#57B952]/25'
-                                  : 'bg-white/[0.02] border-white/[0.05]'
+                                  ? 'bg-brand/[0.08] border-brand/25'
+                                  : 'bg-surface border-hairline'
                               }`}
                             >
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${active ? 'bg-[#57B952]/20' : 'bg-white/[0.05]'}`}>
-                                <Icon size={14} className={active ? 'text-[#57B952]' : 'text-gray-600'} />
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${active ? 'bg-brand/20' : 'bg-surface'}`}>
+                                <Icon size={14} className={active ? 'text-brand-lite' : 'text-txt-faint'} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-semibold leading-tight ${active ? 'text-white' : 'text-gray-600'}`}>
+                                <p className={`text-sm font-semibold leading-tight ${active ? 'text-txt' : 'text-txt-faint'}`}>
                                   {perm.label}
                                 </p>
-                                <p className="text-[11px] text-gray-600 mt-0.5">{perm.desc}</p>
+                                <p className="text-[11px] text-txt-faint mt-0.5">{perm.desc}</p>
                               </div>
-                              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${active ? 'bg-[#57B952]' : 'bg-white/[0.08] border border-white/[0.10]'}`}>
-                                {active && <CheckCircle size={11} className="text-white" />}
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${active ? 'bg-brand' : 'bg-surface-2 border border-hairline'}`}>
+                                {active && <CheckCircle size={11} className="text-txt" />}
                               </div>
                             </div>
                           );
@@ -472,26 +472,26 @@ function AdminCargos() {
       {/* ── Modal Criar / Editar ── */}
       {modal.open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#111115] border border-white/[0.10] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md flex flex-col max-h-[92vh]">
+          <div className="bg-surface-solid border border-hairline rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md flex flex-col max-h-[92vh]">
 
             {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.07] flex-shrink-0">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-hairline flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center">
                   <Shield size={15} className="text-purple-400" />
                 </div>
                 <div>
-                  <p className="font-bold text-white text-sm leading-tight">
+                  <p className="font-bold text-txt text-sm leading-tight">
                     {modal.cargo ? 'Editar Cargo' : 'Novo Cargo'}
                   </p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">
+                  <p className="text-[10px] text-txt-faint mt-0.5">
                     {modal.cargo ? modal.cargo.nome : 'Defina nome e permissões'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setModal({ open: false, cargo: null })}
-                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-2 text-txt-faint hover:text-txt transition-colors"
               >
                 <X size={15} />
               </button>
@@ -502,8 +502,8 @@ function AdminCargos() {
 
                 {/* Nome */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                    Nome do Cargo <span className="text-[#57B952]">*</span>
+                  <label className="block text-xs font-semibold text-txt-faint uppercase tracking-wider mb-2">
+                    Nome do Cargo <span className="text-brand-lite">*</span>
                   </label>
                   <input
                     type="text"
@@ -512,13 +512,13 @@ function AdminCargos() {
                     placeholder="Ex: Coordenador, Analista, Fiscal..."
                     required
                     autoFocus
-                    className="w-full px-4 py-3 bg-white/[0.06] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.08] transition-all"
+                    className="w-full px-4 py-3 bg-surface-2 border border-hairline rounded-xl text-sm text-txt placeholder-txt-faint focus:outline-none focus:border-purple-500/50 focus:bg-surface-2 transition-all"
                   />
                 </div>
 
                 {/* Descrição */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-txt-faint uppercase tracking-wider mb-2">
                     Descrição
                   </label>
                   <input
@@ -526,13 +526,13 @@ function AdminCargos() {
                     value={formDescricao}
                     onChange={e => setFormDescricao(e.target.value)}
                     placeholder="Ex: Responsável por coordenar equipes..."
-                    className="w-full px-4 py-3 bg-white/[0.06] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.08] transition-all"
+                    className="w-full px-4 py-3 bg-surface-2 border border-hairline rounded-xl text-sm text-txt placeholder-txt-faint focus:outline-none focus:border-purple-500/50 focus:bg-surface-2 transition-all"
                   />
                 </div>
 
                 {/* Status */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-txt-faint uppercase tracking-wider mb-2">
                     Status
                   </label>
                   <div className="flex gap-2">
@@ -544,9 +544,9 @@ function AdminCargos() {
                         className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
                           formStatus === opt.value
                             ? opt.value === 'ativo'
-                              ? 'bg-[#57B952]/15 border-[#57B952]/40 text-[#57B952]'
+                              ? 'bg-brand/15 border-brand/40 text-brand-lite'
                               : 'bg-red-500/15 border-red-500/40 text-red-400'
-                            : 'bg-white/[0.03] border-white/[0.08] text-gray-500 hover:bg-white/[0.06]'
+                            : 'bg-surface border-hairline text-txt-faint hover:bg-surface-2'
                         }`}
                       >
                         {opt.label}
@@ -558,10 +558,10 @@ function AdminCargos() {
                 {/* Permissões */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <label className="text-xs font-semibold text-txt-faint uppercase tracking-wider">
                       Permissões
                     </label>
-                    <span className="text-[10px] text-gray-600">
+                    <span className="text-[10px] text-txt-faint">
                       {Object.values(formPerms).filter(Boolean).length}/{PERMISSOES.length} ativas
                     </span>
                   </div>
@@ -576,21 +576,21 @@ function AdminCargos() {
                           onClick={() => togglePerm(perm.id)}
                           className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl border text-left transition-all ${
                             active
-                              ? 'bg-[#57B952]/[0.10] border-[#57B952]/30'
-                              : 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12]'
+                              ? 'bg-brand/[0.10] border-brand/30'
+                              : 'bg-surface border-hairline hover:bg-surface-2 hover:border-hairline-hi'
                           }`}
                         >
-                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${active ? 'bg-[#57B952]/20' : 'bg-white/[0.06]'}`}>
-                            <Icon size={15} className={active ? 'text-[#57B952]' : 'text-gray-500'} />
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${active ? 'bg-brand/20' : 'bg-surface-2'}`}>
+                            <Icon size={15} className={active ? 'text-brand-lite' : 'text-txt-faint'} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-semibold leading-tight transition-colors ${active ? 'text-white' : 'text-gray-400'}`}>
+                            <p className={`text-sm font-semibold leading-tight transition-colors ${active ? 'text-txt' : 'text-txt-dim'}`}>
                               {perm.label}
                             </p>
-                            <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">{perm.desc}</p>
+                            <p className="text-[11px] text-txt-faint mt-0.5 leading-tight">{perm.desc}</p>
                           </div>
                           {/* Toggle switch */}
-                          <div className={`w-10 h-5 rounded-full relative flex-shrink-0 transition-colors duration-200 ${active ? 'bg-[#57B952]' : 'bg-white/20'}`}>
+                          <div className={`w-10 h-5 rounded-full relative flex-shrink-0 transition-colors duration-200 ${active ? 'bg-brand' : 'bg-surface-2'}`}>
                             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${active ? 'left-5' : 'left-0.5'}`} />
                           </div>
                         </button>
@@ -601,18 +601,18 @@ function AdminCargos() {
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-white/[0.07] flex gap-3 flex-shrink-0">
+              <div className="px-6 py-4 border-t border-hairline flex gap-3 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setModal({ open: false, cargo: null })}
-                  className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors"
+                  className="flex-1 py-3 rounded-xl bg-surface border border-hairline text-txt-dim text-sm font-medium hover:bg-surface-2 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 py-3 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-bold transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 transition-all text-white text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {saving
                     ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Salvando...</>
@@ -628,29 +628,29 @@ function AdminCargos() {
       {/* ── Confirm delete ── */}
       {confirmDelete.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#111115] border border-white/[0.10] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="bg-surface-solid border border-hairline rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/20 flex items-center justify-center flex-shrink-0">
                 <Trash2 size={16} className="text-red-400" />
               </div>
               <div>
-                <p className="font-bold text-white text-sm">Excluir cargo?</p>
-                <p className="text-xs text-gray-500 mt-0.5">Esta ação não pode ser desfeita.</p>
+                <p className="font-bold text-txt text-sm">Excluir cargo?</p>
+                <p className="text-xs text-txt-faint mt-0.5">Esta ação não pode ser desfeita.</p>
               </div>
             </div>
-            <p className="text-sm text-gray-400 mb-5">
-              O cargo <span className="text-white font-semibold">"{confirmDelete.cargo?.nome}"</span> será removido permanentemente. Certifique-se de que nenhum usuário está vinculado a ele.
+            <p className="text-sm text-txt-dim mb-5">
+              O cargo <span className="text-txt font-semibold">"{confirmDelete.cargo?.nome}"</span> será removido permanentemente. Certifique-se de que nenhum usuário está vinculado a ele.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDelete({ open: false, cargo: null })}
-                className="flex-1 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.10] text-gray-300 text-sm font-medium hover:bg-white/[0.09] transition-colors"
+                className="flex-1 py-2.5 rounded-xl bg-surface border border-hairline text-txt-dim text-sm font-medium hover:bg-surface-2 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-colors"
+                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-txt text-sm font-bold transition-colors"
               >
                 Excluir
               </button>

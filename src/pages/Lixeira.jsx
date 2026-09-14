@@ -98,42 +98,39 @@ function Lixeira() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white font-[Outfit,sans-serif] relative overflow-hidden">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="nt-page-bg min-h-screen text-txt font-[Outfit,sans-serif] relative overflow-hidden">
       {toast && (
-        <div className="fixed top-5 right-5 z-[300] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border-red-500/30">
-          <span className="font-medium text-sm text-white">{toast}</span>
+        <div className="fixed top-5 right-5 z-[300] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl bg-surface-card border-red-500/30">
+          <span className="font-medium text-sm text-txt">{toast}</span>
         </div>
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-white/20 bg-gray-900/50 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-hairline backdrop-blur-md" style={{ background: 'rgba(9, 22, 11, 0.6)' }}>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
+            className="flex items-center gap-2 text-sm text-txt-dim hover:text-txt transition-colors group"
           >
             <div className="w-8 h-8 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.1] flex items-center justify-center transition-colors">
               <ArrowLeft size={15} />
             </div>
             <span className="hidden sm:inline">Voltar</span>
           </button>
-          <div className="h-4 w-px bg-white/[0.08]" />
+          <div className="h-4 w-px bg-hairline" />
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-red-500/20 border border-red-500/20 flex items-center justify-center">
               <Trash2 size={14} className="text-red-400" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white leading-tight">Lixeira</p>
-              <p className="text-[10px] text-gray-600 leading-tight">Projetos excluídos recentemente</p>
+              <p className="text-sm font-semibold text-txt leading-tight">Lixeira</p>
+              <p className="text-[10px] text-txt-faint leading-tight">Projetos excluídos recentemente</p>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 relative z-10">
 
         {loading ? (
           <div className="py-24 flex items-center justify-center">
@@ -141,28 +138,28 @@ function Lixeira() {
           </div>
         ) : projetos.length === 0 ? (
           <div className="py-24 flex flex-col items-center justify-center gap-4 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/20 flex items-center justify-center">
-              <FolderX size={28} className="text-gray-700" />
+            <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-hairline flex items-center justify-center">
+              <FolderX size={28} className="text-txt-faint" />
             </div>
             <div>
-              <p className="text-gray-400 font-semibold">Lixeira vazia</p>
-              <p className="text-gray-700 text-sm mt-1">Nenhum projeto foi excluído.</p>
+              <p className="text-txt-dim font-semibold">Lixeira vazia</p>
+              <p className="text-txt-faint text-sm mt-1">Nenhum projeto foi excluído.</p>
             </div>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-xs text-gray-600 mb-4">{projetos.length} projeto{projetos.length !== 1 ? 's' : ''} na lixeira</p>
+            <p className="text-xs text-txt-faint mb-4">{projetos.length} projeto{projetos.length !== 1 ? 's' : ''} na lixeira</p>
             {projetos.map(projeto => (
               <div
                 key={projeto.id}
-                className="flex items-center gap-4 px-5 py-4 bg-white/10 border border-white/20 rounded-2xl hover:bg-white/[0.04] transition-colors"
+                className="nt-glass flex items-center gap-4 px-5 py-4 rounded-2xl hover:border-hairline-hi transition-colors"
               >
                 <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
                   <Trash2 size={16} className="text-red-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{projeto.nome}</p>
-                  <p className="text-xs text-gray-600 mt-0.5">
+                  <p className="text-sm font-semibold text-txt truncate">{projeto.nome}</p>
+                  <p className="text-xs text-txt-faint mt-0.5">
                     Excluído em {formatDate(projeto.deletedAt)}
                   </p>
                 </div>
@@ -170,7 +167,7 @@ function Lixeira() {
                   <button
                     onClick={() => handleRestore(projeto)}
                     disabled={working === projeto.id}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#57B952]/10 border border-[#57B952]/20 text-[#57B952] hover:bg-[#57B952]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-brand/10 border border-brand/20 text-brand-lite hover:bg-brand/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <RotateCcw size={12} />
                     Restaurar
@@ -195,18 +192,18 @@ function Lixeira() {
       {/* Modal de confirmação de exclusão permanente */}
       {confirmPerm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="nt-glass rounded-2xl p-6 w-full max-w-sm">
             <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
               <AlertTriangle size={22} className="text-red-400" />
             </div>
-            <h3 className="text-base font-bold text-white text-center mb-2">Excluir permanentemente?</h3>
-            <p className="text-sm text-gray-500 text-center mb-6">
-              O projeto <span className="text-white font-semibold">"{confirmPerm.nome}"</span> será removido para sempre. Esta ação não pode ser desfeita.
+            <h3 className="text-base font-bold text-txt text-center mb-2">Excluir permanentemente?</h3>
+            <p className="text-sm text-txt-faint text-center mb-6">
+              O projeto <span className="text-txt font-semibold">"{confirmPerm.nome}"</span> será removido para sempre. Esta ação não pode ser desfeita.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmPerm(null)}
-                className="flex-1 py-2.5 rounded-xl border border-white/20 text-sm text-gray-400 hover:text-white hover:bg-white/[0.05] transition-colors"
+                className="flex-1 py-2.5 rounded-xl border border-hairline text-sm text-txt-dim hover:text-txt hover:bg-white/[0.05] transition-colors"
               >
                 Cancelar
               </button>

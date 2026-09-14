@@ -46,7 +46,7 @@ function mapCargoRow(row) {
 }
 
 // ─── Configs dos cards legados ─────────────────────────────────────────────────
-const GREEN = { bgColor: 'bg-[#57B952]/20', textColor: 'text-[#57B952]', btnColor: 'bg-[#57B952] hover:bg-[#3d8c38]' };
+const GREEN = { bgColor: 'bg-brand/20', textColor: 'text-brand-lite', btnColor: 'bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110' };
 const CARD_CONFIGS = {
   link:         { icon: ExternalLink,    ...GREEN, label: 'Acessar',             needsUpload: false },
   documents:    { icon: FolderOpen,      ...GREEN, label: 'Ver Arquivos',         needsUpload: true  },
@@ -78,7 +78,7 @@ function Toast({ toast }) {
   if (!toast.show) return null;
   return (
     <div className={`fixed top-5 right-5 z-[300] flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl border backdrop-blur-xl ${
-      toast.type === 'success' ? 'bg-green-500/20 border-green-500/40 text-green-300' : 'bg-red-500/20 border-red-500/40 text-red-300'
+      toast.type === 'success' ? 'bg-brand/20 border-brand/40 text-brand-lite' : 'bg-red-500/20 border-red-500/40 text-red-300'
     }`}>
       {toast.type === 'success' ? <CheckCircle size={16} /> : <X size={16} />}
       <span className="font-medium text-sm">{toast.message}</span>
@@ -95,7 +95,7 @@ function DeadlineBadge({ deadline }) {
   const diff = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-      isOverdue ? 'bg-red-500/15 text-red-400 border-red-500/25' : diff <= 3 ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/25' : 'bg-white/10 text-gray-400 border-white/15'
+      isOverdue ? 'bg-red-500/15 text-red-400 border-red-500/25' : diff <= 3 ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/25' : 'bg-surface-2 text-txt-dim border-hairline'
     }`}>
       <Calendar size={10} />
       {isOverdue ? `Atrasado ${Math.abs(diff)}d` : diff === 0 ? 'Vence hoje' : `${diff}d restantes`}
@@ -110,12 +110,12 @@ function CarteiraSection({ carteira, defaultOpen = true }) {
 
   return (
     <div
-      className="rounded-2xl border border-white/10 bg-white/[0.04] overflow-hidden"
+      className="nt-glass overflow-hidden"
       style={{ borderLeftColor: carteira.cor, borderLeftWidth: 3 }}
     >
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-white/[0.03] transition-colors"
+        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-surface-2 transition-colors"
       >
         <span
           className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -124,8 +124,8 @@ function CarteiraSection({ carteira, defaultOpen = true }) {
           <Layers size={14} style={{ color: carteira.cor }} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-white">{carteira.nome}</p>
-          {carteira.descricao && <p className="text-[11px] text-gray-500 truncate">{carteira.descricao}</p>}
+          <p className="text-sm font-bold text-txt">{carteira.nome}</p>
+          {carteira.descricao && <p className="text-[11px] text-txt-faint truncate">{carteira.descricao}</p>}
         </div>
         <span
           className="text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0"
@@ -133,13 +133,13 @@ function CarteiraSection({ carteira, defaultOpen = true }) {
         >
           {links.length} {links.length === 1 ? 'link' : 'links'}
         </span>
-        {open ? <ChevronUp size={14} className="text-white/30 flex-shrink-0" /> : <ChevronDown size={14} className="text-white/30 flex-shrink-0" />}
+        {open ? <ChevronUp size={14} className="text-txt-dim flex-shrink-0" /> : <ChevronDown size={14} className="text-txt-dim flex-shrink-0" />}
       </button>
 
       {open && (
-        <div className="px-5 pb-4 space-y-2 border-t border-white/[0.06] pt-3">
+        <div className="px-5 pb-4 space-y-2 border-t border-hairline pt-3">
           {links.length === 0 ? (
-            <p className="text-xs text-white/25 italic py-2">Nenhum link neste setor.</p>
+            <p className="text-xs text-txt-faint italic py-2">Nenhum link neste setor.</p>
           ) : links.map(link => {
             const Icon = getLinkIcon(link.tipo);
             const isClickable = link.url && !['contato'].includes(link.tipo);
@@ -149,18 +149,18 @@ function CarteiraSection({ carteira, defaultOpen = true }) {
               <div
                 key={link.id}
                 onClick={() => isClickable && window.open(href, '_blank', 'noopener,noreferrer')}
-                className={`group flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.06] bg-white/[0.02] transition-all ${
-                  isClickable ? 'cursor-pointer hover:bg-white/[0.07] hover:border-white/[0.12]' : ''
+                className={`group flex items-center gap-3 px-4 py-3 rounded-xl border border-hairline bg-surface transition-all ${
+                  isClickable ? 'cursor-pointer hover:bg-surface-2 hover:border-hairline-hi' : ''
                 }`}
               >
-                <span className="text-gray-500 flex-shrink-0"><Icon size={14} /></span>
+                <span className="text-txt-faint flex-shrink-0"><Icon size={14} /></span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white/90 truncate">{link.nome}</p>
-                  {link.descricao && <p className="text-xs text-white/40 truncate mt-0.5">{link.descricao}</p>}
-                  {link.url && !link.descricao && <p className="text-xs text-white/25 truncate mt-0.5">{link.url}</p>}
+                  <p className="text-sm font-semibold text-txt truncate">{link.nome}</p>
+                  {link.descricao && <p className="text-xs text-txt-dim truncate mt-0.5">{link.descricao}</p>}
+                  {link.url && !link.descricao && <p className="text-xs text-txt-faint truncate mt-0.5">{link.url}</p>}
                 </div>
                 {isClickable && (
-                  <ExternalLink size={13} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
+                  <ExternalLink size={13} className="text-txt-faint group-hover:text-txt-dim transition-colors flex-shrink-0" />
                 )}
               </div>
             );
@@ -380,13 +380,13 @@ function PainelProjeto() {
 
   // ─── Loading / error states ───────────────────────────────────────────────────
   if (loading) return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] nt-page-bg text-txt">
       <UserPageHeader backTo="/selecao-projeto" backLabel="Trocar Projeto" />
-      <main className="flex-grow flex flex-col items-center p-3 md:p-8">
+      <main className="relative z-10 flex-grow flex flex-col items-center p-3 md:p-8">
         <div className="w-full max-w-5xl">
           <div className="text-center mb-8">
-            <div className="h-4 w-32 bg-white/10 rounded-full mx-auto mb-3 animate-pulse" />
-            <div className="h-8 w-64 bg-white/10 rounded-xl mx-auto animate-pulse" />
+            <div className="h-4 w-32 bg-surface-2 rounded-full mx-auto mb-3 animate-pulse" />
+            <div className="h-8 w-64 bg-surface-2 rounded-xl mx-auto animate-pulse" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map(i => <SkeletonPainelCard key={i} />)}
@@ -397,9 +397,9 @@ function PainelProjeto() {
   );
 
   if (errorType) return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] nt-page-bg text-txt">
       <UserPageHeader backTo="/selecao-projeto" backLabel="Trocar Projeto" />
-      <main className="flex-grow flex items-center justify-center">
+      <main className="relative z-10 flex-grow flex items-center justify-center">
         <ErrorState type={errorType} title={errorType === 'notfound' ? 'Projeto não encontrado' : undefined} message={errorType === 'notfound' ? 'Este projeto não existe ou foi removido.' : undefined} onRetry={errorType !== 'notfound' && errorType !== 'permission' ? () => window.location.reload() : undefined} />
       </main>
     </div>
@@ -435,13 +435,13 @@ function PainelProjeto() {
   const hasCarteiras = projetoCarteiras.length > 0;
   const hasLegacyExtras = extras.length > 0 || builtInCards.length > 0;
 
-  const baseClass = 'group bg-white/10 backdrop-blur-md p-4 md:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-white/20 flex flex-col items-center text-center transition-all transform hover:-translate-y-2 min-h-[280px] md:h-[320px] w-full';
+  const baseClass = 'group nt-glass p-4 md:p-10 hover:shadow-2xl flex flex-col items-center text-center transition-all transform hover:-translate-y-2 min-h-[280px] md:h-[320px] w-full';
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden nt-page-bg text-txt">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand-deep/10 rounded-full blur-3xl" />
       </div>
 
       <Toast toast={toast} />
@@ -457,13 +457,13 @@ function PainelProjeto() {
           {/* ── Project header ────────────────────────────────────────────────── */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
-              <p className="text-xs font-bold text-[#57B952] uppercase tracking-widest mb-1">Ambiente de Trabalho</p>
-              <h1 className="text-xl md:text-3xl font-bold text-white">{projeto.nome}</h1>
+              <p className="text-xs font-bold text-brand-lite uppercase tracking-widest mb-1">Ambiente de Trabalho</p>
+              <h1 className="text-xl md:text-3xl font-bold text-txt">{projeto.nome}</h1>
               {projeto.deadline && <div className="mt-2"><DeadlineBadge deadline={projeto.deadline} /></div>}
               {projeto.tags?.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {projeto.tags.map(tag => (
-                    <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gray-400 border border-white/15">{tag}</span>
+                    <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-surface-2 text-txt-dim border border-hairline">{tag}</span>
                   ))}
                 </div>
               )}
@@ -487,12 +487,12 @@ function PainelProjeto() {
           {hasCarteiras && (
             <div className="space-y-3">
               {visibleCarteiras.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-10 text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-3">
-                    <Lock size={20} className="text-white/20" />
+                <div className="nt-glass p-10 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-surface-2 border border-hairline flex items-center justify-center mx-auto mb-3">
+                    <Lock size={20} className="text-txt-faint" />
                   </div>
-                  <p className="text-sm font-semibold text-white/50 mb-1">Sem setores atribuídos</p>
-                  <p className="text-xs text-white/25">Você não possui acesso a nenhum setor neste projeto. Contate seu gerente.</p>
+                  <p className="text-sm font-semibold text-txt-dim mb-1">Sem setores atribuídos</p>
+                  <p className="text-xs text-txt-faint">Você não possui acesso a nenhum setor neste projeto. Contate seu gerente.</p>
                 </div>
               ) : (
                 visibleCarteiras.map(carteira => (
@@ -507,9 +507,9 @@ function PainelProjeto() {
           {!hasCarteiras && (
             <>
               {builtInCards.length === 0 && extras.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center">
+                <div className="rounded-2xl border border-dashed border-hairline p-12 text-center">
                   <Layers size={28} className="text-cyan-400/40 mx-auto mb-3" />
-                  <p className="text-sm font-semibold text-white/50 mb-1">Projeto sem conteúdo configurado</p>
+                  <p className="text-sm font-semibold text-txt-dim mb-1">Projeto sem conteúdo configurado</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -525,9 +525,9 @@ function PainelProjeto() {
                         <div className={`${config.bgColor} p-4 md:p-6 rounded-full mb-4 md:mb-6 group-hover:scale-110 transition-transform ${config.textColor}`}>
                           <CardIcon size={36} className="md:w-12 md:h-12" />
                         </div>
-                        <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">{card.name}</h2>
-                        <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">{card.description || 'Acesse este recurso.'}</p>
-                        {accessCount > 0 && <span className="flex items-center gap-1 text-[10px] text-gray-500 mb-2"><Eye size={10} /> {accessCount} {accessCount === 1 ? 'acesso' : 'acessos'}</span>}
+                        <h2 className="text-lg md:text-2xl font-bold text-txt mb-2 md:mb-3">{card.name}</h2>
+                        <p className="text-sm md:text-base text-txt-dim mb-4 md:mb-6">{card.description || 'Acesse este recurso.'}</p>
+                        {accessCount > 0 && <span className="flex items-center gap-1 text-[10px] text-txt-faint mb-2"><Eye size={10} /> {accessCount} {accessCount === 1 ? 'acesso' : 'acessos'}</span>}
                         {!canManageCarteiras && card.carteiraId && (() => {
                           const s = SETORES_PADRAO.find(s => s.id === card.carteiraId);
                           if (!s) return null;
@@ -548,12 +548,12 @@ function PainelProjeto() {
                       <div key={idx} className="relative">
                         <div className="absolute top-4 right-4 z-20 flex gap-1">
                           {hasUrl && (
-                            <button onClick={(e) => handleCopyLink(e, card.url, idx)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 rounded-full transition-colors bg-white/10 backdrop-blur-md" title="Copiar link">
-                              {copiedIdx === idx ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                            <button onClick={(e) => handleCopyLink(e, card.url, idx)} className="p-2 text-txt-dim hover:text-blue-400 hover:bg-blue-500/20 rounded-full transition-colors bg-surface-2 backdrop-blur-md" title="Copiar link">
+                              {copiedIdx === idx ? <Check size={14} className="text-brand-lite" /> : <Copy size={14} />}
                             </button>
                           )}
                           {(canEdit || canEditCards) && (
-                            <button onClick={(e) => handleDeleteExtraCard(e, card)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded-full transition-colors bg-white/10 backdrop-blur-md" title="Excluir Card">
+                            <button onClick={(e) => handleDeleteExtraCard(e, card)} className="p-2 text-txt-dim hover:text-red-400 hover:bg-red-500/20 rounded-full transition-colors bg-surface-2 backdrop-blur-md" title="Excluir Card">
                               <Trash2 size={18} />
                             </button>
                           )}
@@ -576,8 +576,8 @@ function PainelProjeto() {
 
           {/* Built-in tools compact strip (in carteiras mode) */}
           {hasCarteiras && builtInCards.length > 0 && (
-            <div className="border-t border-white/[0.06] pt-4">
-              <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-2 font-semibold">Ferramentas</p>
+            <div className="border-t border-hairline pt-4">
+              <p className="text-[10px] text-txt-faint uppercase tracking-wider mb-2 font-semibold">Ferramentas</p>
               <div className="flex flex-wrap gap-2">
                 {builtInCards.map(card => (
                   <a
@@ -585,11 +585,11 @@ function PainelProjeto() {
                     href={card.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.09] text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl bg-surface-2 border border-hairline text-txt-dim hover:text-txt hover:bg-hairline-hi/20 transition-colors"
                   >
                     <card.builtInIcon size={13} />
                     {card.name}
-                    <ExternalLink size={10} className="text-gray-600" />
+                    <ExternalLink size={10} className="text-txt-faint" />
                   </a>
                 ))}
               </div>
@@ -598,39 +598,39 @@ function PainelProjeto() {
         </div>
       </main>
 
-      <footer className="w-full py-6 text-center text-gray-400 text-xs border-t border-white/20 bg-white/5 relative z-10">
-        &copy; 2025 Parceria Petrobras &amp; Normatel Engenharia
+      <footer className="w-full py-6 text-center text-txt-dim text-xs border-t border-hairline bg-surface-2 relative z-10">
+        &copy; {new Date().getFullYear()} Normatel Engenharia
       </footer>
 
       {/* ── Legacy edit modal ─────────────────────────────────────────────────── */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#111114] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl border border-white/[0.10] flex flex-col max-h-[95vh] sm:max-h-[88vh]">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.07] flex-shrink-0">
+          <div className="bg-surface-solid rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl border border-hairline flex flex-col max-h-[95vh] sm:max-h-[88vh]">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-hairline flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center">
-                  <Settings size={18} className="text-[#57B952]" />
+                <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/20 flex items-center justify-center">
+                  <Settings size={18} className="text-brand-lite" />
                 </div>
                 <div>
-                  <p className="font-bold text-white text-base leading-tight">Editar Base</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{projeto.nome}</p>
+                  <p className="font-bold text-txt text-base leading-tight">Editar Base</p>
+                  <p className="text-xs text-txt-faint mt-0.5">{projeto.nome}</p>
                 </div>
               </div>
-              <button onClick={() => setIsEditModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors">
+              <button onClick={() => setIsEditModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-2 text-txt-faint hover:text-txt transition-colors">
                 <X size={16} />
               </button>
             </div>
             <form onSubmit={handleSaveEdit} className="flex flex-col flex-1 overflow-hidden">
               <div className="px-6 py-5 space-y-6 overflow-y-auto flex-1">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest">Nome da Base *</label>
-                  <input type="text" value={editedName} onChange={e => setEditedName(e.target.value)} required className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 transition-all" />
+                  <label className="block text-xs font-semibold text-txt-dim uppercase tracking-widest">Nome da Base *</label>
+                  <input type="text" value={editedName} onChange={e => setEditedName(e.target.value)} required className="w-full px-4 py-3 bg-surface-2 border border-hairline rounded-xl text-sm text-txt placeholder-txt-faint focus:outline-none focus:border-brand/60 transition-all" />
                 </div>
                 <CardFieldsForm cards={editedExtras} onAdd={addExtraField} onUpdate={updateExtraField} onRemove={removeExtraField} carteiras={projetoCarteiras} cargosLista={cargosLista} />
               </div>
-              <div className="px-6 py-4 border-t border-white/[0.07] flex gap-3 flex-shrink-0">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors">Cancelar</button>
-                <button type="submit" disabled={saving} className="flex-1 py-3 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
+              <div className="px-6 py-4 border-t border-hairline flex gap-3 flex-shrink-0">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-3 rounded-xl bg-surface-2 border border-hairline text-txt-dim text-sm font-medium hover:bg-hairline-hi/20 transition-colors">Cancelar</button>
+                <button type="submit" disabled={saving} className="nt-glow-btn flex-1 py-3 rounded-xl bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 text-white text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-70">
                   {saving ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Salvando...</> : <><Save size={15} /> Salvar Alterações</>}
                 </button>
               </div>
@@ -642,11 +642,11 @@ function PainelProjeto() {
       {/* ── Confirm Delete Card ───────────────────────────────────────────────── */}
       {confirmDelete.open && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[300] p-4">
-          <div className="bg-[#161618] rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-white/10">
-            <h3 className="text-base font-bold text-white mb-2">Confirmar exclusão</h3>
-            <p className="text-sm text-gray-400 mb-6">Tem certeza que deseja remover este card?</p>
+          <div className="bg-surface-solid rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-hairline">
+            <h3 className="text-base font-bold text-txt mb-2">Confirmar exclusão</h3>
+            <p className="text-sm text-txt-dim mb-6">Tem certeza que deseja remover este card?</p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null })} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition-colors">Cancelar</button>
+              <button onClick={() => setConfirmDelete({ open: false, cardIndex: null, isBuiltIn: false, builtInKey: null })} className="flex-1 py-2.5 rounded-xl bg-surface-2 border border-hairline text-txt-dim text-sm font-medium hover:bg-hairline-hi/20 transition-colors">Cancelar</button>
               <button onClick={confirmDeleteCard} className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors">Excluir</button>
             </div>
           </div>

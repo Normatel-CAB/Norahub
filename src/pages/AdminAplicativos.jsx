@@ -57,7 +57,7 @@ function Toast({ toast }) {
   if (!toast.show) return null;
   return (
     <div className="fixed top-8 right-8 z-[200] animate-fade-in">
-      <div className={`border-l-4 ${toast.type === 'error' ? 'bg-red-500/20 border-red-500' : 'bg-green-500/20 border-[#57B952]'} rounded-lg shadow-2xl p-4 flex items-center gap-3 min-w-[280px] text-white`}>
+      <div className={`border-l-4 ${toast.type === 'error' ? 'bg-red-500/20 border-red-500' : 'bg-brand/20 border-brand'} rounded-lg shadow-2xl p-4 flex items-center gap-3 min-w-[280px] text-white`}>
         <p className="text-sm font-medium">{toast.message}</p>
       </div>
     </div>
@@ -191,25 +191,25 @@ function AdminAplicativos() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] nt-page-bg">
       <Toast toast={toast} />
       <UserPageHeader backTo="/aplicativos" />
 
-      <main className="flex-grow p-3 md:p-8">
+      <main className="relative z-10 flex-grow p-3 md:p-8">
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-3">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-                <Grid3x3 size={28} className="text-[#57B952]" />
+              <h1 className="text-2xl md:text-3xl font-bold text-txt flex items-center gap-3">
+                <Grid3x3 size={28} className="text-brand-lite" />
                 Gerenciar Aplicativos
               </h1>
-              <p className="text-sm text-gray-400 mt-2">
+              <p className="text-sm text-txt-dim mt-2">
                 Cadastre os sistemas da Normatel e escolha quais cargos enxergam cada um.
               </p>
             </div>
             <button
               onClick={openCreate}
-              className="bg-[#57B952] hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow transition-transform hover:scale-105 text-sm"
+              className="bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 transition-all text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow hover:scale-105 text-sm"
             >
               <Plus size={16} /> Novo Aplicativo
             </button>
@@ -217,29 +217,29 @@ function AdminAplicativos() {
 
           {loading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-white/[0.05] animate-pulse" />)}
+              {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-surface-2 animate-pulse" />)}
             </div>
           ) : appsOrdenados.length === 0 ? (
-            <div className="text-center py-16 bg-white/5 border border-white/10 rounded-2xl">
-              <p className="text-gray-300 font-medium">Nenhum aplicativo cadastrado ainda.</p>
-              <p className="text-gray-500 text-sm mt-1">Clique em "Novo Aplicativo" pra começar.</p>
+            <div className="text-center py-16 nt-glass">
+              <p className="text-txt-dim font-medium">Nenhum aplicativo cadastrado ainda.</p>
+              <p className="text-txt-faint text-sm mt-1">Clique em "Novo Aplicativo" pra começar.</p>
             </div>
           ) : (
-            <div className="bg-gray-800/60 border border-gray-700 rounded-2xl divide-y divide-gray-700 overflow-hidden">
+            <div className="nt-glass divide-y divide-hairline overflow-hidden">
               {appsOrdenados.map(app => {
                 const ativo = app.ativo !== false;
                 const cargosLabel = (!app.cargosPermitidos || app.cargosPermitidos.length === 0)
                   ? 'Todos os cargos'
                   : app.cargosPermitidos.join(', ');
                 return (
-                  <div key={app.id} className="flex items-center gap-4 p-4 hover:bg-white/[0.03] transition-colors">
-                    <div className="bg-green-900/30 p-2.5 rounded-lg text-[#57B952] shrink-0">
+                  <div key={app.id} className="flex items-center gap-4 p-4 hover:bg-surface-2 transition-colors">
+                    <div className="bg-brand/15 p-2.5 rounded-lg text-brand-lite shrink-0">
                       <AppIcon name={app.icone} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-white truncate">{app.nome}</p>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gray-400 border border-white/10">
+                        <p className="font-semibold text-txt truncate">{app.nome}</p>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-2 text-txt-dim border border-hairline">
                           {app.categoria}
                         </span>
                         {!ativo && (
@@ -248,21 +248,21 @@ function AdminAplicativos() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{app.url}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Visível para: {cargosLabel}</p>
+                      <p className="text-xs text-txt-faint truncate mt-0.5">{app.url}</p>
+                      <p className="text-xs text-txt-faint mt-0.5">Visível para: {cargosLabel}</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => handleToggleAtivo(app)}
                         title={ativo ? 'Desativar' : 'Ativar'}
-                        className={`p-2 rounded-lg transition-colors ${ativo ? 'text-[#57B952] hover:bg-white/10' : 'text-gray-500 hover:bg-white/10'}`}
+                        className={`p-2 rounded-lg transition-colors ${ativo ? 'text-brand-lite hover:bg-surface-2' : 'text-txt-faint hover:bg-surface-2'}`}
                       >
                         {ativo ? <Power size={16} /> : <PowerOff size={16} />}
                       </button>
                       <button
                         onClick={() => openEdit(app)}
                         title="Editar"
-                        className="p-2 rounded-lg text-gray-300 hover:bg-white/10 transition-colors"
+                        className="p-2 rounded-lg text-txt-dim hover:bg-surface-2 transition-colors"
                       >
                         <Pencil size={16} />
                       </button>
@@ -285,63 +285,63 @@ function AdminAplicativos() {
       {/* Modal criar/editar */}
       {modal.open && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[150]">
-          <div className="bg-gray-800 border border-gray-700 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+          <div className="nt-glass w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
             <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-bold text-txt">
                 {modal.editingId ? 'Editar Aplicativo' : 'Novo Aplicativo'}
               </h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-white">
+              <button onClick={closeModal} className="text-txt-dim hover:text-txt">
                 <X size={20} />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-gray-400 mb-1 block">Nome *</label>
+                <label className="text-xs font-semibold text-txt-dim mb-1 block">Nome *</label>
                 <input
                   value={form.nome}
                   onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white/[0.05] border border-white/[0.10] rounded-lg text-sm text-white focus:outline-none focus:border-[#57B952]/60"
+                  className="w-full px-3 py-2 bg-surface border border-hairline rounded-lg text-sm text-txt focus:outline-none focus:border-brand/60"
                   placeholder="Ex: Sistema de Compras"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-400 mb-1 block">Descrição</label>
+                <label className="text-xs font-semibold text-txt-dim mb-1 block">Descrição</label>
                 <input
                   value={form.descricao}
                   onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white/[0.05] border border-white/[0.10] rounded-lg text-sm text-white focus:outline-none focus:border-[#57B952]/60"
+                  className="w-full px-3 py-2 bg-surface border border-hairline rounded-lg text-sm text-txt focus:outline-none focus:border-brand/60"
                   placeholder="Uma frase curta sobre o que o sistema faz"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-400 mb-1 block">URL *</label>
+                <label className="text-xs font-semibold text-txt-dim mb-1 block">URL *</label>
                 <input
                   value={form.url}
                   onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white/[0.05] border border-white/[0.10] rounded-lg text-sm text-white focus:outline-none focus:border-[#57B952]/60"
+                  className="w-full px-3 py-2 bg-surface border border-hairline rounded-lg text-sm text-txt focus:outline-none focus:border-brand/60"
                   placeholder="https://..."
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-gray-400 mb-1 block">Categoria *</label>
+                  <label className="text-xs font-semibold text-txt-dim mb-1 block">Categoria *</label>
                   <input
                     value={form.categoria}
                     onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/[0.05] border border-white/[0.10] rounded-lg text-sm text-white focus:outline-none focus:border-[#57B952]/60"
+                    className="w-full px-3 py-2 bg-surface border border-hairline rounded-lg text-sm text-txt focus:outline-none focus:border-brand/60"
                     placeholder="Ex: Compras"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-400 mb-1 block">Ícone</label>
+                  <label className="text-xs font-semibold text-txt-dim mb-1 block">Ícone</label>
                   <select
                     value={form.icone}
                     onChange={e => setForm(f => ({ ...f, icone: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/[0.05] border border-white/[0.10] rounded-lg text-sm text-white focus:outline-none focus:border-[#57B952]/60"
+                    className="w-full px-3 py-2 bg-surface border border-hairline rounded-lg text-sm text-txt focus:outline-none focus:border-brand/60"
                   >
                     {ICON_OPTIONS.map(name => (
                       <option key={name} value={name}>{name}</option>
@@ -351,28 +351,28 @@ function AdminAplicativos() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-400 mb-2 block">Quem pode ver</label>
-                <label className="flex items-center gap-2 text-sm text-gray-300 mb-2 cursor-pointer">
+                <label className="text-xs font-semibold text-txt-dim mb-2 block">Quem pode ver</label>
+                <label className="flex items-center gap-2 text-sm text-txt-dim mb-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={form.cargosPermitidos.length === 0}
                     onChange={e => setForm(f => ({ ...f, cargosPermitidos: e.target.checked ? [] : [cargos[0]?.nome].filter(Boolean) }))}
-                    className="accent-[#57B952]"
+                    className="accent-brand"
                   />
                   Todos os cargos
                 </label>
                 {form.cargosPermitidos.length > 0 || cargos.length === 0 ? (
-                  <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto bg-white/[0.03] rounded-lg p-2 border border-white/10">
+                  <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto bg-surface rounded-lg p-2 border border-hairline">
                     {cargos.length === 0 && (
-                      <p className="text-xs text-gray-500 col-span-2">Nenhum cargo cadastrado ainda.</p>
+                      <p className="text-xs text-txt-faint col-span-2">Nenhum cargo cadastrado ainda.</p>
                     )}
                     {cargos.map(cargo => (
-                      <label key={cargo.id} className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                      <label key={cargo.id} className="flex items-center gap-2 text-xs text-txt-dim cursor-pointer">
                         <input
                           type="checkbox"
                           checked={form.cargosPermitidos.includes(cargo.nome)}
                           onChange={() => toggleCargo(cargo.nome)}
-                          className="accent-[#57B952]"
+                          className="accent-brand"
                         />
                         {cargo.nome}
                       </label>
@@ -381,12 +381,12 @@ function AdminAplicativos() {
                 ) : null}
               </div>
 
-              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-txt-dim cursor-pointer">
                 <input
                   type="checkbox"
                   checked={form.ativo}
                   onChange={e => setForm(f => ({ ...f, ativo: e.target.checked }))}
-                  className="accent-[#57B952]"
+                  className="accent-brand"
                 />
                 Ativo (aparece pra quem tem acesso)
               </label>
@@ -395,14 +395,14 @@ function AdminAplicativos() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={closeModal}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-white/5 transition-colors text-sm font-medium"
+                className="flex-1 px-4 py-2 rounded-lg border border-hairline text-txt-dim hover:bg-surface-2 transition-colors text-sm font-medium"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 px-4 py-2 rounded-lg bg-[#57B952] hover:bg-green-600 text-white font-bold flex items-center justify-center gap-2 transition-colors text-sm disabled:opacity-60"
+                className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 transition-all text-white font-bold flex items-center justify-center gap-2 text-sm disabled:opacity-60"
               >
                 <Save size={16} /> {saving ? 'Salvando...' : 'Salvar'}
               </button>
@@ -414,14 +414,14 @@ function AdminAplicativos() {
       {/* Confirmação de exclusão */}
       {confirmDelete.open && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[150]">
-          <div className="bg-gray-800 border border-gray-700 rounded-2xl w-full max-w-sm p-6 text-center">
+          <div className="nt-glass w-full max-w-sm p-6 text-center">
             <AlertTriangle size={36} className="mx-auto text-red-400 mb-3" />
-            <h3 className="text-white font-bold mb-2">Excluir "{confirmDelete.app?.nome}"?</h3>
-            <p className="text-gray-400 text-sm mb-5">Essa ação não pode ser desfeita.</p>
+            <h3 className="text-txt font-bold mb-2">Excluir "{confirmDelete.app?.nome}"?</h3>
+            <p className="text-txt-dim text-sm mb-5">Essa ação não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDelete({ open: false, app: null })}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-white/5 transition-colors text-sm font-medium"
+                className="flex-1 px-4 py-2 rounded-lg border border-hairline text-txt-dim hover:bg-surface-2 transition-colors text-sm font-medium"
               >
                 Cancelar
               </button>

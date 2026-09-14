@@ -37,9 +37,9 @@ const AVATAR_COLORS = [
 function AreaTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-gray-800 border border-white/[0.08] rounded-xl px-3 py-2 shadow-xl">
-      <p className="text-[10px] text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm font-bold text-[#57B952]">{payload[0]?.value} ações</p>
+    <div className="nt-glass px-3 py-2">
+      <p className="text-[10px] text-txt-faint mb-0.5">{label}</p>
+      <p className="text-sm font-bold text-brand-lite">{payload[0]?.value} ações</p>
     </div>
   );
 }
@@ -47,8 +47,8 @@ function AreaTooltip({ active, payload, label }) {
 function BarTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-gray-800 border border-white/[0.08] rounded-xl px-3 py-2 shadow-xl">
-      <p className="text-[10px] text-gray-500 mb-0.5">{label}</p>
+    <div className="nt-glass px-3 py-2">
+      <p className="text-[10px] text-txt-faint mb-0.5">{label}</p>
       <p className="text-sm font-bold text-indigo-400">{payload[0]?.value}</p>
     </div>
   );
@@ -167,17 +167,17 @@ function AdminAnalytics() {
   };
 
   if (authLoading || loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
+    <div className="min-h-screen flex items-center justify-center nt-page-bg">
+      <div className="relative z-10 animate-spin rounded-full h-8 w-8 border-2 border-brand-lite border-t-transparent" />
     </div>
   );
 
   if (error) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 gap-4 p-6">
-      <p className="text-red-400 font-medium">Erro ao carregar os dados. Tente novamente.</p>
+    <div className="min-h-screen flex flex-col items-center justify-center nt-page-bg gap-4 p-6">
+      <p className="relative z-10 text-red-400 font-medium">Erro ao carregar os dados. Tente novamente.</p>
       <button
         onClick={() => { setError(false); setLoading(true); loadData(); }}
-        className="px-5 py-2 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-semibold transition-colors"
+        className="relative z-10 px-5 py-2 rounded-xl bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 transition-all text-white text-sm font-semibold"
       >
         Tentar novamente
       </button>
@@ -186,52 +186,53 @@ function AdminAnalytics() {
 
   const statCards = [
     { label: 'Usuários totais',    value: stats.users,           icon: Users,    color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/20'       },
-    { label: 'Usuários ativos',    value: stats.activeUsers,     icon: Users,    color: 'text-[#57B952]',   bg: 'bg-[#57B952]/10 border-[#57B952]/20'     },
+    { label: 'Usuários ativos',    value: stats.activeUsers,     icon: Users,    color: 'text-brand-lite',  bg: 'bg-brand/10 border-brand/20'              },
     { label: 'Projetos ativos',    value: stats.projects,        icon: Folder,   color: 'text-indigo-400',  bg: 'bg-indigo-500/10 border-indigo-500/20'   },
     { label: 'Ações registradas',  value: stats.totalActivities, icon: Activity, color: 'text-purple-400',  bg: 'bg-purple-500/10 border-purple-500/20'   },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white font-[Outfit,sans-serif] relative overflow-hidden">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen nt-page-bg text-txt font-[Outfit,sans-serif] relative overflow-hidden">
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand-deep/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-white/20 bg-gray-900/50 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-hairline bg-[#050b06]/50 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
+            className="flex items-center gap-2 text-sm text-txt-dim hover:text-txt transition-colors group"
           >
-            <div className="w-8 h-8 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.1] flex items-center justify-center transition-colors">
+            <div className="w-8 h-8 rounded-lg bg-surface group-hover:bg-surface-2 flex items-center justify-center transition-colors">
               <ArrowLeft size={15} />
             </div>
             <span className="hidden sm:inline">Voltar</span>
           </button>
-          <div className="h-4 w-px bg-white/[0.08]" />
+          <div className="h-4 w-px bg-hairline" />
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-purple-500/20 border border-purple-500/20 flex items-center justify-center">
               <TrendingUp size={14} className="text-purple-400" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white leading-tight">Dashboard de Uso</p>
-              <p className="text-[10px] text-gray-600 leading-tight">Últimos 30 dias</p>
+              <p className="text-sm font-semibold text-txt leading-tight">Dashboard de Uso</p>
+              <p className="text-[10px] text-txt-faint leading-tight">Últimos 30 dias</p>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-5">
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {statCards.map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className={`bg-white/10 border rounded-2xl p-4 sm:p-5 ${s.bg}`}>
-                <div className="flex items-start justify-between">
+              <div key={s.label} className="nt-glass nt-beam-host p-4 sm:p-5">
+                <span className="nt-beam" aria-hidden />
+                <div className="nt-beam-content flex items-start justify-between">
                   <div>
-                    <p className="text-xs text-gray-500 mb-2 leading-tight">{s.label}</p>
+                    <p className="text-xs text-txt-faint mb-2 leading-tight">{s.label}</p>
                     <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
                   </div>
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${s.bg}`}>
@@ -244,27 +245,27 @@ function AdminAnalytics() {
         </div>
 
         {/* Area chart — activity timeline */}
-        <div className="bg-white/10 border border-white/20 rounded-2xl p-5">
-          <p className="text-sm font-semibold text-white mb-0.5">Atividade por dia</p>
-          <p className="text-xs text-gray-600 mb-5">Ações registradas nos últimos 30 dias</p>
+        <div className="nt-glass p-5">
+          <p className="text-sm font-semibold text-txt mb-0.5">Atividade por dia</p>
+          <p className="text-xs text-txt-faint mb-5">Ações registradas nos últimos 30 dias</p>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={dailyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#57B952" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#57B952" stopOpacity={0}    />
+                  <stop offset="5%"  stopColor="var(--brand)" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="var(--brand)" stopOpacity={0}    />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--grid)" />
               <XAxis
                 dataKey="dia"
-                tick={{ fill: '#4B5563', fontSize: 10 }}
+                tick={{ fill: 'var(--txt-faint)', fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
                 interval={4}
               />
               <YAxis
-                tick={{ fill: '#4B5563', fontSize: 10 }}
+                tick={{ fill: 'var(--txt-faint)', fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}
@@ -273,11 +274,11 @@ function AdminAnalytics() {
               <Area
                 type="monotone"
                 dataKey="ações"
-                stroke="#57B952"
+                stroke="var(--brand)"
                 strokeWidth={2}
                 fill="url(#greenGrad)"
                 dot={false}
-                activeDot={{ r: 4, fill: '#57B952', strokeWidth: 0 }}
+                activeDot={{ r: 4, fill: 'var(--brand)', strokeWidth: 0 }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -286,17 +287,17 @@ function AdminAnalytics() {
         <div className="grid lg:grid-cols-2 gap-4">
 
           {/* Bar chart — action types */}
-          <div className="bg-white/10 border border-white/20 rounded-2xl p-5">
-            <p className="text-sm font-semibold text-white mb-0.5">Ações mais frequentes</p>
-            <p className="text-xs text-gray-600 mb-5">Top ações nos últimos 30 dias</p>
+          <div className="nt-glass p-5">
+            <p className="text-sm font-semibold text-txt mb-0.5">Ações mais frequentes</p>
+            <p className="text-xs text-txt-faint mb-5">Top ações nos últimos 30 dias</p>
             {actionData.length === 0 ? (
-              <p className="text-xs text-gray-700 py-8 text-center">Sem dados suficientes.</p>
+              <p className="text-xs text-txt-faint py-8 text-center">Sem dados suficientes.</p>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={actionData} layout="vertical" margin={{ top: 0, right: 4, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                  <XAxis type="number" tick={{ fill: '#4B5563', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <YAxis dataKey="action" type="category" tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} width={95} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--grid)" horizontal={false} />
+                  <XAxis type="number" tick={{ fill: 'var(--txt-faint)', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <YAxis dataKey="action" type="category" tick={{ fill: 'var(--txt-dim)', fontSize: 10 }} tickLine={false} axisLine={false} width={95} />
                   <Tooltip content={<BarTooltip />} />
                   <Bar dataKey="total" fill="#6366F1" radius={[0, 4, 4, 0]} maxBarSize={14} />
                 </BarChart>
@@ -305,11 +306,11 @@ function AdminAnalytics() {
           </div>
 
           {/* Top users */}
-          <div className="bg-white/10 border border-white/20 rounded-2xl p-5">
-            <p className="text-sm font-semibold text-white mb-0.5">Usuários mais ativos</p>
-            <p className="text-xs text-gray-600 mb-5">Por número de ações nos últimos 30 dias</p>
+          <div className="nt-glass p-5">
+            <p className="text-sm font-semibold text-txt mb-0.5">Usuários mais ativos</p>
+            <p className="text-xs text-txt-faint mb-5">Por número de ações nos últimos 30 dias</p>
             {topUsers.length === 0 ? (
-              <p className="text-xs text-gray-700 py-8 text-center">Sem dados suficientes.</p>
+              <p className="text-xs text-txt-faint py-8 text-center">Sem dados suficientes.</p>
             ) : (
               <div className="space-y-4">
                 {topUsers.map((u, i) => {
@@ -317,18 +318,18 @@ function AdminAnalytics() {
                   const pct = Math.round((u.count / max) * 100);
                   return (
                     <div key={i} className="flex items-center gap-3">
-                      <span className="text-xs text-gray-700 w-4 text-right flex-shrink-0">{i + 1}</span>
+                      <span className="text-xs text-txt-faint w-4 text-right flex-shrink-0">{i + 1}</span>
                       <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${AVATAR_COLORS[i % AVATAR_COLORS.length]} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
                         {u.name?.charAt(0)?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs text-white font-medium truncate">{u.name}</span>
-                          <span className="text-xs text-gray-600 ml-2 flex-shrink-0">{u.count} ações</span>
+                          <span className="text-xs text-txt font-medium truncate">{u.name}</span>
+                          <span className="text-xs text-txt-faint ml-2 flex-shrink-0">{u.count} ações</span>
                         </div>
-                        <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                        <div className="h-1 bg-surface-2 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-[#57B952] rounded-full transition-all duration-700"
+                            className="h-full bg-brand rounded-full transition-all duration-700"
                             style={{ width: `${pct}%` }}
                           />
                         </div>

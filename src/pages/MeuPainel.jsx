@@ -34,10 +34,10 @@ function MeuPainel() {
   const recentLinksSorted = recentLinks.slice(0, 8);
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden nt-page-bg text-txt">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand-deep/10 rounded-full blur-3xl" />
       </div>
 
       <UserPageHeader backTo="/selecao-projeto" backLabel="Projetos" />
@@ -50,19 +50,19 @@ function MeuPainel() {
 
           {/* Cabeçalho */}
           <div className="mb-8 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#57B952]/20 border border-[#57B952]/30 flex items-center justify-center">
-              <LayoutDashboard size={22} className="text-[#57B952]" />
+            <div className="w-12 h-12 rounded-2xl bg-brand/20 border border-brand/30 flex items-center justify-center">
+              <LayoutDashboard size={22} className="text-brand-lite" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white">Meu Painel</h1>
-              <p className="text-sm text-gray-400">Olá, {primeiroNome}. Seus projetos e links favoritos.</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-txt">Meu Painel</h1>
+              <p className="text-sm text-txt-dim">Olá, {primeiroNome}. Seus projetos e links favoritos.</p>
             </div>
           </div>
 
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-32 bg-white/5 rounded-2xl animate-pulse" />
+                <div key={i} className="h-32 bg-surface-2 rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : (
@@ -73,19 +73,19 @@ function MeuPainel() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Star size={16} className="text-yellow-400 fill-yellow-400" />
-                    <h2 className="text-base font-bold text-white">Projetos Favoritos</h2>
-                    <span className="text-xs text-gray-500 bg-white/10 px-2 py-0.5 rounded-full">{favProjects.length}</span>
+                    <h2 className="text-base font-bold text-txt">Projetos Favoritos</h2>
+                    <span className="text-xs text-txt-faint bg-surface-2 px-2 py-0.5 rounded-full">{favProjects.length}</span>
                   </div>
-                  <button onClick={() => navigate('/selecao-projeto')} className="text-xs text-gray-400 hover:text-[#57B952] flex items-center gap-1 transition-colors">
+                  <button onClick={() => navigate('/selecao-projeto')} className="text-xs text-txt-dim hover:text-brand-lite flex items-center gap-1 transition-colors">
                     Ver todos <ArrowRight size={12} />
                   </button>
                 </div>
 
                 {favProjects.length === 0 ? (
-                  <div className="bg-white/5 rounded-2xl border border-white/10 p-6 text-center">
-                    <Star size={28} className="text-gray-600 mx-auto mb-3" />
-                    <p className="text-sm text-gray-400">Nenhum projeto favoritado ainda.</p>
-                    <button onClick={() => navigate('/selecao-projeto')} className="mt-3 text-xs text-[#57B952] hover:underline">
+                  <div className="nt-glass p-6 text-center">
+                    <Star size={28} className="text-txt-faint mx-auto mb-3" />
+                    <p className="text-sm text-txt-dim">Nenhum projeto favoritado ainda.</p>
+                    <button onClick={() => navigate('/selecao-projeto')} className="mt-3 text-xs text-brand-lite hover:underline">
                       Ir para projetos
                     </button>
                   </div>
@@ -95,18 +95,18 @@ function MeuPainel() {
                       <button
                         key={p.id}
                         onClick={() => navigate(`/projeto/${p.id}`)}
-                        className="group bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 hover:border-[#57B952]/40 text-left transition-all hover:-translate-y-0.5"
+                        className="group nt-glass p-4 hover:border-hairline-hi text-left transition-all hover:-translate-y-0.5"
                       >
                         <div className="flex items-start justify-between mb-2">
-                          <div className="bg-[#57B952]/20 p-1.5 rounded-lg text-[#57B952] border border-[#57B952]/30">
+                          <div className="bg-brand/20 p-1.5 rounded-lg text-brand-lite border border-brand/30">
                             <Briefcase size={14} />
                           </div>
                           <Star size={12} className="text-yellow-400 fill-yellow-400 mt-0.5" />
                         </div>
-                        <p className="text-sm font-semibold text-white group-hover:text-[#57B952] transition-colors line-clamp-2">
+                        <p className="text-sm font-semibold text-txt group-hover:text-brand-lite transition-colors line-clamp-2">
                           {p.name || p.nome}
                         </p>
-                        <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-500">
+                        <div className="mt-2 flex items-center gap-1 text-[10px] text-txt-faint">
                           <span>Abrir projeto</span>
                           <ArrowRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
@@ -121,8 +121,8 @@ function MeuPainel() {
                 <section>
                   <div className="flex items-center gap-2 mb-4">
                     <TrendingUp size={16} className="text-blue-400" />
-                    <h2 className="text-base font-bold text-white">Links Mais Usados</h2>
-                    <span className="text-xs text-gray-500 bg-white/10 px-2 py-0.5 rounded-full">{topLinks.length}</span>
+                    <h2 className="text-base font-bold text-txt">Links Mais Usados</h2>
+                    <span className="text-xs text-txt-faint bg-surface-2 px-2 py-0.5 rounded-full">{topLinks.length}</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {topLinks.map(link => (
@@ -131,14 +131,14 @@ function MeuPainel() {
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-3 rounded-xl border border-white/20 hover:border-blue-400/40 transition-all hover:-translate-y-0.5"
+                        className="group nt-glass flex items-center gap-3 px-4 py-3 hover:border-blue-400/40 transition-all hover:-translate-y-0.5"
                       >
                         <div className="bg-blue-400/15 p-2 rounded-lg border border-blue-400/20 flex-shrink-0">
                           <ExternalLink size={14} className="text-blue-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-white group-hover:text-blue-300 transition-colors truncate">{link.cardName}</p>
-                          <p className="text-[11px] text-gray-500 truncate">{link.projetoNome}</p>
+                          <p className="text-sm font-semibold text-txt group-hover:text-blue-300 transition-colors truncate">{link.cardName}</p>
+                          <p className="text-[11px] text-txt-faint truncate">{link.projetoNome}</p>
                         </div>
                         <span className="flex-shrink-0 text-[10px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-full border border-blue-400/20">
                           {link.accessCount}x
@@ -154,7 +154,7 @@ function MeuPainel() {
                 <section>
                   <div className="flex items-center gap-2 mb-4">
                     <Clock size={16} className="text-purple-400" />
-                    <h2 className="text-base font-bold text-white">Acessados Recentemente</h2>
+                    <h2 className="text-base font-bold text-txt">Acessados Recentemente</h2>
                   </div>
                   <div className="space-y-2">
                     {recentLinksSorted.map(link => {
@@ -167,16 +167,16 @@ function MeuPainel() {
                           href={link.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group flex items-center gap-3 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-xl border border-white/10 hover:border-white/20 transition-all"
+                          className="group flex items-center gap-3 nt-glass hover:bg-surface-2 px-4 py-3 hover:border-hairline-hi transition-all"
                         >
                           <div className="bg-purple-400/15 p-1.5 rounded-lg border border-purple-400/20 flex-shrink-0">
                             <ExternalLink size={12} className="text-purple-400" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">{link.cardName}</p>
-                            <p className="text-[11px] text-gray-500 truncate">{link.projetoNome}</p>
+                            <p className="text-sm font-medium text-txt truncate">{link.cardName}</p>
+                            <p className="text-[11px] text-txt-faint truncate">{link.projetoNome}</p>
                           </div>
-                          <span className="flex-shrink-0 text-[10px] text-gray-500 whitespace-nowrap">{dateStr}</span>
+                          <span className="flex-shrink-0 text-[10px] text-txt-faint whitespace-nowrap">{dateStr}</span>
                         </a>
                       );
                     })}
@@ -187,12 +187,12 @@ function MeuPainel() {
               {/* Estado vazio */}
               {favProjects.length === 0 && recentLinks.length === 0 && (
                 <div className="text-center py-16">
-                  <LayoutDashboard size={40} className="text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400 mb-2">Seu painel está vazio por enquanto.</p>
-                  <p className="text-sm text-gray-500">Favorite projetos e acesse links para popular seu painel.</p>
+                  <LayoutDashboard size={40} className="text-txt-faint mx-auto mb-4" />
+                  <p className="text-txt-dim mb-2">Seu painel está vazio por enquanto.</p>
+                  <p className="text-sm text-txt-faint">Favorite projetos e acesse links para popular seu painel.</p>
                   <button
                     onClick={() => navigate('/selecao-projeto')}
-                    className="mt-6 inline-flex items-center gap-2 bg-[#57B952]/20 hover:bg-[#57B952]/30 text-[#57B952] px-5 py-2.5 rounded-xl font-semibold text-sm border border-[#57B952]/30 transition-colors"
+                    className="mt-6 inline-flex items-center gap-2 bg-brand/20 hover:bg-brand/30 text-brand-lite px-5 py-2.5 rounded-xl font-semibold text-sm border border-brand/30 transition-colors"
                   >
                     Ir para projetos <ArrowRight size={14} />
                   </button>
@@ -203,8 +203,8 @@ function MeuPainel() {
         </div>
       </main>
 
-      <footer className="w-full py-6 text-center text-gray-400 text-xs border-t border-white/20 bg-white/5 relative z-10">
-        &copy; 2025 Parceria Petrobras &amp; Normatel Engenharia
+      <footer className="w-full py-6 text-center text-txt-dim text-xs border-t border-hairline bg-surface-2 relative z-10">
+        &copy; {new Date().getFullYear()} Normatel Engenharia
       </footer>
     </div>
   );

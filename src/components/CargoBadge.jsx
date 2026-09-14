@@ -2,10 +2,10 @@ const CARGO_MAP = {
   'admin':             { bg: 'bg-red-500/15',    border: 'border-red-500/25',    text: 'text-red-400',    dot: 'bg-red-400',    label: 'Administrador' },
   'Gerente de Projeto':{ bg: 'bg-blue-500/15',   border: 'border-blue-500/25',   text: 'text-blue-400',   dot: 'bg-blue-400',   label: 'Gerente de Projeto' },
   'Supervisor':        { bg: 'bg-purple-500/15', border: 'border-purple-500/25', text: 'text-purple-400', dot: 'bg-purple-400', label: 'Supervisor' },
-  'Engenheiro':        { bg: 'bg-green-500/15',  border: 'border-green-500/25',  text: 'text-green-400',  dot: 'bg-green-400',  label: 'Engenheiro' },
+  'Engenheiro':        { bg: 'bg-brand/15',  border: 'border-brand/25',  text: 'text-brand-lite',  dot: 'bg-brand-lite',  label: 'Engenheiro' },
 };
 
-const DEFAULT_CARGO = { bg: 'bg-gray-500/15', border: 'border-gray-500/25', text: 'text-gray-400', dot: 'bg-gray-400' };
+const DEFAULT_CARGO = { bg: 'bg-surface-2', border: 'border-hairline', text: 'text-txt-dim', dot: 'bg-txt-dim' };
 
 function isGerente(funcao) {
   return typeof funcao === 'string' && funcao.toLowerCase().includes('gerente');

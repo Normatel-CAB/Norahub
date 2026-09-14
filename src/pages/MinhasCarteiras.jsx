@@ -83,65 +83,65 @@ export default function MinhasCarteiras() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
+      <div className="min-h-screen flex items-center justify-center nt-page-bg">
+        <div className="relative z-10 animate-spin rounded-full h-8 w-8 border-2 border-brand border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white font-[Outfit,sans-serif] relative overflow-hidden">
+    <div className="min-h-screen nt-page-bg text-txt font-[Outfit,sans-serif] relative overflow-hidden">
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/8 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#57B952]/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand/8 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-gray-900/70 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-hairline bg-surface-card/80 backdrop-blur-md">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
+            className="flex items-center gap-2 text-sm text-txt-dim hover:text-txt transition-colors group"
           >
-            <div className="w-8 h-8 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.10] flex items-center justify-center transition-colors">
+            <div className="w-8 h-8 rounded-lg bg-surface-2 group-hover:bg-hairline-hi/20 flex items-center justify-center transition-colors">
               <ArrowLeft size={15} />
             </div>
             <span className="hidden sm:inline">Voltar</span>
           </button>
-          <div className="h-4 w-px bg-white/[0.08]" />
+          <div className="h-4 w-px bg-hairline" />
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/25 flex items-center justify-center">
               <Shield size={15} className="text-purple-400" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white leading-tight">Meu Cargo</p>
-              <p className="text-[10px] text-gray-500 leading-tight">Função e permissões no sistema</p>
+              <p className="text-sm font-semibold text-txt leading-tight">Meu Cargo</p>
+              <p className="text-[10px] text-txt-faint leading-tight">Função e permissões no sistema</p>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+      <main className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-5">
 
         {/* Card do cargo */}
-        <div className="bg-white/[0.05] border border-white/[0.10] rounded-2xl p-6">
+        <div className="nt-glass p-6">
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-2xl bg-purple-500/20 border border-purple-500/25 flex items-center justify-center flex-shrink-0">
               <Shield size={24} className="text-purple-400" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-white">{cargoData?.nome || nomeCargo}</h1>
+                <h1 className="text-xl font-bold text-txt">{cargoData?.nome || nomeCargo}</h1>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                   cargoData?.status === 'inativo'
                     ? 'bg-red-500/15 text-red-400 border-red-500/20'
-                    : 'bg-[#57B952]/15 text-[#57B952] border-[#57B952]/20'
+                    : 'bg-brand/15 text-brand-lite border-brand/20'
                 }`}>
                   {cargoData?.status === 'inativo' ? 'Inativo' : 'Ativo'}
                 </span>
               </div>
               {cargoData?.descricao ? (
-                <p className="text-sm text-gray-400 mt-1">{cargoData.descricao}</p>
+                <p className="text-sm text-txt-dim mt-1">{cargoData.descricao}</p>
               ) : (
-                <p className="text-sm text-gray-600 mt-1 italic">Sem descrição cadastrada.</p>
+                <p className="text-sm text-txt-faint mt-1 italic">Sem descrição cadastrada.</p>
               )}
             </div>
           </div>
@@ -149,32 +149,32 @@ export default function MinhasCarteiras() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-4 flex items-center gap-3">
+          <div className="nt-glass p-4 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center">
               <Shield size={16} className="text-purple-400" />
             </div>
             <div>
-              <p className="text-xl font-bold text-white">{permsAtivas.length}</p>
-              <p className="text-xs text-gray-500">Permissões ativas</p>
+              <p className="text-xl font-bold text-txt">{permsAtivas.length}</p>
+              <p className="text-xs text-txt-faint">Permissões ativas</p>
             </div>
           </div>
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center">
-              <CheckCircle size={16} className="text-[#57B952]" />
+          <div className="nt-glass p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-brand/15 border border-brand/20 flex items-center justify-center">
+              <CheckCircle size={16} className="text-brand-lite" />
             </div>
             <div>
-              <p className="text-xl font-bold text-white">{PERMISSOES.length}</p>
-              <p className="text-xs text-gray-500">Total possível</p>
+              <p className="text-xl font-bold text-txt">{PERMISSOES.length}</p>
+              <p className="text-xs text-txt-faint">Total possível</p>
             </div>
           </div>
         </div>
 
         {/* Permissões */}
-        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-white/[0.06]">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Permissões do Cargo</p>
+        <div className="nt-glass overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-hairline">
+            <p className="text-xs font-semibold text-txt-faint uppercase tracking-wider">Permissões do Cargo</p>
           </div>
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-hairline">
             {PERMISSOES.map(perm => {
               const active = !!cargoData?.[perm.id];
               const Icon = perm.icon;
@@ -184,15 +184,15 @@ export default function MinhasCarteiras() {
                   className={`flex items-center gap-3 px-5 py-3.5 transition-colors ${active ? '' : 'opacity-40'}`}
                 >
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    active ? 'bg-[#57B952]/20' : 'bg-white/[0.05]'
+                    active ? 'bg-brand/20' : 'bg-surface-2'
                   }`}>
-                    <Icon size={14} className={active ? 'text-[#57B952]' : 'text-gray-600'} />
+                    <Icon size={14} className={active ? 'text-brand-lite' : 'text-txt-faint'} />
                   </div>
-                  <p className={`text-sm font-medium flex-1 ${active ? 'text-white' : 'text-gray-600'}`}>
+                  <p className={`text-sm font-medium flex-1 ${active ? 'text-txt' : 'text-txt-faint'}`}>
                     {perm.label}
                   </p>
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    active ? 'bg-[#57B952]' : 'bg-white/[0.06] border border-white/[0.10]'
+                    active ? 'bg-brand' : 'bg-surface-2 border border-hairline'
                   }`}>
                     {active && <CheckCircle size={11} className="text-white" />}
                   </div>

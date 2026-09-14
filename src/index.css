@@ -19,10 +19,10 @@
 }
 
 .dark {
-  /* MODO ESCURO: Preto com Gradiente Sutil e Texto Branco */
-  --bg-page: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
-  --text-page: #ffffff;
-  --border-color: #374151;
+  /* MODO ESCURO: agora alinhado aos tokens do design-normatel abaixo */
+  --bg-page: var(--bg-deep);
+  --text-page: var(--txt);
+  --border-color: var(--hairline);
 }
 
 /* ===== DESIGN SYSTEM NORMATEL (design-normatel) =====
@@ -123,6 +123,32 @@
   transition: opacity .3s cubic-bezier(.4,0,.2,1);
   background: radial-gradient(130px circle at var(--gx,50%) var(--gy,50%),
                               rgba(255,255,255,.32), transparent 65%);
+}
+
+/* Fundo padrão de página: base sólida + halos estáticos + grade sutil
+   (seção 6 do design system). Aplique na div raiz de cada página no lugar
+   de bg-gray-900/bg-black etc.; o conteúdo direto precisa de "relative z-10"
+   pra ficar acima dos pseudo-elementos (mesmo padrão já usado na Capa). */
+.nt-page-bg {
+  position: relative;
+  background: var(--bg-deep);
+}
+.nt-page-bg::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(900px 520px at 12% -8%,   var(--halo-1), transparent 62%),
+    radial-gradient(800px 500px at 88% 4%,    var(--halo-2), transparent 60%),
+    radial-gradient(1100px 700px at 60% 108%, var(--halo-3), transparent 66%);
+}
+.nt-page-bg::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+                     linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 104px 104px;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 78%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 78%);
 }
 
 .nt-chip {

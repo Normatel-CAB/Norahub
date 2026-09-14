@@ -10,12 +10,12 @@ function VisualizadorDashboard() {
 
   if (!dashboardUrl) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-        <div className="text-center">
-          <p className="text-gray-500 mb-4">Nenhum dashboard selecionado</p>
-          <button 
+      <div className="min-h-screen flex items-center justify-center nt-page-bg">
+        <div className="relative z-10 text-center">
+          <p className="text-txt-faint mb-4">Nenhum dashboard selecionado</p>
+          <button
             onClick={() => navigate(-1)}
-            className="text-[#57B952] hover:underline"
+            className="text-brand-lite hover:underline"
           >
             Voltar
           </button>
@@ -25,18 +25,18 @@ function VisualizadorDashboard() {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] nt-page-bg text-txt">
       {/* Header */}
-      <header className="w-full flex items-center justify-between py-3 md:py-4 px-3 md:px-8 border-b border-gray-700 bg-gray-800 min-h-[56px]">
-        <button 
-          onClick={() => navigate(-1)} 
-          className="flex items-center gap-1 md:gap-2 text-gray-300 hover:text-white transition-colors font-medium text-xs md:text-sm shrink-0"
+      <header className="relative z-10 w-full flex items-center justify-between py-3 md:py-4 px-3 md:px-8 border-b border-hairline bg-surface-card min-h-[56px]">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 md:gap-2 text-txt-dim hover:text-txt transition-colors font-medium text-xs md:text-sm shrink-0"
         >
-          <ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" /> 
+          <ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" />
           <span>Voltar</span>
         </button>
-        
-        <h1 className="text-sm md:text-lg font-bold text-white truncate px-2 text-center flex-1">
+
+        <h1 className="text-sm md:text-lg font-bold text-txt truncate px-2 text-center flex-1">
           {dashboardName || 'Dashboard'}
         </h1>
         
@@ -55,12 +55,12 @@ function VisualizadorDashboard() {
       </header>
 
       {/* Dashboard Content */}
-      <main className="flex-1 w-full h-full relative">
+      <main className="relative z-10 flex-1 w-full h-full">
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+          <div className="absolute inset-0 flex items-center justify-center bg-surface-card">
             <div className="text-center">
               <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-white text-lg">Carregando dashboard...</p>
+              <p className="text-txt text-lg">Carregando dashboard...</p>
             </div>
           </div>
         )}
@@ -75,14 +75,14 @@ function VisualizadorDashboard() {
       </main>
 
       {/* Info Bar */}
-      <div className="w-full py-2 px-4 bg-gray-800 border-t border-gray-700 text-center">
-        <p className="text-xs text-gray-400">
+      <div className="relative z-10 w-full py-2 px-4 bg-surface-card border-t border-hairline text-center">
+        <p className="text-xs text-txt-faint">
           {projeto?.nome && (
             <span className="mr-4">
-              📊 Projeto: <span className="text-gray-300 font-semibold">{projeto.nome}</span>
+              📊 Projeto: <span className="text-txt-dim font-semibold">{projeto.nome}</span>
             </span>
           )}
-          <span className="text-gray-500">
+          <span className="text-txt-faint">
             Pressione F11 para tela cheia
           </span>
         </p>

@@ -72,15 +72,15 @@ function avatarColor(name = '') {
     'from-pink-500 to-pink-700',
     'from-orange-500 to-orange-700',
     'from-teal-500 to-teal-700',
-    'from-[#57B952] to-[#3d8c38]',
+    'from-brand to-brand-deep',
   ];
   return colors[name.charCodeAt(0) % colors.length] ?? colors[0];
 }
 
 function StatusBadge({ status }) {
   if (status === 'ativo') return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-500/15 text-green-400 border border-green-500/20">
-      <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+    <span className="nt-chip">
+      <span className="w-1.5 h-1.5 rounded-full bg-brand-lite" />
       Ativo
     </span>
   );
@@ -97,13 +97,13 @@ function Toast({ toast }) {
   return (
     <div className={`fixed top-5 right-5 z-[300] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl animate-fade-in ${
       toast.type === 'success'
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border-green-500/30 text-green-400'
-        : 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border-red-500/30 text-red-400'
+        ? 'bg-surface-solid border-brand/30 text-brand-lite'
+        : 'bg-surface-solid border-red-500/30 text-red-400'
     }`}>
-      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${toast.type === 'success' ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${toast.type === 'success' ? 'bg-brand/20' : 'bg-red-500/20'}`}>
         {toast.type === 'success' ? <CheckCircle size={14} /> : <X size={14} />}
       </div>
-      <span className="font-medium text-sm text-white">{toast.message}</span>
+      <span className="font-medium text-sm text-txt">{toast.message}</span>
     </div>
   );
 }
@@ -327,44 +327,44 @@ function AdminDashboard() {
 
   const stats = [
     { label: 'Total de Usuários', value: users.length, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
-    { label: 'Usuários Ativos', value: users.filter(u => u.statusAcesso === 'ativo').length, icon: UserCheck, color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' },
+    { label: 'Usuários Ativos', value: users.filter(u => u.statusAcesso === 'ativo').length, icon: UserCheck, color: 'text-brand-lite', bg: 'bg-brand/10 border-brand/20' },
     { label: 'Aguardando Aprovação', value: users.filter(u => u.statusAcesso === 'pendente').length, icon: UserX, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
   ];
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
+    <div className="min-h-screen flex items-center justify-center nt-page-bg">
+      <div className="relative z-10 animate-spin rounded-full h-8 w-8 border-2 border-brand-lite border-t-transparent" />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white font-[Outfit,sans-serif] relative overflow-hidden">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen nt-page-bg text-txt font-[Outfit,sans-serif] relative overflow-hidden">
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand-deep/10 rounded-full blur-3xl pointer-events-none" />
       <Toast toast={toast} />
 
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-white/20 bg-gray-900/50 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-hairline bg-[#050b06]/50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Usa navigate(-1) para voltar corretamente para Gerência ou de onde veio */}
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
+              className="flex items-center gap-2 text-sm text-txt-dim hover:text-txt transition-colors group"
             >
-              <div className="w-8 h-8 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.1] flex items-center justify-center transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-surface group-hover:bg-surface-2 flex items-center justify-center transition-colors">
                 <ArrowLeft size={15} />
               </div>
               <span className="hidden sm:inline">Voltar</span>
             </button>
-            <div className="h-4 w-px bg-white/[0.08]" />
+            <div className="h-4 w-px bg-surface-2" />
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-500/20 flex items-center justify-center">
                 <Users size={14} className="text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white leading-tight">Gestão de Usuários</p>
-                <p className="text-[10px] text-gray-500 leading-tight">Gerência</p>
+                <p className="text-sm font-semibold text-txt leading-tight">Gestão de Usuários</p>
+                <p className="text-[10px] text-txt-faint leading-tight">Gerência</p>
               </div>
             </div>
           </div>
@@ -373,17 +373,18 @@ function AdminDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 sm:gap-4">
           {stats.map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className={`relative overflow-hidden bg-white/10 border rounded-2xl p-4 sm:p-5 ${s.bg}`}>
-                <div className="flex items-start justify-between">
+              <div key={s.label} className="nt-glass nt-beam-host p-4 sm:p-5">
+                <span className="nt-beam" aria-hidden />
+                <div className="nt-beam-content flex items-start justify-between">
                   <div>
-                    <p className="text-xs text-gray-500 mb-2 leading-tight">{s.label}</p>
+                    <p className="text-xs text-txt-faint mb-2 leading-tight">{s.label}</p>
                     <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
                   </div>
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${s.bg}`}>
@@ -397,16 +398,16 @@ function AdminDashboard() {
 
         {/* Auto-Approval — admin only */}
         {isAdmin && (
-          <div className="flex items-center justify-between gap-4 px-5 py-4 rounded-2xl bg-white/10 border border-white/20">
+          <div className="flex items-center justify-between gap-4 px-5 py-4 nt-glass">
             <div className="flex items-center gap-3">
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-colors ${
-                autoApproval ? 'bg-[#57B952]/15 border-[#57B952]/25' : 'bg-white/[0.05] border-white/20'
+                autoApproval ? 'bg-brand/15 border-brand/25' : 'bg-surface border-hairline'
               }`}>
-                <Zap size={15} className={autoApproval ? 'text-[#57B952]' : 'text-gray-600'} />
+                <Zap size={15} className={autoApproval ? 'text-brand-lite' : 'text-txt-faint'} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Aprovação automática</p>
-                <p className="text-xs text-gray-600 mt-0.5">
+                <p className="text-sm font-semibold text-txt">Aprovação automática</p>
+                <p className="text-xs text-txt-faint mt-0.5">
                   {autoApproval ? 'Novos cadastros ativados automaticamente' : 'Novos cadastros aguardam aprovação manual'}
                 </p>
               </div>
@@ -415,7 +416,7 @@ function AdminDashboard() {
               onClick={toggleAutoApproval}
               disabled={togglingApproval}
               className={`relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 ${
-                autoApproval ? 'bg-[#57B952]' : 'bg-white/15'
+                autoApproval ? 'bg-brand' : 'bg-surface-2'
               } ${togglingApproval ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
             >
               <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 ${autoApproval ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -431,8 +432,8 @@ function AdminDashboard() {
                 <Shield size={15} className="text-amber-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Migração pendente</p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-sm font-semibold text-txt">Migração pendente</p>
+                <p className="text-xs text-txt-faint mt-0.5">
                   {migracaoPendente} usuário(s) com campo legado "carteira" precisam ser migrados para "cargo"
                 </p>
               </div>
@@ -440,7 +441,7 @@ function AdminDashboard() {
             <button
               onClick={handleMigracao}
               disabled={migrando}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex-shrink-0"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-txt text-sm font-semibold transition-colors disabled:opacity-50 flex-shrink-0"
             >
               {migrando
                 ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -452,18 +453,18 @@ function AdminDashboard() {
 
         {/* Global Notice Management — admin only */}
         {isAdmin && (
-          <div className="bg-white/10 border border-white/20 rounded-2xl p-5 space-y-4">
+          <div className="nt-glass p-5 space-y-4">
             <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-colors ${noticeActive ? 'bg-indigo-500/15 border-indigo-500/25' : 'bg-white/[0.05] border-white/20'}`}>
-                <Megaphone size={15} className={noticeActive ? 'text-indigo-400' : 'text-gray-600'} />
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-colors ${noticeActive ? 'bg-indigo-500/15 border-indigo-500/25' : 'bg-surface border-hairline'}`}>
+                <Megaphone size={15} className={noticeActive ? 'text-indigo-400' : 'text-txt-faint'} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-white">Aviso global</p>
-                <p className="text-xs text-gray-600 mt-0.5">Aparece para todos os usuários logados</p>
+                <p className="text-sm font-semibold text-txt">Aviso global</p>
+                <p className="text-xs text-txt-faint mt-0.5">Aparece para todos os usuários logados</p>
               </div>
               <button
                 onClick={() => setNoticeActive(p => !p)}
-                className={`relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 ${noticeActive ? 'bg-indigo-500' : 'bg-white/15'}`}
+                className={`relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 ${noticeActive ? 'bg-indigo-500' : 'bg-surface-2'}`}
               >
                 <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 ${noticeActive ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
@@ -474,23 +475,23 @@ function AdminDashboard() {
                 value={noticeMsg}
                 onChange={e => setNoticeMsg(e.target.value)}
                 placeholder="Digite a mensagem que aparecerá para todos os usuários..."
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-sm text-white placeholder-gray-700 focus:outline-none focus:border-indigo-500/40 transition-all resize-none leading-relaxed"
+                className="w-full px-4 py-3 bg-surface-2 border border-hairline rounded-xl text-sm text-txt placeholder-txt-faint focus:outline-none focus:border-indigo-500/40 transition-all resize-none leading-relaxed"
               />
               <div className="flex gap-3">
                 <select
                   value={noticeType}
                   onChange={e => setNoticeType(e.target.value)}
-                  className="flex-1 px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500/40 transition-all"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
+                  className="flex-1 px-3 py-2.5 bg-surface-2 border border-hairline rounded-xl text-sm text-txt focus:outline-none focus:border-indigo-500/40 transition-all"
+                  style={{ backgroundColor: 'var(--surface)' }}
                 >
-                  <option value="info"    style={{ backgroundColor: '#111', color: '#fff' }}>Informação (azul)</option>
-                  <option value="warning" style={{ backgroundColor: '#111', color: '#fff' }}>Atenção (amarelo)</option>
-                  <option value="alert"   style={{ backgroundColor: '#111', color: '#fff' }}>Alerta (vermelho)</option>
+                  <option value="info"    style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>Informação (azul)</option>
+                  <option value="warning" style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>Atenção (amarelo)</option>
+                  <option value="alert"   style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>Alerta (vermelho)</option>
                 </select>
                 <button
                   onClick={saveNotice}
                   disabled={savingNotice}
-                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex-shrink-0"
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-txt text-sm font-semibold transition-colors disabled:opacity-50 flex-shrink-0"
                 >
                   {savingNotice
                     ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -504,31 +505,31 @@ function AdminDashboard() {
         )}
 
         {/* Table card */}
-        <div className="bg-white/10 border border-white/20 rounded-2xl overflow-hidden">
+        <div className="nt-glass overflow-hidden">
 
           {/* Filters inside the card */}
-          <div className="px-5 py-4 border-b border-white/10 flex flex-col sm:flex-row gap-3">
+          <div className="px-5 py-4 border-b border-hairline flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-txt-faint pointer-events-none" />
               <input
                 type="text"
                 placeholder="Buscar por nome ou email..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-white/10 border border-white/20 rounded-xl text-sm text-white placeholder-gray-700 focus:outline-none focus:border-[#57B952]/40 transition-all"
+                className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-hairline rounded-xl text-sm text-txt placeholder-txt-faint focus:outline-none focus:border-brand/40 transition-all"
               />
             </div>
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-sm focus:outline-none focus:border-[#57B952]/40 transition-all text-white"
-              style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
+              className="px-3 py-2 bg-surface-2 border border-hairline rounded-xl text-sm focus:outline-none focus:border-brand/40 transition-all text-txt"
+              style={{ backgroundColor: 'var(--surface)' }}
             >
-              <option value="all" style={{ backgroundColor: '#111', color: '#fff' }}>Todos</option>
-              <option value="ativo" style={{ backgroundColor: '#111', color: '#fff' }}>Ativos</option>
-              <option value="pendente" style={{ backgroundColor: '#111', color: '#fff' }}>Pendentes</option>
+              <option value="all" style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>Todos</option>
+              <option value="ativo" style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>Ativos</option>
+              <option value="pendente" style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>Pendentes</option>
             </select>
-            <span className="self-center text-xs text-gray-600 whitespace-nowrap">
+            <span className="self-center text-xs text-txt-faint whitespace-nowrap">
               {filteredUsers.length} usuário(s)
             </span>
           </div>
@@ -537,26 +538,26 @@ function AdminDashboard() {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/[0.05]">
+                <tr className="border-b border-hairline">
                   {['Usuário', 'Status', 'Último acesso', 'Cargo / Ação', 'Projetos', 'Setores', ''].map(h => (
-                    <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-gray-600 uppercase tracking-wider ${h === '' ? 'text-right' : 'text-left'}`}>{h}</th>
+                    <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-txt-faint uppercase tracking-wider ${h === '' ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {paginatedUsers.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-5 py-16 text-center text-gray-700 text-sm">
+                    <td colSpan="7" className="px-5 py-16 text-center text-txt-faint text-sm">
                       {users.length === 0 ? 'Nenhum usuário cadastrado ainda.' : 'Nenhum resultado encontrado.'}
                     </td>
                   </tr>
                 ) : paginatedUsers.map((user, idx) => (
                   <tr
                     key={user.id}
-                    className={`border-b border-white/[0.04] transition-colors ${
+                    className={`border-b border-hairline transition-colors ${
                       user.statusAcesso === 'pendente'
                         ? 'bg-amber-500/[0.03]'
-                        : 'hover:bg-white/10'
+                        : 'hover:bg-surface-2'
                     }`}
                   >
                     {/* Usuário */}
@@ -565,12 +566,12 @@ function AdminDashboard() {
                         onClick={() => setSelectedUser(user)}
                         className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity group"
                       >
-                        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarColor(user.nome)} flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm group-hover:ring-2 group-hover:ring-white/20 transition-all`}>
+                        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarColor(user.nome)} flex items-center justify-center text-txt text-sm font-bold flex-shrink-0 shadow-sm group-hover:ring-2 group-hover:ring-hairline-hi transition-all`}>
                           {user.nome?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-white leading-tight group-hover:text-[#57B952] transition-colors">{user.nome || '—'}</p>
-                          <p className="text-xs text-gray-600 mt-0.5">{user.email}</p>
+                          <p className="text-sm font-semibold text-txt leading-tight group-hover:text-brand-lite transition-colors">{user.nome || '—'}</p>
+                          <p className="text-xs text-txt-faint mt-0.5">{user.email}</p>
                         </div>
                       </button>
                     </td>
@@ -582,7 +583,7 @@ function AdminDashboard() {
 
                     {/* Último acesso */}
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                      <div className="flex items-center gap-1.5 text-xs text-txt-faint">
                         <Clock size={11} />
                         {formatLastSeen(user.lastSeen)}
                       </div>
@@ -595,15 +596,15 @@ function AdminDashboard() {
                           <select
                             value={pendingRoles[user.id] ?? user.funcao ?? 'colaborador'}
                             onChange={e => setPendingRoles(prev => ({ ...prev, [user.id]: e.target.value }))}
-                            className="text-xs px-2.5 py-1.5 rounded-lg border border-white/[0.10] bg-white/[0.05] text-white focus:outline-none focus:border-[#57B952]/50"
-                            style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                            className="text-xs px-2.5 py-1.5 rounded-lg border border-hairline bg-surface text-txt focus:outline-none focus:border-brand/50"
+                            style={{ backgroundColor: 'var(--surface)' }}
                           >
-                            {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: '#111', color: '#fff' }}>{c.nome}</option>)}
-                            {isAdmin && <option value="admin" style={{ backgroundColor: '#111', color: '#fff' }}>Administrador</option>}
+                            {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>{c.nome}</option>)}
+                            {isAdmin && <option value="admin" style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>Administrador</option>}
                           </select>
                           <button
                             onClick={() => handleApprove(user, pendingRoles[user.id] ?? user.funcao ?? 'colaborador')}
-                            className="p-1.5 rounded-lg bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25 transition-colors"
+                            className="p-1.5 rounded-lg bg-brand/15 text-brand-lite border border-brand/25 hover:bg-brand/25 transition-colors"
                             title="Aprovar"
                           >
                             <CheckCircle size={14} />
@@ -621,15 +622,15 @@ function AdminDashboard() {
                           value={user.funcao || 'colaborador'}
                           onChange={e => handleRoleChange(user.id, e.target.value)}
                           disabled={user.funcao === 'admin' && !isAdmin}
-                          className={`text-xs px-2.5 py-1.5 rounded-lg border focus:outline-none transition-colors text-white ${
+                          className={`text-xs px-2.5 py-1.5 rounded-lg border focus:outline-none transition-colors text-txt ${
                             user.funcao === 'admin' && !isAdmin
-                              ? 'border-white/5 opacity-40 cursor-not-allowed bg-white/10'
-                              : 'border-white/[0.10] bg-white/[0.05] cursor-pointer hover:border-white/20 focus:border-[#57B952]/50'
+                              ? 'border-hairline opacity-40 cursor-not-allowed bg-surface-2'
+                              : 'border-hairline bg-surface cursor-pointer hover:border-hairline focus:border-brand/50'
                           }`}
-                          style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                          style={{ backgroundColor: 'var(--surface)' }}
                         >
-                          {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: '#111', color: '#fff' }}>{c.nome}</option>)}
-                          {isAdmin && <option value="admin" style={{ backgroundColor: '#111', color: '#fff' }}>Administrador</option>}
+                          {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>{c.nome}</option>)}
+                          {isAdmin && <option value="admin" style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>Administrador</option>}
                         </select>
                       )}
                     </td>
@@ -638,7 +639,7 @@ function AdminDashboard() {
                     <td className="px-5 py-3.5">
                       <button
                         onClick={() => setModalProjetos({ open: true, userId: user.id, userName: user.nome, projetosAtuais: user.projetos || [] })}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20 hover:bg-[#57B952]/20 transition-colors font-medium"
+                        className="text-xs px-3 py-1.5 rounded-lg bg-brand/10 text-brand-lite border border-brand/20 hover:bg-brand/20 transition-colors font-medium"
                       >
                         {(user.projetos || []).length > 0 ? `${user.projetos.length} proj.` : '+ Atribuir'}
                       </button>
@@ -654,7 +655,7 @@ function AdminDashboard() {
                             className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
                               total > 0
                                 ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20'
-                                : 'bg-white/5 text-gray-500 border-white/10 hover:bg-white/10 hover:text-gray-300'
+                                : 'bg-surface text-txt-faint border-hairline hover:bg-surface-2 hover:text-txt-dim'
                             }`}
                           >
                             {total > 0 ? `${total} setor${total !== 1 ? 'es' : ''}` : '+ Atribuir'}
@@ -670,8 +671,8 @@ function AdminDashboard() {
                         disabled={user.funcao === 'admin' && !isAdmin}
                         className={`p-1.5 rounded-lg transition-colors ${
                           user.funcao === 'admin' && !isAdmin
-                            ? 'opacity-20 cursor-not-allowed text-gray-600'
-                            : 'text-gray-600 hover:text-red-400 hover:bg-red-500/15'
+                            ? 'opacity-20 cursor-not-allowed text-txt-faint'
+                            : 'text-txt-faint hover:text-red-400 hover:bg-red-500/15'
                         }`}
                         title="Remover usuário"
                       >
@@ -687,18 +688,18 @@ function AdminDashboard() {
           {/* Mobile cards */}
           <div className="md:hidden divide-y divide-white/10">
             {paginatedUsers.length === 0 ? (
-              <p className="py-14 text-center text-gray-700 text-sm">Nenhum usuário encontrado.</p>
+              <p className="py-14 text-center text-txt-faint text-sm">Nenhum usuário encontrado.</p>
             ) : paginatedUsers.map(user => (
               <div key={user.id} className={`p-4 space-y-3 ${user.statusAcesso === 'pendente' ? 'bg-amber-500/[0.03]' : ''}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarColor(user.nome)} flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
+                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarColor(user.nome)} flex items-center justify-center text-txt text-sm font-bold flex-shrink-0`}>
                       {user.nome?.charAt(0)?.toUpperCase() || '?'}
                     </div>
                     <div>
-                      <p className="font-semibold text-sm text-white">{user.nome || '—'}</p>
-                      <p className="text-xs text-gray-600">{user.email}</p>
-                      <p className="text-xs text-gray-700 mt-0.5 flex items-center gap-1"><Clock size={9} /> {formatLastSeen(user.lastSeen)}</p>
+                      <p className="font-semibold text-sm text-txt">{user.nome || '—'}</p>
+                      <p className="text-xs text-txt-faint">{user.email}</p>
+                      <p className="text-xs text-txt-faint mt-0.5 flex items-center gap-1"><Clock size={9} /> {formatLastSeen(user.lastSeen)}</p>
                     </div>
                   </div>
                   <StatusBadge status={user.statusAcesso} />
@@ -707,18 +708,18 @@ function AdminDashboard() {
                   <select
                     value={user.funcao || 'colaborador'}
                     onChange={e => user.statusAcesso !== 'pendente' && handleRoleChange(user.id, e.target.value)}
-                    className="flex-1 text-xs px-3 py-2 rounded-xl border border-white/[0.10] bg-white/[0.05] text-white focus:outline-none"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                    className="flex-1 text-xs px-3 py-2 rounded-xl border border-hairline bg-surface text-txt focus:outline-none"
+                    style={{ backgroundColor: 'var(--surface)' }}
                   >
-                    {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: '#111', color: '#fff' }}>{c.nome}</option>)}
-                    {isAdmin && <option value="admin" style={{ backgroundColor: '#111', color: '#fff' }}>Administrador</option>}
+                    {cargos.map(c => <option key={c.id} value={c.nome} style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>{c.nome}</option>)}
+                    {isAdmin && <option value="admin" style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>Administrador</option>}
                   </select>
                   {user.statusAcesso === 'pendente' && (
-                    <button onClick={() => handleApprove(user, user.funcao || 'colaborador')} className="p-2 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25"><CheckCircle size={16} /></button>
+                    <button onClick={() => handleApprove(user, user.funcao || 'colaborador')} className="p-2 rounded-xl bg-brand/15 text-brand-lite border border-brand/25"><CheckCircle size={16} /></button>
                   )}
-                  <button onClick={() => setModalProjetos({ open: true, userId: user.id, userName: user.nome, projetosAtuais: user.projetos || [] })} className="p-2 rounded-xl bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20"><Briefcase size={16} /></button>
+                  <button onClick={() => setModalProjetos({ open: true, userId: user.id, userName: user.nome, projetosAtuais: user.projetos || [] })} className="p-2 rounded-xl bg-brand/10 text-brand-lite border border-brand/20"><Briefcase size={16} /></button>
                   <button onClick={() => openSetoresModal(user)} className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"><Layers size={16} /></button>
-                  <button onClick={() => setConfirmDelete({ open: true, userId: user.id, userName: user.nome || user.email })} className="p-2 rounded-xl text-gray-600 hover:text-red-400 hover:bg-red-500/15 transition-colors"><Trash2 size={16} /></button>
+                  <button onClick={() => setConfirmDelete({ open: true, userId: user.id, userName: user.nome || user.email })} className="p-2 rounded-xl text-txt-faint hover:text-red-400 hover:bg-red-500/15 transition-colors"><Trash2 size={16} /></button>
                 </div>
               </div>
             ))}
@@ -726,15 +727,15 @@ function AdminDashboard() {
 
           {/* Pagination — dentro do card */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-5 py-3.5 border-t border-white/10 bg-white/[0.05]">
-              <span className="text-xs text-gray-600">
+            <div className="flex items-center justify-between px-5 py-3.5 border-t border-hairline bg-surface">
+              <span className="text-xs text-txt-faint">
                 Mostrando {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredUsers.length)} de {filteredUsers.length}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setPage(p => p - 1)}
                   disabled={page === 0}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/20 text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-hairline text-txt-faint hover:text-txt hover:bg-surface-2 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft size={15} />
                 </button>
@@ -744,8 +745,8 @@ function AdminDashboard() {
                     onClick={() => setPage(i)}
                     className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
                       i === page
-                        ? 'bg-[#57B952] text-white'
-                        : 'text-gray-500 hover:text-white hover:bg-white/[0.06] border border-white/20'
+                        ? 'bg-brand text-white'
+                        : 'text-txt-faint hover:text-txt hover:bg-surface-2 border border-hairline'
                     }`}
                   >
                     {i + 1}
@@ -754,7 +755,7 @@ function AdminDashboard() {
                 <button
                   onClick={() => setPage(p => p + 1)}
                   disabled={page + 1 >= totalPages}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/20 text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-hairline text-txt-faint hover:text-txt hover:bg-surface-2 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <ChevronRight size={15} />
                 </button>
@@ -767,22 +768,22 @@ function AdminDashboard() {
       {/* ── Confirm delete modal ── */}
       {confirmDelete.open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="nt-glass p-6 w-full max-w-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/20 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle size={17} className="text-red-400" />
               </div>
               <div>
-                <p className="font-bold text-white text-sm">Remover usuário</p>
-                <p className="text-xs text-gray-600">Esta ação não pode ser desfeita.</p>
+                <p className="font-bold text-txt text-sm">Remover usuário</p>
+                <p className="text-xs text-txt-faint">Esta ação não pode ser desfeita.</p>
               </div>
             </div>
-            <p className="text-sm text-gray-400 mb-5">
-              Remover <span className="text-white font-semibold">{confirmDelete.userName}</span> do sistema?
+            <p className="text-sm text-txt-dim mb-5">
+              Remover <span className="text-txt font-semibold">{confirmDelete.userName}</span> do sistema?
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete({ open: false, userId: null, userName: '' })} className="flex-1 py-2.5 rounded-xl bg-white/10 border border-white/20 text-gray-300 text-sm font-medium hover:bg-white/[0.08] transition-colors">Cancelar</button>
-              <button onClick={deleteUser} className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-colors">Remover</button>
+              <button onClick={() => setConfirmDelete({ open: false, userId: null, userName: '' })} className="flex-1 py-2.5 rounded-xl bg-surface-2 border border-hairline text-txt-dim text-sm font-medium hover:bg-surface-2 transition-colors">Cancelar</button>
+              <button onClick={deleteUser} className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-txt text-sm font-bold transition-colors">Remover</button>
             </div>
           </div>
         </div>
@@ -800,20 +801,20 @@ function AdminDashboard() {
       {/* ── Setores modal ── */}
       {modalSetores.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-gray-800 border border-white/20 rounded-2xl shadow-2xl w-full max-w-lg max-h-[82vh] flex flex-col">
+          <div className="nt-glass w-full max-w-lg max-h-[82vh] flex flex-col">
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/20">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-hairline">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
                   <Layers size={14} className="text-cyan-400" />
                 </div>
                 <div>
-                  <p className="font-bold text-white text-sm">Atribuir Setores</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{modalSetores.userName}</p>
+                  <p className="font-bold text-txt text-sm">Atribuir Setores</p>
+                  <p className="text-xs text-txt-faint mt-0.5">{modalSetores.userName}</p>
                 </div>
               </div>
-              <button onClick={() => setModalSetores({ open: false, userId: null, userName: '', setores: [] })} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors">
+              <button onClick={() => setModalSetores({ open: false, userId: null, userName: '', setores: [] })} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-2 text-txt-faint hover:text-txt transition-colors">
                 <X size={15} />
               </button>
             </div>
@@ -821,13 +822,13 @@ function AdminDashboard() {
             {/* Search */}
             <div className="px-4 pt-4 pb-2">
               <div className="relative">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-txt-faint pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Buscar setor..."
                   value={searchSetores}
                   onChange={e => setSearchSetores(e.target.value)}
-                  className="w-full pl-8 pr-4 py-2 bg-white/10 border border-white/20 rounded-xl text-sm text-white placeholder-gray-700 focus:outline-none focus:border-cyan-500/40"
+                  className="w-full pl-8 pr-4 py-2 bg-surface-2 border border-hairline rounded-xl text-sm text-txt placeholder-txt-faint focus:outline-none focus:border-cyan-500/40"
                 />
               </div>
             </div>
@@ -842,7 +843,7 @@ function AdminDashboard() {
                   <label
                     key={setor.id}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors border ${
-                      checked ? 'border-cyan-500/25 bg-cyan-500/10' : 'border-transparent hover:bg-white/10'
+                      checked ? 'border-cyan-500/25 bg-cyan-500/10' : 'border-transparent hover:bg-surface-2'
                     }`}
                   >
                     <input
@@ -852,20 +853,20 @@ function AdminDashboard() {
                       className="w-4 h-4 flex-shrink-0 accent-cyan-400"
                     />
                     <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: setor.cor }} />
-                    <span className="text-sm text-white font-medium flex-1">{setor.nome}</span>
+                    <span className="text-sm text-txt font-medium flex-1">{setor.nome}</span>
                   </label>
                 );
               })}
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-4 border-t border-white/20 flex items-center justify-between gap-3">
-              <span className="text-xs text-gray-600">
+            <div className="px-4 py-4 border-t border-hairline flex items-center justify-between gap-3">
+              <span className="text-xs text-txt-faint">
                 {modalSetores.setores.length} setor(es) selecionado(s)
               </span>
               <div className="flex gap-3">
-                <button onClick={() => setModalSetores({ open: false, userId: null, userName: '', setores: [] })} className="px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-sm text-gray-300 font-medium hover:bg-white/[0.08] transition-colors">Cancelar</button>
-                <button onClick={salvarSetores} className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-bold transition-colors">Salvar</button>
+                <button onClick={() => setModalSetores({ open: false, userId: null, userName: '', setores: [] })} className="px-4 py-2.5 rounded-xl bg-surface-2 border border-hairline text-sm text-txt-dim font-medium hover:bg-surface-2 transition-colors">Cancelar</button>
+                <button onClick={salvarSetores} className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-txt text-sm font-bold transition-colors">Salvar</button>
               </div>
             </div>
           </div>
@@ -875,25 +876,25 @@ function AdminDashboard() {
       {/* ── Projects modal ── */}
       {modalProjetos.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-gray-800 border border-white/20 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/20">
+          <div className="nt-glass w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-hairline">
               <div>
-                <p className="font-bold text-white text-sm">Atribuir Projetos</p>
-                <p className="text-xs text-gray-500 mt-0.5">{modalProjetos.userName}</p>
+                <p className="font-bold text-txt text-sm">Atribuir Projetos</p>
+                <p className="text-xs text-txt-faint mt-0.5">{modalProjetos.userName}</p>
               </div>
-              <button onClick={() => setModalProjetos({ open: false, userId: null, userName: '', projetosAtuais: [] })} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/[0.07] text-gray-500 hover:text-white transition-colors">
+              <button onClick={() => setModalProjetos({ open: false, userId: null, userName: '', projetosAtuais: [] })} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-2 text-txt-faint hover:text-txt transition-colors">
                 <X size={15} />
               </button>
             </div>
             <div className="px-4 pt-4 pb-2">
               <div className="relative">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-txt-faint pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Buscar projetos..."
                   value={searchProjetos}
                   onChange={e => setSearchProjetos(e.target.value)}
-                  className="w-full pl-8 pr-4 py-2 bg-white/10 border border-white/20 rounded-xl text-sm text-white placeholder-gray-700 focus:outline-none focus:border-[#57B952]/40"
+                  className="w-full pl-8 pr-4 py-2 bg-surface-2 border border-hairline rounded-xl text-sm text-txt placeholder-txt-faint focus:outline-none focus:border-brand/40"
                 />
               </div>
             </div>
@@ -906,7 +907,7 @@ function AdminDashboard() {
                     <label
                       key={projeto.id}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors border ${
-                        checked ? 'bg-[#57B952]/10 border-[#57B952]/20' : 'border-transparent hover:bg-white/10'
+                        checked ? 'bg-brand/10 border-brand/20' : 'border-transparent hover:bg-surface-2'
                       }`}
                     >
                       <input
@@ -918,17 +919,17 @@ function AdminDashboard() {
                             : [...modalProjetos.projetosAtuais, projeto.id];
                           setModalProjetos(prev => ({ ...prev, projetosAtuais: updated }));
                         }}
-                        className="accent-[#57B952] w-4 h-4 flex-shrink-0"
+                        className="accent-brand w-4 h-4 flex-shrink-0"
                       />
-                      <span className="text-sm text-white">{projeto.nome}</span>
+                      <span className="text-sm text-txt">{projeto.nome}</span>
                     </label>
                   );
                 })}
-              {projetos.length === 0 && <p className="text-center text-gray-700 text-sm py-8">Nenhum projeto cadastrado.</p>}
+              {projetos.length === 0 && <p className="text-center text-txt-faint text-sm py-8">Nenhum projeto cadastrado.</p>}
             </div>
-            <div className="px-4 py-4 border-t border-white/20 flex gap-3">
-              <button onClick={() => setModalProjetos({ open: false, userId: null, userName: '', projetosAtuais: [] })} className="flex-1 py-2.5 rounded-xl bg-white/10 border border-white/20 text-sm text-gray-300 font-medium hover:bg-white/[0.08] transition-colors">Cancelar</button>
-              <button onClick={salvarProjetos} className="flex-1 py-2.5 rounded-xl bg-[#57B952] hover:bg-[#4aa847] text-white text-sm font-bold transition-colors">
+            <div className="px-4 py-4 border-t border-hairline flex gap-3">
+              <button onClick={() => setModalProjetos({ open: false, userId: null, userName: '', projetosAtuais: [] })} className="flex-1 py-2.5 rounded-xl bg-surface-2 border border-hairline text-sm text-txt-dim font-medium hover:bg-surface-2 transition-colors">Cancelar</button>
+              <button onClick={salvarProjetos} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 transition-all text-white text-sm font-bold">
                 Salvar ({modalProjetos.projetosAtuais.length})
               </button>
             </div>

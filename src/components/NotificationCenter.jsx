@@ -66,7 +66,7 @@ const NotificationCenter = () => {
       case 'form_response':
         return <FileText size={18} className="text-blue-500" />;
       case 'file_upload':
-        return <Upload size={18} className="text-green-500" />;
+        return <Upload size={18} className="text-brand-lite" />;
       case 'approval':
         return <CheckCircle size={18} className="text-purple-500" />;
       case 'comment':
@@ -74,7 +74,7 @@ const NotificationCenter = () => {
       case 'system':
         return <AlertCircle size={18} className="text-red-500" />;
       default:
-        return <Bell size={18} className="text-gray-500" />;
+        return <Bell size={18} className="text-txt-faint" />;
     }
   };
 
@@ -105,7 +105,7 @@ const NotificationCenter = () => {
         className="relative p-2 hover:bg-white/10 rounded-lg transition-colors"
         aria-label="Notificações"
       >
-        <Bell size={20} className="text-white" />
+        <Bell size={20} className="text-txt" />
         {unreadCount > 0 && (
           <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -115,15 +115,15 @@ const NotificationCenter = () => {
 
       {/* Dropdown de Notificações */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 md:w-96 bg-gray-800 backdrop-blur-xl rounded-lg shadow-xl border border-gray-700 z-50 max-h-[80vh] flex flex-col">
+        <div className="absolute right-0 mt-2 w-80 md:w-96 nt-glass rounded-lg shadow-xl z-50 max-h-[80vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
-            <h3 className="text-lg font-semibold text-white">Notificações</h3>
+          <div className="flex items-center justify-between p-4 border-b border-hairline">
+            <h3 className="text-lg font-semibold text-txt">Notificações</h3>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="text-sm text-[#57B952] hover:text-[#4a9e44] font-medium flex items-center gap-1"
+                  className="text-sm text-brand-lite hover:brightness-110 font-medium flex items-center gap-1"
                   title="Marcar todas como lidas"
                 >
                   <CheckCheck size={16} />
@@ -135,7 +135,7 @@ const NotificationCenter = () => {
                 className="p-1 hover:bg-white/10 rounded"
                 aria-label="Fechar"
               >
-                <X size={18} className="text-gray-400" />
+                <X size={18} className="text-txt-dim" />
               </button>
             </div>
           </div>
@@ -143,8 +143,8 @@ const NotificationCenter = () => {
           {/* Lista de Notificações */}
           <div className="overflow-y-auto flex-1">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <Bell size={48} className="mx-auto mb-3 text-gray-300" />
+              <div className="p-8 text-center text-txt-faint">
+                <Bell size={48} className="mx-auto mb-3 text-txt-dim" />
                 <p className="text-sm">Nenhuma notificação</p>
               </div>
             ) : (
@@ -169,18 +169,18 @@ const NotificationCenter = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <p className={`text-sm font-medium ${
-                            !notification.read ? 'text-white' : 'text-gray-300'
+                            !notification.read ? 'text-txt' : 'text-txt-dim'
                           }`}>
                             {notification.title}
                           </p>
                           {!notification.read && (
-                            <div className="w-2 h-2 bg-[#57B952] rounded-full flex-shrink-0 mt-1" />
+                            <div className="w-2 h-2 bg-brand rounded-full flex-shrink-0 mt-1" />
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                        <p className="text-sm text-txt-faint mt-1 line-clamp-2">
                           {notification.message}
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-txt-dim mt-1">
                           {formatTimestamp(notification.createdAt)}
                         </p>
                       </div>
@@ -193,8 +193,8 @@ const NotificationCenter = () => {
 
           {/* Footer (se houver muitas notificações) */}
           {notifications.length > 10 && (
-            <div className="p-3 border-t border-gray-700 text-center">
-              <button className="text-sm text-[#57B952] hover:text-[#4a9e44] font-medium">
+            <div className="p-3 border-t border-hairline text-center">
+              <button className="text-sm text-brand-lite hover:brightness-110 font-medium">
                 Ver todas as notificações
               </button>
             </div>

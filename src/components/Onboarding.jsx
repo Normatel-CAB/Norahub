@@ -49,26 +49,26 @@ export function Onboarding({ onCreateProject }) {
   };
 
   return (
-    <div className="mb-6 relative bg-gradient-to-r from-[#57B952]/10 via-transparent to-blue-500/10 border border-[#57B952]/20 rounded-2xl p-5 overflow-hidden">
-      <div className="absolute -top-8 -right-8 w-32 h-32 bg-[#57B952]/5 rounded-full pointer-events-none" />
+    <div className="mb-6 relative bg-gradient-to-r from-brand/10 via-transparent to-blue-500/10 border border-brand/20 rounded-2xl p-5 overflow-hidden">
+      <div className="absolute -top-8 -right-8 w-32 h-32 bg-brand/5 rounded-full pointer-events-none" />
       <button
         onClick={dismiss}
-        className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-600 hover:text-white hover:bg-white/10 transition-colors"
+        className="absolute top-3 right-3 p-1.5 rounded-lg text-txt-faint hover:text-txt hover:bg-white/10 transition-colors"
         title="Dispensar"
       >
         <X size={14} />
       </button>
 
       <div className="flex items-start gap-4 pr-8">
-        <div className="w-11 h-11 rounded-xl bg-[#57B952]/20 border border-[#57B952]/30 flex items-center justify-center flex-shrink-0">
-          <Icon size={20} className="text-[#57B952]" />
+        <div className="w-11 h-11 rounded-xl bg-brand/20 border border-brand/30 flex items-center justify-center flex-shrink-0">
+          <Icon size={20} className="text-brand-lite" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] text-[#57B952] font-semibold uppercase tracking-widest mb-1">
+          <p className="text-[11px] text-brand-lite font-semibold uppercase tracking-widest mb-1">
             Bem-vindo, {primeiroNome} · Passo {step + 1}/{STEPS.length}
           </p>
-          <h3 className="font-bold text-white text-sm mb-1">{title}</h3>
-          <p className="text-xs text-gray-400 mb-3 leading-relaxed">{description}</p>
+          <h3 className="font-bold text-txt text-sm mb-1">{title}</h3>
+          <p className="text-xs text-txt-dim mb-3 leading-relaxed">{description}</p>
           <div className="flex items-center gap-3">
             <div className="flex gap-1">
               {STEPS.map((_, i) => (
@@ -76,9 +76,9 @@ export function Onboarding({ onCreateProject }) {
                   key={i}
                   className={`h-1 rounded-full transition-all ${
                     i < step
-                      ? 'w-4 bg-[#57B952]'
+                      ? 'w-4 bg-brand'
                       : i === step
-                      ? 'w-6 bg-[#57B952]'
+                      ? 'w-6 bg-brand'
                       : 'w-4 bg-white/20'
                   }`}
                 />
@@ -86,7 +86,7 @@ export function Onboarding({ onCreateProject }) {
             </div>
             <button
               onClick={next}
-              className="flex items-center gap-1 text-xs font-semibold text-[#57B952] hover:text-green-300 transition-colors"
+              className="flex items-center gap-1 text-xs font-semibold text-brand-lite hover:brightness-110 transition-colors"
             >
               {isLast ? (
                 <><Check size={13} /> Criar primeiro projeto</>

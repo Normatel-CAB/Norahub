@@ -68,8 +68,8 @@ function PrivateRoute({ children, requiredRole, requiredPermission }) {
 
   // Spinner enquanto a sessão ou o perfil carregam
   const spinner = (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-900">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#57B952]" />
+    <div className="min-h-screen w-full flex items-center justify-center nt-page-bg">
+      <div className="relative z-10 animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand" />
     </div>
   );
 

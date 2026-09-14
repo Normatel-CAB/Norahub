@@ -60,7 +60,7 @@ export const sendEmailToCollaborator = async ({ email, title, message, actionUrl
     <div style="font-family: Arial, sans-serif; color: #111; line-height: 1.5;">
       <h2 style="margin:0 0 12px; color:#111;">${safeTitle}</h2>
       <p style="margin:0 0 16px;">${safeMessage}</p>
-      ${actionUrl ? `<a href="${actionUrl}" style="display:inline-block;padding:10px 16px;background:#57B952;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Abrir</a>` : ''}
+      ${actionUrl ? `<a href="${actionUrl}" style="display:inline-block;padding:10px 16px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Abrir</a>` : ''}
       <p style="margin:16px 0 0; color:#555; font-size:12px;">Enviado via NoraHub</p>
     </div>
   `;

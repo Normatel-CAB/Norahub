@@ -124,60 +124,60 @@ function AdminProjetos() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 transition-colors duration-200 relative text-white">
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden nt-page-bg transition-colors duration-200 relative text-txt">
       {/* Background decorativo */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand-deep/10 rounded-full blur-3xl"></div>
       </div>
       {alertInfo && <Alert message={alertInfo.message} type={alertInfo.type} onClose={() => setAlertInfo(null)} />}
 
-      <header className="relative w-full flex items-center justify-center py-3 md:py-6 px-3 md:px-8 border-b border-gray-700 min-h-[56px] md:h-20 bg-gray-900/50">
-        <button onClick={() => navigate('/admin')} className="absolute left-3 md:left-8 flex items-center gap-1 md:gap-2 text-gray-500 hover:text-[#57B952] transition-colors font-medium text-xs md:text-sm shrink-0 z-10">
+      <header className="relative z-10 w-full flex items-center justify-center py-3 md:py-6 px-3 md:px-8 border-b border-hairline min-h-[56px] md:h-20 bg-[#050b06]/50">
+        <button onClick={() => navigate('/admin')} className="absolute left-3 md:left-8 flex items-center gap-1 md:gap-2 text-txt-faint hover:text-brand-lite transition-colors font-medium text-xs md:text-sm shrink-0 z-10">
           <ArrowLeft size={16} className="md:w-5 md:h-5" />
           <span className="hidden sm:inline">Voltar</span>
         </button>
         <div className="flex items-center justify-center">
-          <img 
-            src={isDark ? "/img/Normatel Engenharia_BRANCO.png" : "/img/Normatel Engenharia_PRETO.png"} 
-            alt="Logo" 
-            className="h-6 sm:h-8 md:h-10 w-auto object-contain drop-shadow-lg" 
+          <img
+            src={isDark ? "/img/Normatel Engenharia_BRANCO.png" : "/img/Normatel Engenharia_PRETO.png"}
+            alt="Logo"
+            className="h-6 sm:h-8 md:h-10 w-auto object-contain drop-shadow-lg"
           />
         </div>
       </header>
 
-      <main className="flex-grow flex flex-col items-center p-3 md:p-8">
+      <main className="relative z-10 flex-grow flex flex-col items-center p-3 md:p-8">
         <div className="w-full max-w-6xl">
           <div className="mb-4 md:mb-8">
-            <h1 className="text-xl md:text-3xl font-bold text-white flex items-center gap-2">
-              <Users className="text-[#57B952]" size={24} /> Gerenciar Membros dos Projetos
+            <h1 className="text-xl md:text-3xl font-bold text-txt flex items-center gap-2">
+              <Users className="text-brand-lite" size={24} /> Gerenciar Membros dos Projetos
             </h1>
-            <p className="text-gray-500 mt-2">Defina quais usuários podem visualizar cada projeto.</p>
+            <p className="text-txt-faint mt-2">Defina quais usuários podem visualizar cada projeto.</p>
           </div>
 
           {loading ? (
-            <div className="text-center py-20 text-gray-500">Carregando projetos...</div>
+            <div className="text-center py-20 text-txt-faint">Carregando projetos...</div>
           ) : projetos.length === 0 ? (
-            <div className="text-center py-20 bg-white/10 backdrop-blur-md rounded-xl shadow border border-white/20 text-gray-300">
-              <p className="text-gray-500">Nenhum projeto cadastrado.</p>
+            <div className="text-center py-20 nt-glass text-txt-dim">
+              <p className="text-txt-faint">Nenhum projeto cadastrado.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {projetos.map((projeto) => (
-                <div key={projeto.id} className="bg-white/10 backdrop-blur-md rounded-lg shadow-md border border-white/20 p-6 text-white">
+                <div key={projeto.id} className="nt-glass p-6 text-txt">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className="text-xl font-bold text-white">{projeto.nome}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{projeto.descricao || '-'}</p>
+                      <h3 className="text-xl font-bold text-txt">{projeto.nome}</h3>
+                      <p className="text-sm text-txt-faint mt-1">{projeto.descricao || '-'}</p>
                     </div>
                   </div>
-                  
+
                   <div className="mb-4">
-                    <p className="text-sm font-medium text-gray-300 mb-2">
-                      Membros: <span className="font-bold text-[#57B952]">{(projeto.membros || []).length}</span>
+                    <p className="text-sm font-medium text-txt-dim mb-2">
+                      Membros: <span className="font-bold text-brand-lite">{(projeto.membros || []).length}</span>
                     </p>
                     {(projeto.membros || []).length > 0 && (
-                      <ul className="text-xs text-gray-300 space-y-1 bg-white/10 p-2 rounded">
+                      <ul className="text-xs text-txt-dim space-y-1 bg-surface-2 p-2 rounded">
                         {projeto.membros.map(userId => (
                           <li key={userId} className="truncate">• {getNomeUsuario(userId)}</li>
                         ))}
@@ -185,9 +185,9 @@ function AdminProjetos() {
                     )}
                   </div>
 
-                  <button 
+                  <button
                     onClick={() => abrirModal(projeto)}
-                    className="w-full px-4 py-2 bg-[#57B952] hover:bg-green-600 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                    className="w-full px-4 py-2 bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 transition-all text-white rounded-lg font-semibold flex items-center justify-center gap-2"
                   >
                     <Plus size={16} /> Gerenciar Membros
                   </button>
@@ -201,35 +201,35 @@ function AdminProjetos() {
       {/* Modal de Gerenciamento de Membros */}
       {modalOpen && projetoSelecionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 mx-4 max-h-[90vh] overflow-y-auto border border-gray-700 text-white">
+          <div className="nt-glass max-w-md w-full p-6 mx-4 max-h-[90vh] overflow-y-auto text-txt">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-white">Membros: {projetoSelecionado.nome}</h2>
-              <button onClick={fecharModal} className="text-gray-600 hover:text-red-600 transition-colors">
+              <h2 className="text-xl font-bold text-txt">Membros: {projetoSelecionado.nome}</h2>
+              <button onClick={fecharModal} className="text-txt-faint hover:text-red-400 transition-colors">
                 <X size={20} />
               </button>
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">Adicionar Usuário</label>
+              <label className="block text-sm font-medium text-txt-dim mb-2">Adicionar Usuário</label>
               <div className="flex gap-2">
                 <select
                   value={usuarioParaAdicionar}
                   onChange={(e) => setUsuarioParaAdicionar(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg border border-white/20 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: '#f9fafb' }}
+                  className="flex-1 px-3 py-2 rounded-lg border border-hairline focus:ring-2 focus:ring-brand outline-none text-sm"
+                  style={{ backgroundColor: 'var(--surface-2)', color: 'var(--txt)' }}
                 >
-                  <option value="" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Selecione um usuário... ({usuarios.filter(u => !membrosAdicionados.includes(String(u.id))).length} disponíveis)</option>
+                  <option value="" style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>Selecione um usuário... ({usuarios.filter(u => !membrosAdicionados.includes(String(u.id))).length} disponíveis)</option>
                   {usuarios
                     .filter(u => !membrosAdicionados.includes(String(u.id)))
                     .map(u => (
-                      <option key={u.id} value={u.id} style={{ backgroundColor: '#ffffff', color: '#111827' }}>
+                      <option key={u.id} value={u.id} style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>
                         {u.nome} ({u.email})
                       </option>
                     ))}
                 </select>
                 <button
                   onClick={adicionarMembro}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-txt rounded-lg font-semibold transition-colors"
                 >
                   <Plus size={18} />
                 </button>
@@ -237,14 +237,14 @@ function AdminProjetos() {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">Membros Atuais ({membrosAdicionados.length})</label>
+              <label className="block text-sm font-medium text-txt-dim mb-2">Membros Atuais ({membrosAdicionados.length})</label>
               {membrosAdicionados.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">Nenhum membro adicionado</p>
+                <p className="text-sm text-txt-faint text-center py-4">Nenhum membro adicionado</p>
               ) : (
-                <div className="space-y-2 bg-white/5 p-3 rounded-lg max-h-64 overflow-y-auto">
+                <div className="space-y-2 bg-surface p-3 rounded-lg max-h-64 overflow-y-auto">
                   {membrosAdicionados.map(userId => (
-                    <div key={userId} className="flex items-center justify-between p-2 bg-white/10 rounded border border-white/20 text-white">
-                      <span className="text-sm text-white">{getNomeUsuario(userId)}</span>
+                    <div key={userId} className="flex items-center justify-between p-2 bg-surface-2 rounded border border-hairline text-txt">
+                      <span className="text-sm text-txt">{getNomeUsuario(userId)}</span>
                       <button
                         onClick={() => removerMembro(userId)}
                         className="p-1 text-red-400 hover:bg-red-500/20 rounded transition-colors"
@@ -261,18 +261,18 @@ function AdminProjetos() {
               <button
                 onClick={fecharModal}
                 disabled={savingLoading}
-                className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-2 rounded-lg bg-surface border border-hairline text-txt-dim font-medium hover:bg-surface-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancelar
               </button>
               <button
                 onClick={salvarMembros}
                 disabled={savingLoading}
-                className="flex-1 py-2 rounded-lg bg-[#57B952] hover:bg-green-600 text-white font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-2 rounded-lg bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 transition-all text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savingLoading ? (
                   <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-4 w-4 text-txt" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>

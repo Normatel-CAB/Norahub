@@ -45,8 +45,8 @@ const OPCOES = [
     descricao: 'Criar e gerenciar projetos disponíveis no sistema',
     icon: Briefcase,
     path: '/gerencia-projetos',
-    cor: 'text-green-400',
-    bg: 'bg-green-500/10 border-green-500/20',
+    cor: 'text-brand-lite',
+    bg: 'bg-brand/10 border-brand/20',
     permissao: 'canCreateProjetos',
   },
   {
@@ -128,22 +128,22 @@ function Gerencia() {
   const opcoesVisiveis = OPCOES.filter(o => isAdmin || hasPermission(o));
 
   if (authLoading || loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#57B952] border-t-transparent" />
+    <div className="nt-page-bg min-h-screen flex items-center justify-center relative">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand border-t-transparent relative z-10" />
     </div>
   );
 
   if (!isAdmin && opcoesVisiveis.length === 0) return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
-      <div className="text-center max-w-xs">
+    <div className="nt-page-bg min-h-screen flex items-center justify-center p-6 relative">
+      <div className="text-center max-w-xs relative z-10">
         <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-5">
           <Lock size={26} className="text-red-400" />
         </div>
-        <h1 className="text-xl font-bold text-white mb-2">Acesso Restrito</h1>
-        <p className="text-gray-500 text-sm mb-7">Você não tem permissão para acessar esta área.</p>
+        <h1 className="text-xl font-bold text-txt mb-2">Acesso Restrito</h1>
+        <p className="text-txt-faint text-sm mb-7">Você não tem permissão para acessar esta área.</p>
         <button
           onClick={() => navigate('/selecao-projeto')}
-          className="flex items-center gap-2 mx-auto text-sm text-[#57B952] hover:text-white transition-colors"
+          className="flex items-center gap-2 mx-auto text-sm text-brand-lite hover:text-txt transition-colors"
         >
           <ArrowLeft size={15} /> Voltar para projetos
         </button>
@@ -152,30 +152,28 @@ function Gerencia() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white font-[Outfit,sans-serif] relative overflow-hidden">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="nt-page-bg min-h-screen text-txt font-[Outfit,sans-serif] relative overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-white/20 bg-gray-900/50 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-hairline backdrop-blur-md" style={{ background: 'rgba(9, 22, 11, 0.6)' }}>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
+            className="flex items-center gap-2 text-sm text-txt-dim hover:text-txt transition-colors group"
           >
             <div className="w-8 h-8 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.1] flex items-center justify-center transition-colors">
               <ArrowLeft size={15} />
             </div>
             <span className="hidden sm:inline">Voltar</span>
           </button>
-          <span className="text-sm font-medium text-gray-400">Área de Gerência</span>
+          <span className="text-sm font-medium text-txt-dim">Área de Gerência</span>
           <div className="w-16" />
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12 relative z-10">
         <div className="mb-10">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">Olá, {primeiroNome}</h1>
-          <p className="text-gray-500 mt-2 text-sm">Selecione uma área para gerenciar.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-txt">Olá, {primeiroNome}</h1>
+          <p className="text-txt-faint mt-2 text-sm">Selecione uma área para gerenciar.</p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -190,19 +188,19 @@ function Gerencia() {
                 className={`group relative text-left p-6 rounded-2xl border transition-all duration-200 ${
                   enabled
                     ? `${opcao.bg} hover:scale-[1.02] hover:shadow-xl cursor-pointer`
-                    : 'bg-white/[0.02] border-white/[0.06] opacity-40 cursor-not-allowed'
+                    : 'bg-white/[0.02] border-hairline opacity-40 cursor-not-allowed'
                 }`}
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-5 border ${
-                  enabled ? `${opcao.bg}` : 'bg-white/5 border-white/10'
+                  enabled ? `${opcao.bg}` : 'bg-white/5 border-hairline'
                 }`}>
                   {enabled
                     ? <Icon size={20} className={opcao.cor} />
-                    : <Lock size={18} className="text-gray-600" />
+                    : <Lock size={18} className="text-txt-faint" />
                   }
                 </div>
-                <h3 className="font-semibold text-white mb-1.5">{opcao.titulo}</h3>
-                <p className="text-xs text-gray-500 leading-relaxed">{opcao.descricao}</p>
+                <h3 className="font-semibold text-txt mb-1.5">{opcao.titulo}</h3>
+                <p className="text-xs text-txt-faint leading-relaxed">{opcao.descricao}</p>
                 {enabled && (
                   <ChevronRight
                     size={15}

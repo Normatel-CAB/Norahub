@@ -43,8 +43,8 @@ const AdminAplicativos       = lazy(() => import('./pages/AdminAplicativos'));
 
 function RouteSpinner() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#57B952]" />
+    <div className="min-h-screen w-full flex items-center justify-center nt-page-bg">
+      <div className="relative z-10 animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand" />
     </div>
   );
 }

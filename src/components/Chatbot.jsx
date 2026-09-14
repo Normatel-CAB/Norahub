@@ -272,7 +272,7 @@ ${chatbotConfig.aiSettings.customInstructions}
 
 🎨 **10. TEMAS E INTERFACE**
    • **Tema claro/escuro**: Toggle no topo (sol/lua)
-   • **Cores personalizadas**: Verde Petrobras (#57B952)
+   • **Cores personalizadas**: Verde Normatel (#4CAF50)
    • **Responsivo**: Funciona em desktop, tablet, mobile
    • **PWA**: Instalável como app (manifest.json)
    • **Animações**: Transições suaves
@@ -758,13 +758,13 @@ ${conversationHistory || 'Nenhuma mensagem anterior.'}
       <div className="fixed bottom-20 right-6 z-50">
         <button
           onClick={() => setIsOpen(true)}
-          className="w-16 h-16 bg-white/10 backdrop-blur-xl hover:bg-white/20 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 group p-2 border-2 border-[#57B952]"
+          className="w-16 h-16 bg-surface-2 backdrop-blur-xl hover:bg-surface rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 group p-2 border-2 border-brand"
           title="Conversar com Nora (assistente virtual)"
         >
           <img src="/img/Simbolo.png" alt="Nora" className="w-full h-full object-contain" />
           <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-lite opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-4 w-4 bg-brand"></span>
           </span>
         </button>
       </div>
@@ -772,10 +772,10 @@ ${conversationHistory || 'Nenhuma mensagem anterior.'}
   }
 
   return (
-    <div className={`fixed bottom-20 right-6 z-50 bg-gradient-to-b from-gray-900 to-gray-950 backdrop-blur-xl shadow-2xl rounded-2xl border border-gray-700 flex flex-col transition-all duration-300 overflow-hidden ${isMinimized ? 'h-16 w-72' : 'h-[600px] w-[380px] sm:w-[420px]'}`}>
-      
+    <div className={`fixed bottom-20 right-6 z-50 bg-gradient-to-b from-bg to-bg-deep backdrop-blur-xl shadow-2xl rounded-2xl border border-hairline flex flex-col transition-all duration-300 overflow-hidden ${isMinimized ? 'h-16 w-72' : 'h-[600px] w-[380px] sm:w-[420px]'}`}>
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#57B952] to-[#469e41] p-4 flex items-center justify-between shadow-md">
+      <div className="bg-gradient-to-r from-brand-lite to-brand p-4 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 p-1">
             <img src="/img/Simbolo.png" alt="Nora" className="w-full h-full object-contain" />
@@ -817,14 +817,14 @@ ${conversationHistory || 'Nenhuma mensagem anterior.'}
       {!isMinimized && (
         <>
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-950/30 to-gray-900/50">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-bg-deep/30 to-bg/50">
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
                 <div className={`flex gap-2 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm ${msg.role === 'user' ? 'bg-green-500/20 text-green-400' : 'bg-white/20 backdrop-blur-md border border-white/30 p-1'}`}>
+                  <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm ${msg.role === 'user' ? 'bg-brand/20 text-brand-lite' : 'bg-white/20 backdrop-blur-md border border-white/30 p-1'}`}>
                     {msg.role === 'user' ? <User size={16} /> : <img src="/img/Simbolo.png" alt="Nora" className="w-full h-full object-contain" />}
                   </div>
-                  <div className={`p-3 rounded-2xl shadow-sm text-sm leading-relaxed ${msg.role === 'user' ? 'bg-[#57B952] text-white rounded-tr-none' : 'bg-white/10 border border-white/20 text-gray-100 rounded-tl-none backdrop-blur-sm'}`}>
+                  <div className={`p-3 rounded-2xl shadow-sm text-sm leading-relaxed ${msg.role === 'user' ? 'bg-brand text-white rounded-tr-none' : 'bg-surface-2 border border-hairline text-txt rounded-tl-none backdrop-blur-sm'}`}>
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                     {chatbotConfig.visual.showTimestamp && (
                       <span className={`text-[9px] mt-2 block opacity-70 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
@@ -837,10 +837,10 @@ ${conversationHistory || 'Nenhuma mensagem anterior.'}
             ))}
             {loading && (
               <div className="flex justify-start animate-pulse">
-                <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-2xl rounded-tl-none shadow-sm flex gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '75ms' }}></div>
-                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                <div className="bg-surface-2 backdrop-blur-xl border border-hairline p-3 rounded-2xl rounded-tl-none shadow-sm flex gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-txt-dim rounded-full animate-bounce" style={{ animationDelay: '75ms' }}></div>
+                  <div className="w-1.5 h-1.5 bg-txt-dim rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-1.5 h-1.5 bg-txt-dim rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                 </div>
               </div>
             )}
@@ -848,12 +848,12 @@ ${conversationHistory || 'Nenhuma mensagem anterior.'}
           </div>
 
           {/* Quick Actions */}
-          <div className="px-4 py-2 bg-gray-950/50 backdrop-blur-md border-t border-gray-700 flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+          <div className="px-4 py-2 bg-bg-deep/50 backdrop-blur-md border-t border-hairline flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
             {quickActions.map((action, idx) => (
               <button
                 key={idx}
                 onClick={() => setInput(action.query)}
-                className="whitespace-nowrap px-4 py-1.5 bg-white/10 hover:bg-green-500/20 hover:text-green-400 border border-white/20 rounded-full text-xs font-medium transition-all text-gray-300"
+                className="whitespace-nowrap px-4 py-1.5 bg-surface-2 hover:bg-brand/20 hover:text-brand-lite border border-hairline rounded-full text-xs font-medium transition-all text-txt-dim"
               >
                 {action.label}
               </button>
@@ -861,26 +861,26 @@ ${conversationHistory || 'Nenhuma mensagem anterior.'}
           </div>
 
           {/* Input */}
-          <div className="p-4 bg-gray-950/50 backdrop-blur-md border-t border-gray-700">
-            <div className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-2xl p-1.5 focus-within:border-[#57B952] focus-within:ring-2 focus-within:ring-[#57B952]/20 transition-all shadow-inner backdrop-blur-sm">
+          <div className="p-4 bg-bg-deep/50 backdrop-blur-md border-t border-hairline">
+            <div className="flex items-center gap-2 bg-surface-2 border border-hairline rounded-2xl p-1.5 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 transition-all shadow-inner backdrop-blur-sm">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={chatbotConfig.messages.inputPlaceholder}
-                className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-white placeholder:text-gray-400"
+                className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-txt placeholder:text-txt-dim"
                 disabled={loading}
               />
               <button
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
-                className="w-10 h-10 bg-[#57B952] hover:bg-green-600 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95 disabled:cursor-not-allowed text-white"
+                className="w-10 h-10 bg-brand hover:brightness-110 disabled:bg-surface-2 disabled:text-txt-faint rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-95 disabled:cursor-not-allowed text-white"
               >
                 <Send size={20} />
               </button>
             </div>
-            <p className="text-[10px] text-gray-300 mt-2 text-center font-medium">
+            <p className="text-[10px] text-txt-dim mt-2 text-center font-medium">
               Powered by {chatbotConfig.assistantName} AI • Google Gemini 1.5 Flash
             </p>
           </div>

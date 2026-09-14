@@ -18,18 +18,18 @@ export const NO_URL_TYPES = new Set(['documents', 'files', 'spreadsheets']);
 export const CUSTOM_FORM_TYPES = new Set(['forms']);
 
 const inputCls =
-  'w-full px-3 py-2.5 bg-white/[0.05] border border-white/[0.10] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#57B952]/60 focus:bg-white/[0.07] transition-all';
+  'w-full px-3 py-2.5 bg-surface border border-hairline rounded-xl text-sm text-txt placeholder-txt-faint focus:outline-none focus:border-brand/60 focus:bg-surface-2 transition-all';
 
 export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, cargosLista = [] }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+          <label className="text-xs font-semibold text-txt-dim uppercase tracking-widest">
             Cards
           </label>
           {cards.filter(c => (c.name ?? c.nome ?? '').trim()).length > 0 && (
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#57B952]/20 text-[#57B952] text-[10px] font-bold">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand/20 text-brand-lite text-[10px] font-bold">
               {cards.filter(c => (c.name ?? c.nome ?? '').trim()).length}
             </span>
           )}
@@ -37,7 +37,7 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, cargosLista =
         <button
           type="button"
           onClick={onAdd}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#57B952]/10 text-[#57B952] border border-[#57B952]/20 hover:bg-[#57B952]/20 font-semibold transition-colors"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-brand/10 text-brand-lite border border-brand/20 hover:bg-brand/20 font-semibold transition-colors"
         >
           + Novo card
         </button>
@@ -47,12 +47,12 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, cargosLista =
         <button
           type="button"
           onClick={onAdd}
-          className="w-full flex flex-col items-center justify-center gap-2 py-8 border border-dashed border-white/[0.10] rounded-2xl hover:border-[#57B952]/30 hover:bg-[#57B952]/[0.03] transition-all group"
+          className="w-full flex flex-col items-center justify-center gap-2 py-8 border border-dashed border-hairline rounded-2xl hover:border-brand/30 hover:bg-brand/[0.03] transition-all group"
         >
-          <div className="w-10 h-10 rounded-xl bg-white/[0.04] group-hover:bg-[#57B952]/10 flex items-center justify-center transition-colors">
-            <span className="text-xl text-gray-600 group-hover:text-[#57B952] transition-colors">+</span>
+          <div className="w-10 h-10 rounded-xl bg-surface group-hover:bg-brand/10 flex items-center justify-center transition-colors">
+            <span className="text-xl text-txt-faint group-hover:text-brand-lite transition-colors">+</span>
           </div>
-          <p className="text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">
+          <p className="text-xs font-medium text-txt-faint group-hover:text-txt-dim transition-colors">
             Clique para adicionar um card
           </p>
         </button>
@@ -71,19 +71,19 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, cargosLista =
             return (
               <div
                 key={idx}
-                className="group bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-4 space-y-3 transition-colors"
+                className="group nt-glass p-4 space-y-3 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-lg bg-[#57B952]/15 border border-[#57B952]/20 flex items-center justify-center text-[11px] font-bold text-[#57B952] flex-shrink-0">
+                    <span className="w-6 h-6 rounded-lg bg-brand/15 border border-brand/20 flex items-center justify-center text-[11px] font-bold text-brand-lite flex-shrink-0">
                       {idx + 1}
                     </span>
-                    <span className="text-xs text-gray-500 font-medium">Card {idx + 1}</span>
+                    <span className="text-xs text-txt-faint font-medium">Card {idx + 1}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => onRemove(idx)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/15 text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/15 text-txt-faint hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
                   >
                     <X size={14} />
                   </button>
@@ -101,10 +101,10 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, cargosLista =
                     value={type}
                     onChange={e => onUpdate(idx, 'type', e.target.value)}
                     className={`sm:col-span-2 ${inputCls} cursor-pointer`}
-                    style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#f9fafb' }}
+                    style={{ backgroundColor: 'var(--surface)', color: 'var(--txt)' }}
                   >
                     {CARD_TYPES.map(t => (
-                      <option key={t.v} value={t.v} style={{ backgroundColor: '#ffffff', color: '#111827' }}>
+                      <option key={t.v} value={t.v} style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>
                         {t.l}
                       </option>
                     ))}
@@ -140,19 +140,19 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, cargosLista =
                 )}
 
                 {/* Carteira associada */}
-                <div className="flex items-center gap-2 pt-1 border-t border-white/[0.06]">
-                  <Layers size={13} className="text-gray-600 flex-shrink-0" />
+                <div className="flex items-center gap-2 pt-1 border-t border-hairline">
+                  <Layers size={13} className="text-txt-faint flex-shrink-0" />
                   <select
                     value={carteiraId ?? ''}
                     onChange={e => onUpdate(idx, 'carteiraId', e.target.value || null)}
                     className={`flex-1 ${inputCls} text-xs py-2`}
-                    style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: carteiraId ? '#f9fafb' : '#9ca3af' }}
+                    style={{ backgroundColor: 'var(--surface)', color: carteiraId ? 'var(--txt)' : 'var(--txt-faint)' }}
                   >
-                    <option value="" style={{ backgroundColor: '#111827', color: '#9ca3af' }}>
+                    <option value="" style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt-faint)' }}>
                       Sem restrição de setor
                     </option>
                     {SETORES_PADRAO.map(s => (
-                      <option key={s.id} value={s.id} style={{ backgroundColor: '#111827', color: '#f9fafb' }}>
+                      <option key={s.id} value={s.id} style={{ backgroundColor: 'var(--surface-solid)', color: 'var(--txt)' }}>
                         {s.nome}
                       </option>
                     ))}
@@ -161,14 +161,14 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, cargosLista =
 
                 {/* Cargos que podem ver este card */}
                 {cargosLista.length > 0 && (
-                  <div className="flex items-start gap-2 pt-1 border-t border-white/[0.06]">
+                  <div className="flex items-start gap-2 pt-1 border-t border-hairline">
                     <Shield size={13} className="text-purple-500 flex-shrink-0 mt-1.5" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] text-gray-500 mb-2">
+                      <p className="text-[11px] text-txt-faint mb-2">
                         Restringir por cargo
                         {cardCargos.length > 0
                           ? <span className="ml-1.5 text-purple-400 font-semibold">({cardCargos.length} selecionado{cardCargos.length > 1 ? 's' : ''})</span>
-                          : <span className="ml-1.5 text-gray-600">— vazio = todos os cargos</span>
+                          : <span className="ml-1.5 text-txt-faint">— vazio = todos os cargos</span>
                         }
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -187,7 +187,7 @@ export function CardFieldsForm({ cards, onAdd, onUpdate, onRemove, cargosLista =
                               className={`text-[11px] px-2.5 py-1 rounded-full border font-semibold transition-all ${
                                 selected
                                   ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
-                                  : 'bg-white/[0.04] border-white/[0.10] text-gray-500 hover:text-gray-300 hover:border-white/[0.20]'
+                                  : 'bg-surface border-hairline text-txt-faint hover:text-txt-dim hover:border-hairline-hi'
                               }`}
                             >
                               {c.nome}

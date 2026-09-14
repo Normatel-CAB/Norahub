@@ -351,43 +351,38 @@ function ConstrutorFormulario() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-        <p className="text-gray-600">Carregando formulário...</p>
+      <div className="nt-page-bg min-h-screen flex items-center justify-center relative">
+        <p className="text-txt-faint relative z-10">Carregando formulário...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-      {/* Background decorativo */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl"></div>
-      </div>
+    <div className="nt-page-bg min-h-screen w-full flex flex-col font-[Outfit,Poppins] text-txt relative">
       {/* Toast */}
       {toast.show && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-brand' : 'bg-red-500'} text-white`}>
           {toast.message}
         </div>
       )}
 
       {/* Header */}
-      <header className="w-full flex items-center justify-between py-3 md:py-6 px-3 md:px-8 border-b border-gray-700 bg-gray-900/50 min-h-[56px]">
-        <button 
-          onClick={() => navigate(-1)} 
-          className="flex items-center gap-1 md:gap-2 text-gray-500 hover:text-[#57B952] transition-colors font-medium text-xs md:text-sm shrink-0"
+      <header className="relative w-full flex items-center justify-between py-3 md:py-6 px-3 md:px-8 border-b border-hairline min-h-[56px] z-10" style={{ background: 'rgba(9, 22, 11, 0.6)' }}>
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 md:gap-2 text-txt-faint hover:text-brand-lite transition-colors font-medium text-xs md:text-sm shrink-0"
         >
           <ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" /> <span className="hidden xs:inline">Voltar</span>
         </button>
-        
-        <h1 className="text-sm md:text-xl lg:text-2xl font-bold text-white absolute left-1/2 transform -translate-x-1/2 max-w-[50%] truncate">{card.name}</h1>
-        
+
+        <h1 className="text-sm md:text-xl lg:text-2xl font-bold text-txt absolute left-1/2 transform -translate-x-1/2 max-w-[50%] truncate">{card.name}</h1>
+
         <div className="flex gap-2">
           {canEdit && (
             <button
               onClick={() => setMode('builder')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors font-medium text-sm ${
-                mode === 'builder' ? 'bg-[#57B952] text-white border-[#57B952]' : 'border-white/20 text-gray-300 hover:bg-white/10'
+                mode === 'builder' ? 'bg-gradient-to-r from-brand-lite via-brand to-brand-deep text-white border-transparent' : 'border-hairline text-txt-dim hover:bg-white/10'
               }`}
             >
               <Settings size={16} /> Editar
@@ -397,7 +392,7 @@ function ConstrutorFormulario() {
           <button
             onClick={() => setMode('preview')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors font-medium text-sm ${
-              mode === 'preview' ? 'bg-[#57B952] text-white border-[#57B952]' : 'border-white/20 text-gray-300 hover:bg-white/10'
+              mode === 'preview' ? 'bg-gradient-to-r from-brand-lite via-brand to-brand-deep text-white border-transparent' : 'border-hairline text-txt-dim hover:bg-white/10'
             }`}
           >
             <Eye size={16} /> Preencher
@@ -407,13 +402,13 @@ function ConstrutorFormulario() {
             <button
               onClick={() => setMode('responses')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors font-medium text-sm ${
-                mode === 'responses' ? 'bg-[#57B952] text-white border-[#57B952]' : 'border-white/20 text-gray-300 hover:bg-white/10'
+                mode === 'responses' ? 'bg-gradient-to-r from-brand-lite via-brand to-brand-deep text-white border-transparent' : 'border-hairline text-txt-dim hover:bg-white/10'
               }`}
             >
               <FileText size={16} /> Respostas ({formResponses.length})
             </button>
           )}
-          
+
           {mode === 'builder' && canEdit && (
             <button
               onClick={saveForm}
@@ -427,21 +422,21 @@ function ConstrutorFormulario() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 w-full max-w-4xl mx-auto p-3 md:p-8">
+      <main className="flex-1 w-full max-w-4xl mx-auto p-3 md:p-8 relative z-10">
         {mode === 'builder' ? (
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+          <div className="nt-glass rounded-2xl p-4 md:p-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-3">
-              <h2 className="text-lg md:text-xl font-bold text-white">Construtor de Formulário</h2>
+              <h2 className="text-lg md:text-xl font-bold text-txt">Construtor de Formulário</h2>
               <button
                 onClick={addField}
-                className="flex items-center gap-2 bg-[#57B952] hover:bg-green-600 text-white px-3 md:px-4 py-2 rounded-lg transition-colors font-medium text-sm w-full sm:w-auto justify-center"
+                className="flex items-center gap-2 bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 text-white px-3 md:px-4 py-2 rounded-lg transition-all font-medium text-sm w-full sm:w-auto justify-center"
               >
                 <Plus size={16} /> Adicionar Campo
               </button>
             </div>
 
             {/* Configurações de Notificação */}
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
               <div className="flex items-center gap-3 mb-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -450,12 +445,12 @@ function ConstrutorFormulario() {
                     onChange={(e) => setEmailNotifications(e.target.checked)}
                     className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded"
                   />
-                  <span className="font-medium text-gray-300">📧 Ativar notificações por email</span>
+                  <span className="font-medium text-txt-dim">📧 Ativar notificações por email</span>
                 </label>
               </div>
               {emailNotifications && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-2">
+                  <label className="block text-sm font-medium text-txt-faint mb-2">
                     Emails para notificação (separados por vírgula)
                   </label>
                   <input
@@ -463,9 +458,9 @@ function ConstrutorFormulario() {
                     placeholder="email1@exemplo.com, email2@exemplo.com"
                     value={notificationEmails}
                     onChange={(e) => setNotificationEmails(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    className="w-full px-3 py-2 rounded-lg border border-hairline bg-white/5 text-txt focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-txt-faint mt-1">
                     Estes emails receberão uma notificação sempre que alguém responder o formulário
                   </p>
                 </div>
@@ -473,16 +468,16 @@ function ConstrutorFormulario() {
             </div>
 
             {formFields.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-txt-dim">
                 <p>Nenhum campo adicionado ainda</p>
                 <p className="text-sm mt-2">Clique em "Adicionar Campo" para começar</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {formFields.map((field, idx) => (
-                  <div key={field.id} className="border border-white/20 rounded-lg p-4 bg-white/5 backdrop-blur-sm">
+                  <div key={field.id} className="border border-hairline rounded-lg p-4 bg-white/5 backdrop-blur-sm">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-semibold text-gray-400">Campo {idx + 1}</span>
+                      <span className="text-sm font-semibold text-txt-dim">Campo {idx + 1}</span>
                       <button
                         onClick={() => removeField(field.id)}
                         className="text-red-400 hover:bg-red-500/10 p-1 rounded transition-colors"
@@ -493,23 +488,23 @@ function ConstrutorFormulario() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="md:col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Rótulo / Pergunta</label>
+                        <label className="block text-xs font-medium text-txt-faint mb-1">Rótulo / Pergunta</label>
                         <input
                           type="text"
                           placeholder="Ex: Qual seu nome?"
                           value={field.label}
                           onChange={(e) => updateField(field.id, 'label', e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
+                          className="w-full px-3 py-2 rounded-lg border border-hairline bg-white/5 text-txt focus:ring-2 focus:ring-brand outline-none text-sm"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de Campo</label>
+                        <label className="block text-xs font-medium text-txt-faint mb-1">Tipo de Campo</label>
                         <select
                           value={field.type}
                           onChange={(e) => updateField(field.id, 'type', e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
-                          style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
+                          className="w-full px-3 py-2 rounded-lg border border-hairline focus:ring-2 focus:ring-brand outline-none text-sm"
+                          style={{ backgroundColor: 'var(--surface-2)', color: 'var(--txt)' }}
                         >
                           {fieldTypes.map(type => (
                             <option key={type.value} value={type.value} style={{ backgroundColor: '#ffffff', color: '#111827' }}>{type.label}</option>
@@ -523,15 +518,15 @@ function ConstrutorFormulario() {
                             type="checkbox"
                             checked={field.required}
                             onChange={(e) => updateField(field.id, 'required', e.target.checked)}
-                            className="w-4 h-4 text-[#57B952] focus:ring-[#57B952] rounded"
+                            className="w-4 h-4 text-brand-lite focus:ring-brand rounded"
                           />
-                          <span className="text-sm text-gray-300">Campo obrigatório</span>
+                          <span className="text-sm text-txt-dim">Campo obrigatório</span>
                         </label>
                       </div>
 
                       {(['select', 'radio', 'checkbox'].includes(field.type)) && (
                         <div className="md:col-span-2">
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-txt-faint mb-1">
                             Opções (separadas por vírgula)
                           </label>
                           <input
@@ -539,7 +534,7 @@ function ConstrutorFormulario() {
                             placeholder="Ex: Sim, Não, Talvez"
                             value={field.options.join(', ')}
                             onChange={(e) => updateField(field.id, 'options', e.target.value.split(',').map(o => o.trim()))}
-                            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none text-sm"
+                            className="w-full px-3 py-2 rounded-lg border border-hairline bg-white/5 text-txt focus:ring-2 focus:ring-brand outline-none text-sm"
                           />
                         </div>
                       )}
@@ -550,12 +545,12 @@ function ConstrutorFormulario() {
             )}
           </div>
         ) : mode === 'preview' ? (
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
-            <h2 className="text-2xl font-bold text-gray-100 mb-6">{card.name}</h2>
-            <p className="text-gray-300 mb-8">{card.description || 'Preencha os campos abaixo'}</p>
+          <div className="nt-glass rounded-2xl p-8">
+            <h2 className="text-2xl font-bold text-txt mb-6">{card.name}</h2>
+            <p className="text-txt-dim mb-8">{card.description || 'Preencha os campos abaixo'}</p>
 
             {formFields.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-txt-dim">
                 <p>Nenhum campo foi criado ainda</p>
                 <p className="text-sm mt-2">Vá para "Editar" para adicionar campos</p>
               </div>
@@ -563,7 +558,7 @@ function ConstrutorFormulario() {
               <div className="space-y-6">
                 {formFields.map((field) => (
                   <div key={field.id}>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-txt-dim mb-2">
                       {field.label} {field.required && <span className="text-red-500">*</span>}
                     </label>
 
@@ -573,14 +568,14 @@ function ConstrutorFormulario() {
                         placeholder="Sua resposta..."
                         value={currentResponse[field.id] || ''}
                         onChange={(e) => setCurrentResponse({...currentResponse, [field.id]: e.target.value})}
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none"
+                        className="w-full px-4 py-2 rounded-lg border border-hairline bg-white/5 text-txt focus:ring-2 focus:ring-brand outline-none"
                       />
                     ) : field.type === 'select' ? (
                       <select
                         value={currentResponse[field.id] || ''}
                         onChange={(e) => setCurrentResponse({...currentResponse, [field.id]: e.target.value})}
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none"
-                        style={{ backgroundColor: '#1a1a20', color: '#f9fafb' }}
+                        className="w-full px-4 py-2 rounded-lg border border-hairline focus:ring-2 focus:ring-brand outline-none"
+                        style={{ backgroundColor: 'var(--surface-2)', color: 'var(--txt)' }}
                       >
                         <option value="" style={{ backgroundColor: '#ffffff', color: '#111827' }}>Selecione...</option>
                         {field.options.map((opt, i) => (
@@ -591,13 +586,13 @@ function ConstrutorFormulario() {
                       <div className="space-y-2">
                         {field.options.map((opt, i) => (
                           <label key={i} className="flex items-center gap-2">
-                            <input 
-                              type="radio" 
-                              name={`field-${field.id}`} 
+                            <input
+                              type="radio"
+                              name={`field-${field.id}`}
                               value={opt}
                               checked={currentResponse[field.id] === opt}
                               onChange={(e) => setCurrentResponse({...currentResponse, [field.id]: e.target.value})}
-                              className="text-[#57B952]" 
+                              className="text-brand-lite"
                             />
                             <span>{opt}</span>
                           </label>
@@ -607,8 +602,8 @@ function ConstrutorFormulario() {
                       <div className="space-y-2">
                         {field.options.map((opt, i) => (
                           <label key={i} className="flex items-center gap-2">
-                            <input 
-                              type="checkbox" 
+                            <input
+                              type="checkbox"
                               value={opt}
                               checked={(currentResponse[field.id] || []).includes(opt)}
                               onChange={(e) => {
@@ -618,7 +613,7 @@ function ConstrutorFormulario() {
                                   : current.filter(v => v !== opt);
                                 setCurrentResponse({...currentResponse, [field.id]: updated});
                               }}
-                              className="text-[#57B952] rounded" 
+                              className="text-brand-lite rounded"
                             />
                             <span>{opt}</span>
                           </label>
@@ -629,14 +624,14 @@ function ConstrutorFormulario() {
                         <div
                           onDragOver={(e) => {
                             e.preventDefault();
-                            e.currentTarget.classList.add('border-[#57B952]', 'bg-green-50');
+                            e.currentTarget.classList.add('border-brand', 'bg-brand/10');
                           }}
                           onDragLeave={(e) => {
-                            e.currentTarget.classList.remove('border-[#57B952]', 'bg-green-50');
+                            e.currentTarget.classList.remove('border-brand', 'bg-brand/10');
                           }}
                           onDrop={(e) => {
                             e.preventDefault();
-                            e.currentTarget.classList.remove('border-[#57B952]', 'bg-green-50');
+                            e.currentTarget.classList.remove('border-brand', 'bg-brand/10');
                             const files = Array.from(e.dataTransfer.files);
                             const validFiles = files.filter(file => {
                               if (file.size > 10 * 1024 * 1024) {
@@ -650,7 +645,7 @@ function ConstrutorFormulario() {
                               setCurrentResponse({...currentResponse, [field.id]: [...current, ...validFiles]});
                             }
                           }}
-                          className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center transition-all hover:border-[#57B952] hover:bg-green-50 cursor-pointer"
+                          className="border-2 border-dashed border-hairline rounded-xl p-8 text-center transition-all hover:border-brand hover:bg-brand/10 cursor-pointer"
                         >
                           <input
                             type="file"
@@ -674,9 +669,9 @@ function ConstrutorFormulario() {
                             className="hidden"
                           />
                           <label htmlFor={`file-${field.id}`} className="cursor-pointer">
-                            <Upload className="mx-auto mb-3 text-[#57B952]" size={40} />
-                            <p className="text-gray-300 font-medium mb-1">Clique ou arraste arquivos aqui</p>
-                            <p className="text-sm text-gray-500">Suporta imagens, PDFs e documentos (máx 10MB cada)</p>
+                            <Upload className="mx-auto mb-3 text-brand-lite" size={40} />
+                            <p className="text-txt-dim font-medium mb-1">Clique ou arraste arquivos aqui</p>
+                            <p className="text-sm text-txt-faint">Suporta imagens, PDFs e documentos (máx 10MB cada)</p>
                           </label>
                         </div>
 
@@ -685,7 +680,7 @@ function ConstrutorFormulario() {
                           <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                             {currentResponse[field.id].map((file, idx) => (
                               <div key={idx} className="relative group">
-                                <div className="aspect-square rounded-lg overflow-hidden bg-white/10 border-2 border-white/20">
+                                <div className="aspect-square rounded-lg overflow-hidden bg-white/10 border-2 border-hairline">
                                   {file.type?.startsWith('image/') ? (
                                     <img
                                       src={URL.createObjectURL(file)}
@@ -694,8 +689,8 @@ function ConstrutorFormulario() {
                                     />
                                   ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center p-3">
-                                      <FileText size={32} className="text-gray-400 mb-2" />
-                                      <p className="text-xs text-gray-600 text-center truncate w-full">{file.name}</p>
+                                      <FileText size={32} className="text-txt-dim mb-2" />
+                                      <p className="text-xs text-txt-faint text-center truncate w-full">{file.name}</p>
                                     </div>
                                   )}
                                 </div>
@@ -720,33 +715,33 @@ function ConstrutorFormulario() {
                     ) : field.type === 'link' ? (
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-400 mb-2">URL/Endereço</label>
-                          <input 
+                          <label className="block text-xs font-medium text-txt-faint mb-2">URL/Endereço</label>
+                          <input
                             type="text"
                             placeholder="https://exemplo.com ou /pagina-interna"
                             value={currentResponse[field.id]?.url || ''}
                             onChange={(e) => setCurrentResponse({...currentResponse, [field.id]: {...(currentResponse[field.id] || {}), url: e.target.value}})}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none"
+                            className="w-full px-4 py-2 rounded-lg border border-hairline bg-white/5 text-txt focus:ring-2 focus:ring-brand outline-none"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-400 mb-2">Texto do Link</label>
-                          <input 
+                          <label className="block text-xs font-medium text-txt-faint mb-2">Texto do Link</label>
+                          <input
                             type="text"
                             placeholder="Ex: Clique aqui, Ver mais, Acessar portal"
                             value={currentResponse[field.id]?.text || ''}
                             onChange={(e) => setCurrentResponse({...currentResponse, [field.id]: {...(currentResponse[field.id] || {}), text: e.target.value}})}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none"
+                            className="w-full px-4 py-2 rounded-lg border border-hairline bg-white/5 text-txt focus:ring-2 focus:ring-brand outline-none"
                           />
                         </div>
                         {(currentResponse[field.id]?.url || currentResponse[field.id]?.text) && (
-                          <div className="p-3 bg-[#57B952]/10 rounded-lg border border-[#57B952]/30">
-                            <p className="text-xs text-gray-400 mb-2">Prévia do link:</p>
-                            <a 
-                              href={currentResponse[field.id]?.url || '#'} 
-                              target="_blank" 
+                          <div className="p-3 bg-brand/10 rounded-lg border border-brand/30">
+                            <p className="text-xs text-txt-faint mb-2">Prévia do link:</p>
+                            <a
+                              href={currentResponse[field.id]?.url || '#'}
+                              target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[#57B952] hover:text-green-400 underline break-all"
+                              className="text-brand-lite hover:text-brand-glow underline break-all"
                             >
                               {currentResponse[field.id]?.text || currentResponse[field.id]?.url || 'Link'}
                             </a>
@@ -759,16 +754,16 @@ function ConstrutorFormulario() {
                         placeholder="Sua resposta..."
                         value={currentResponse[field.id] || ''}
                         onChange={(e) => setCurrentResponse({...currentResponse, [field.id]: e.target.value})}
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#57B952] outline-none"
+                        className="w-full px-4 py-2 rounded-lg border border-hairline bg-white/5 text-txt focus:ring-2 focus:ring-brand outline-none"
                       />
                     )}
                   </div>
                 ))}
 
-                <button 
+                <button
                   onClick={submitResponse}
                   disabled={saving}
-                  className="w-full bg-[#57B952] hover:bg-green-600 text-white py-3 rounded-lg font-bold transition-colors disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 text-white py-3 rounded-lg font-bold transition-all disabled:opacity-50"
                 >
                   {saving ? 'Enviando...' : 'Enviar Respostas'}
                 </button>
@@ -776,15 +771,15 @@ function ConstrutorFormulario() {
             )}
           </div>
         ) : (
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
+          <div className="nt-glass rounded-2xl p-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-100">
+              <h2 className="text-xl font-bold text-txt">
                 Respostas Recebidas ({formResponses.length})
               </h2>
               {formResponses.length > 0 && (
                 <button
                   onClick={exportToCSV}
-                  className="flex items-center gap-2 bg-[#57B952] hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                  className="flex items-center gap-2 bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 text-white px-4 py-2 rounded-lg transition-all font-medium text-sm"
                 >
                   <Download size={16} /> Exportar CSV
                 </button>
@@ -792,21 +787,21 @@ function ConstrutorFormulario() {
             </div>
 
             {formResponses.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-txt-dim">
                 <p>Nenhuma resposta recebida ainda</p>
               </div>
             ) : (
               <div className="space-y-6">
                 {formResponses.length > 0 && formResponses.map((response, idx) => (
-                  <div key={response.id || idx} className="border border-white/20 rounded-lg p-6 bg-white/5 backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+                  <div key={response.id || idx} className="border border-hairline rounded-lg p-6 bg-white/5 backdrop-blur-sm">
+                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-hairline">
                       <div>
-                        <p className="font-semibold text-white">{response.userName || 'Usuário'}</p>
-                        <p className="text-xs text-gray-400">
+                        <p className="font-semibold text-txt">{response.userName || 'Usuário'}</p>
+                        <p className="text-xs text-txt-faint">
                           {response.submittedAt ? new Date(response.submittedAt).toLocaleString('pt-BR') : 'Data não disponível'}
                         </p>
                       </div>
-                      <span className="text-sm font-medium text-gray-400">Resposta #{idx + 1}</span>
+                      <span className="text-sm font-medium text-txt-faint">Resposta #{idx + 1}</span>
                     </div>
 
                     <div className="space-y-3">
@@ -816,10 +811,10 @@ function ConstrutorFormulario() {
                           const answer = response.answers?.[field.id];
                           const isFileField = field.type === 'file';
                           const isFileArray = isFileField && Array.isArray(answer) && answer.length > 0 && typeof answer[0] === 'object' && answer[0].url;
-                          
+
                           return (
                             <div key={field.id}>
-                              <p className="text-sm font-medium text-gray-400 mb-2">{field.label}</p>
+                              <p className="text-sm font-medium text-txt-faint mb-2">{field.label}</p>
                               {isFileArray ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                   {answer.map((file, fileIdx) => (
@@ -828,7 +823,7 @@ function ConstrutorFormulario() {
                                       href={file.url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="group relative aspect-square rounded-lg overflow-hidden bg-white/10 backdrop-blur-xl border-2 border-white/20 hover:border-[#57B952] transition-all"
+                                      className="group relative aspect-square rounded-lg overflow-hidden bg-white/10 backdrop-blur-xl border-2 border-hairline hover:border-brand transition-all"
                                     >
                                       {file.type?.startsWith('image/') ? (
                                         <img
@@ -838,8 +833,8 @@ function ConstrutorFormulario() {
                                         />
                                       ) : (
                                         <div className="w-full h-full flex flex-col items-center justify-center p-3">
-                                          <FileText size={32} className="text-gray-400 mb-2" />
-                                          <p className="text-xs text-gray-600 text-center truncate w-full">{file.name}</p>
+                                          <FileText size={32} className="text-txt-dim mb-2" />
+                                          <p className="text-xs text-txt-faint text-center truncate w-full">{file.name}</p>
                                         </div>
                                       )}
                                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
@@ -852,8 +847,8 @@ function ConstrutorFormulario() {
                                   ))}
                                 </div>
                               ) : (
-                                <p className="text-gray-200 mt-1">
-                                  {Array.isArray(answer) 
+                                <p className="text-txt-dim mt-1">
+                                  {Array.isArray(answer)
                                     ? answer.length > 0 ? answer.join(', ') : '-'
                                     : answer ? String(answer) : '-'}
                                 </p>
@@ -862,7 +857,7 @@ function ConstrutorFormulario() {
                           );
                         })
                       ) : (
-                        <p className="text-gray-500 italic">Nenhum campo disponível para exibir respostas</p>
+                        <p className="text-txt-faint italic">Nenhum campo disponível para exibir respostas</p>
                       )}
                     </div>
                   </div>

@@ -27,7 +27,7 @@ function getPasswordStrength(password) {
   if (/[^A-Za-z0-9]/.test(password)) score++;
   if (score <= 2) return { score, label: 'Fraca',   color: 'bg-red-500'    };
   if (score <= 4) return { score, label: 'Média',   color: 'bg-yellow-500' };
-  return              { score, label: 'Forte',   color: 'bg-green-500'  };
+  return              { score, label: 'Forte',   color: 'bg-brand'  };
 }
 
 function Cadastro() {
@@ -196,28 +196,28 @@ function Cadastro() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 transition-colors duration-200">
+    <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden relative nt-page-bg transition-colors duration-200">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-1/3 w-96 h-96 bg-[#57B952]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 w-96 h-96 bg-[#008542]/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-1/3 w-96 h-96 bg-brand/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 w-96 h-96 bg-brand-deep/10 rounded-full blur-3xl" />
       </div>
 
       {alertInfo && (
         <div
           className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-xl backdrop-blur-md border font-semibold text-sm max-w-sm animate-fade-in ${
             alertInfo.type === 'error'
-              ? 'bg-red-500/90 border-red-400 text-white'
-              : 'bg-green-500/90 border-green-400 text-white'
+              ? 'bg-red-500/90 border-red-400 text-txt'
+              : 'bg-brand/90 border-brand-lite text-txt'
           }`}
         >
           {alertInfo.message}
         </div>
       )}
 
-      <header className="relative w-full flex items-center justify-center py-4 sm:py-5 md:py-8 px-2 sm:px-4 md:px-8 min-h-[56px] sm:min-h-[64px] md:h-24 bg-gray-900/50 backdrop-blur-md border-b border-gray-700 z-20">
+      <header className="relative w-full flex items-center justify-center py-4 sm:py-5 md:py-8 px-2 sm:px-4 md:px-8 min-h-[56px] sm:min-h-[64px] md:h-24 bg-[#050b06]/50 backdrop-blur-md border-b border-hairline z-20">
         <button
           onClick={() => navigate('/')}
-          className="absolute left-2 sm:left-4 md:left-8 flex items-center gap-2 text-gray-300 hover:text-[#57B952] hover:bg-white/5 px-4 py-2 rounded-lg transition-all font-semibold text-xs sm:text-sm backdrop-blur-sm"
+          className="absolute left-2 sm:left-4 md:left-8 flex items-center gap-2 text-txt-dim hover:text-brand-lite hover:bg-surface px-4 py-2 rounded-lg transition-all font-semibold text-xs sm:text-sm backdrop-blur-sm"
         >
           <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
           <span className="hidden sm:inline">Voltar</span>
@@ -230,19 +230,19 @@ function Cadastro() {
       </header>
 
       <main className="flex-grow flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 min-h-screen relative z-10">
-        <div className="w-full max-w-xs sm:max-w-sm bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 p-6 sm:p-8 md:p-10">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-center text-white mb-8">Criar Conta</h2>
+        <div className="w-full max-w-xs sm:max-w-sm nt-glass p-6 sm:p-8 md:p-10">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-center text-txt mb-8">Criar Conta</h2>
 
           {/* Botão Microsoft */}
           <button
             type="button"
             onClick={handleMicrosoftRegister}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#2F2F2F] to-[#1a1a1a] hover:from-[#444] hover:to-[#222] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all mb-6 sm:mb-8 border border-white/20 hover:border-white/40 shadow-lg hover:shadow-xl"
+            className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#2F2F2F] to-[#1a1a1a] hover:from-[#444] hover:to-[#222] disabled:opacity-50 disabled:cursor-not-allowed text-txt font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all mb-6 sm:mb-8 border border-hairline hover:border-hairline-hi shadow-lg hover:shadow-xl"
           >
             {loading ? (
               <>
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-5 w-5 text-txt" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
@@ -262,42 +262,42 @@ function Cadastro() {
           </button>
 
           <div className="flex items-center gap-4 mb-6 sm:mb-8">
-            <div className="h-px bg-white/20 flex-1" />
-            <span className="text-xs sm:text-sm text-gray-200 whitespace-nowrap font-medium">ou manual</span>
-            <div className="h-px bg-white/20 flex-1" />
+            <div className="h-px bg-hairline flex-1" />
+            <span className="text-xs sm:text-sm text-txt-dim whitespace-nowrap font-medium">ou manual</span>
+            <div className="h-px bg-hairline flex-1" />
           </div>
 
           <form onSubmit={handleRegisterSubmit} className="space-y-4 sm:space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-xs sm:text-sm font-semibold text-gray-200 ml-1 mb-2">Nome Completo</label>
+                <label className="block text-xs sm:text-sm font-semibold text-txt-dim ml-1 mb-2">Nome Completo</label>
                 <input
                   type="text"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  className="w-full px-4 py-3 sm:py-3.5 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-[#57B952] focus:border-transparent placeholder-gray-400 text-white text-sm outline-none backdrop-blur-sm transition-all hover:bg-white/15"
+                  className="w-full px-4 py-3 sm:py-3.5 bg-surface border border-hairline rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent placeholder-txt-faint text-txt text-sm outline-none backdrop-blur-sm transition-all hover:bg-surface-2"
                   placeholder="Ex: João Silva"
                   required
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs sm:text-sm font-semibold text-gray-200 ml-1 mb-2">Email Corporativo</label>
+                <label className="block text-xs sm:text-sm font-semibold text-txt-dim ml-1 mb-2">Email Corporativo</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 sm:py-3.5 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-[#57B952] focus:border-transparent placeholder-gray-400 text-white text-sm outline-none backdrop-blur-sm transition-all hover:bg-white/15"
+                  className="w-full px-4 py-3 sm:py-3.5 bg-surface border border-hairline rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent placeholder-txt-faint text-txt text-sm outline-none backdrop-blur-sm transition-all hover:bg-surface-2"
                   placeholder="seu.nome@normatel.com.br"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-semibold text-gray-200 ml-1 mb-2">Senha</label>
+                <label className="block text-xs sm:text-sm font-semibold text-txt-dim ml-1 mb-2">Senha</label>
                 <input
                   type="password"
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
-                  className="w-full px-4 py-3 sm:py-3.5 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-[#57B952] focus:border-transparent placeholder-gray-400 text-white text-sm outline-none backdrop-blur-sm transition-all hover:bg-white/15"
+                  className="w-full px-4 py-3 sm:py-3.5 bg-surface border border-hairline rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent placeholder-txt-faint text-txt text-sm outline-none backdrop-blur-sm transition-all hover:bg-surface-2"
                   placeholder="Mín. 8 chars + símbolo"
                   required
                 />
@@ -305,33 +305,33 @@ function Cadastro() {
                   <div className="mt-2 space-y-1">
                     <div className="flex gap-1 h-1">
                       {[1,2,3,4,5,6].map(i => (
-                        <div key={i} className={`flex-1 rounded-full transition-colors ${i <= passwordStrength.score ? passwordStrength.color : 'bg-white/10'}`} />
+                        <div key={i} className={`flex-1 rounded-full transition-colors ${i <= passwordStrength.score ? passwordStrength.color : 'bg-surface'}`} />
                       ))}
                     </div>
-                    <p className={`text-[10px] ml-0.5 ${passwordStrength.score <= 2 ? 'text-red-400' : passwordStrength.score <= 4 ? 'text-yellow-400' : 'text-green-400'}`}>
+                    <p className={`text-[10px] ml-0.5 ${passwordStrength.score <= 2 ? 'text-red-400' : passwordStrength.score <= 4 ? 'text-yellow-400' : 'text-brand-lite'}`}>
                       Senha {passwordStrength.label} — use maiúscula, número e símbolo
                     </p>
                   </div>
                 )}
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-semibold text-gray-200 ml-1 mb-2">CPF</label>
+                <label className="block text-xs sm:text-sm font-semibold text-txt-dim ml-1 mb-2">CPF</label>
                 <input
                   type="text"
                   value={cpfMatricula}
                   onChange={(e) => setCpfMatricula(formatCPF(e.target.value))}
-                  className="w-full px-4 py-3 sm:py-3.5 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-[#57B952] focus:border-transparent placeholder-gray-400 text-white text-sm outline-none backdrop-blur-sm transition-all hover:bg-white/15"
+                  className="w-full px-4 py-3 sm:py-3.5 bg-surface border border-hairline rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent placeholder-txt-faint text-txt text-sm outline-none backdrop-blur-sm transition-all hover:bg-surface-2"
                   placeholder="000.000.000-00"
                   required
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs sm:text-sm font-semibold text-gray-200 ml-1 mb-2">Cargo</label>
+                <label className="block text-xs sm:text-sm font-semibold text-txt-dim ml-1 mb-2">Cargo</label>
                 <input
                   type="text"
                   value={funcao}
                   onChange={(e) => setFuncao(e.target.value)}
-                  className="w-full px-4 py-3 sm:py-3.5 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-[#57B952] focus:border-transparent placeholder-gray-400 text-white text-sm outline-none backdrop-blur-sm transition-all hover:bg-white/15"
+                  className="w-full px-4 py-3 sm:py-3.5 bg-surface border border-hairline rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent placeholder-txt-faint text-txt text-sm outline-none backdrop-blur-sm transition-all hover:bg-surface-2"
                   placeholder="Ex: Analista"
                   required
                 />
@@ -341,11 +341,11 @@ function Cadastro() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#57B952] to-[#3d8c38] hover:from-[#6BC962] hover:to-[#45a241] text-white font-bold py-3 sm:py-4 rounded-xl transition-all mt-6 sm:mt-8 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              className="nt-glow-btn w-full bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 text-white font-bold py-3 sm:py-4 rounded-xl transition-all mt-6 sm:mt-8 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-5 w-5 text-txt" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
@@ -358,10 +358,10 @@ function Cadastro() {
           </form>
 
           <div className="mt-8 text-center">
-            <p className="text-gray-200 text-xs sm:text-sm mb-3">Já tem conta?</p>
+            <p className="text-txt-dim text-xs sm:text-sm mb-3">Já tem conta?</p>
             <Link
               to="/login"
-              className="inline-flex items-center justify-center w-full py-3 sm:py-4 border-2 border-[#57B952] text-[#57B952] rounded-xl font-bold hover:bg-[#57B952]/20 hover:border-[#6BC962] hover:text-[#6BC962] transition-all backdrop-blur-sm text-xs sm:text-sm"
+              className="inline-flex items-center justify-center w-full py-3 sm:py-4 border-2 border-brand text-brand-lite rounded-xl font-bold hover:bg-brand/20 hover:border-brand-lite hover:text-brand-lite transition-all backdrop-blur-sm text-xs sm:text-sm"
             >
               Fazer Login
             </Link>
@@ -369,7 +369,7 @@ function Cadastro() {
         </div>
       </main>
 
-      <footer className="w-full py-4 sm:py-6 text-center text-gray-300 text-xs shrink-0 bg-white/5 backdrop-blur-md border-t border-white/10 px-2 z-20">
+      <footer className="w-full py-4 sm:py-6 text-center text-txt-dim text-xs shrink-0 bg-surface backdrop-blur-md border-t border-hairline px-2 z-20">
         &copy; 2025 Normatel Engenharia
       </footer>
     </div>

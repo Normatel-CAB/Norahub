@@ -152,12 +152,12 @@ function VisualizadorArquivo() {
 
   if (!fileUrl) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Nenhum arquivo para visualizar</p>
-          <button 
-            onClick={() => navigate(-1)} 
-            className="text-[#57B952] hover:underline"
+      <div className="min-h-screen flex items-center justify-center nt-page-bg">
+        <div className="relative z-10 text-center">
+          <p className="text-txt-faint mb-4">Nenhum arquivo para visualizar</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="text-brand-lite hover:underline"
           >
             Voltar
           </button>
@@ -167,17 +167,17 @@ function VisualizadorArquivo() {
   }
 
   return (
-    <div className="fixed inset-0 w-screen h-screen flex flex-col bg-gray-900 overflow-hidden">
+    <div className="fixed inset-0 w-screen h-screen flex flex-col nt-page-bg overflow-hidden">
       {/* Header */}
-      <header className="w-full flex items-center justify-between py-3 px-8 bg-gray-800 border-b border-gray-700 flex-shrink-0">
-        <button 
-          onClick={() => navigate(-1)} 
-          className="flex items-center gap-2 text-white hover:text-[#57B952] transition-colors font-medium text-sm"
+      <header className="relative z-10 w-full flex items-center justify-between py-3 px-8 bg-surface-card border-b border-hairline flex-shrink-0">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-txt hover:text-brand-lite transition-colors font-medium text-sm"
         >
           <ArrowLeft size={18} /> Voltar
         </button>
-        
-        <h1 className="text-white font-semibold text-lg truncate max-w-md" title={fileName}>
+
+        <h1 className="text-txt font-semibold text-lg truncate max-w-md" title={fileName}>
           {fileName || 'Visualizador de Arquivo'}
         </h1>
         
@@ -187,7 +187,7 @@ function VisualizadorArquivo() {
             <button
               onClick={handleSummarize}
               disabled={isAnalyzing}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-surface-2 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
               title="Resumir documento com IA"
             >
               <FileText size={16} />
@@ -199,7 +199,7 @@ function VisualizadorArquivo() {
             <button
               onClick={handleOCR}
               disabled={isAnalyzing}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-surface-2 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
               title="Extrair texto da imagem com OCR"
             >
               <ImageIcon size={16} />
@@ -211,7 +211,7 @@ function VisualizadorArquivo() {
             <button
               onClick={handleAnalyzeSpreadsheet}
               disabled={isAnalyzing}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-surface-2 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
               title="Analisar dados com IA"
             >
               <BarChart3 size={16} />
@@ -222,7 +222,7 @@ function VisualizadorArquivo() {
           <a
             href={fileUrl}
             download
-            className="flex items-center gap-2 bg-[#57B952] hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+            className="flex items-center gap-2 bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 text-white px-4 py-2 rounded-lg transition-all font-medium text-sm"
           >
             <Download size={16} /> Baixar
           </a>
@@ -230,7 +230,7 @@ function VisualizadorArquivo() {
       </header>
 
       {/* Viewer */}
-      <div className="flex-1 w-full h-full overflow-hidden">
+      <div className="relative z-10 flex-1 w-full h-full overflow-hidden">
         <iframe
           src={fileUrl}
           className="w-full h-full border-0"
@@ -242,26 +242,26 @@ function VisualizadorArquivo() {
       {/* Modal de Resultados */}
       {analysisResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-gray-800 backdrop-blur-xl rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] overflow-hidden border border-gray-700">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-xl font-bold text-white">
+          <div className="nt-glass w-full max-w-3xl max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-hairline">
+              <h2 className="text-xl font-bold text-txt">
                 {analysisResult.type === 'summary' && '📄 Resumo do Documento'}
                 {analysisResult.type === 'ocr' && '🔍 Texto Extraído (OCR)'}
                 {analysisResult.type === 'analysis' && '📊 Análise de Dados'}
               </h2>
               <button
                 onClick={() => setAnalysisResult(null)}
-                className="text-gray-500 hover:text-red-500"
+                className="text-txt-faint hover:text-red-500"
               >
                 <X size={20} />
               </button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
-              <pre className="whitespace-pre-wrap text-sm text-gray-200 font-sans leading-relaxed">
+              <pre className="whitespace-pre-wrap text-sm text-txt font-sans leading-relaxed">
                 {analysisResult.data}
               </pre>
             </div>
-            <div className="p-4 border-t border-gray-700 bg-gray-800/50 flex justify-end gap-2">
+            <div className="p-4 border-t border-hairline bg-surface-2 flex justify-end gap-2">
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(analysisResult.data);
@@ -273,7 +273,7 @@ function VisualizadorArquivo() {
               </button>
               <button
                 onClick={() => setAnalysisResult(null)}
-                className="px-4 py-2 bg-white/10 text-gray-300 rounded-lg hover:bg-white/20"
+                className="px-4 py-2 bg-surface-2 text-txt-dim rounded-lg hover:bg-surface"
               >
                 Fechar
               </button>

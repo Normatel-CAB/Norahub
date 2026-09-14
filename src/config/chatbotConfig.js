@@ -162,7 +162,7 @@ INFORMAÇÕES IMPORTANTES:
   
   visual: {
     // Cor principal (hexadecimal)
-    primaryColor: '#57B952',
+    primaryColor: '#4CAF50',
     
     // Mostrar status online
     showOnlineStatus: true,
