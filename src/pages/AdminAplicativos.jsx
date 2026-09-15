@@ -48,6 +48,12 @@ const EMPTY_FORM = {
   ordem: 0, ativo: true, cargosPermitidos: [],
 };
 
+// Sugestões de categoria (= abas em /aplicativos). O campo continua texto
+// livre — isso é só autocomplete pra evitar "SMS" vs "Sms" virando duas
+// abas por acidente. As categorias já cadastradas no banco também entram
+// na lista (ver `categoriasSugeridas` abaixo).
+const CATEGORIAS_BASE = ['SMS', 'Logística', '736', '737', '741', '743', 'Apoio Macaé'];
+
 function AppIcon({ name, size = 20, className = '' }) {
   const Icon = (name && LucideIcons[name]) || Grid3x3;
   return <Icon size={size} className={className} />;
@@ -103,6 +109,11 @@ function AdminAplicativos() {
     () => [...apps].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0)),
     [apps]
   );
+
+  const categoriasSugeridas = useMemo(() => {
+    const doBanco = apps.map(a => (a.categoria || '').trim()).filter(Boolean);
+    return Array.from(new Set([...CATEGORIAS_BASE, ...doBanco]));
+  }, [apps]);
 
   const openCreate = () => {
     setForm({ ...EMPTY_FORM, ordem: apps.length });
@@ -328,13 +339,20 @@ function AdminAplicativos() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-txt-dim mb-1 block">Categoria *</label>
+                  <label className="text-xs font-semibold text-txt-dim mb-1 block">Categoria (aba) *</label>
                   <input
                     value={form.categoria}
                     onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
+                    list="categorias-sugeridas"
                     className="w-full px-3 py-2 bg-surface border border-hairline rounded-lg text-sm text-txt focus:outline-none focus:border-brand/60"
-                    placeholder="Ex: Compras"
+                    placeholder="Ex: SMS, Logística, 743..."
                   />
+                  <datalist id="categorias-sugeridas">
+                    {categoriasSugeridas.map(cat => <option key={cat} value={cat} />)}
+                  </datalist>
+                  <p className="text-[11px] text-txt-faint mt-1">
+                    Cada categoria vira uma aba em /aplicativos. Use o mesmo nome de uma já existente pra cair na mesma aba.
+                  </p>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-txt-dim mb-1 block">Ícone</label>

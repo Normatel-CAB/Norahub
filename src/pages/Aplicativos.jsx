@@ -35,6 +35,7 @@ function Aplicativos() {
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [abaAtiva, setAbaAtiva] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -68,15 +69,27 @@ function Aplicativos() {
       .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
   }, [apps, isAdmin, funcao]);
 
-  const porCategoria = useMemo(() => {
+  // Abas: uma por categoria, na ordem em que cada categoria aparece pela
+  // primeira vez entre os apps já ordenados por "ordem" — assim o admin
+  // controla a ordem das abas só organizando o campo "ordem" dos apps.
+  const abas = useMemo(() => {
     const grupos = new Map();
     for (const app of visiveis) {
       const cat = (app.categoria || '').trim() || 'Outros';
       if (!grupos.has(cat)) grupos.set(cat, []);
       grupos.get(cat).push(app);
     }
-    return Array.from(grupos.entries());
+    return Array.from(grupos.entries()).map(([categoria, apps]) => ({ categoria, apps }));
   }, [visiveis]);
+
+  // Mantém a aba ativa válida conforme os dados chegam/mudam; se a aba
+  // salva sumir (ex: categoria ficou vazia), volta pra primeira disponível.
+  useEffect(() => {
+    if (abas.length === 0) { setAbaAtiva(null); return; }
+    setAbaAtiva(atual => (atual && abas.some(a => a.categoria === atual)) ? atual : abas[0].categoria);
+  }, [abas]);
+
+  const grupoAtivo = abas.find(a => a.categoria === abaAtiva);
 
   return (
     <div className="min-h-screen w-full flex flex-col font-[Outfit,Poppins] overflow-x-hidden nt-page-bg">
@@ -126,36 +139,65 @@ function Aplicativos() {
               <p className="text-txt-faint text-sm mt-1">Fale com o administrador se você esperava ver algo aqui.</p>
             </div>
           ) : (
-            <div className="space-y-8 md:space-y-10">
-              {porCategoria.map(([categoria, appsDaCategoria]) => (
-                <div key={categoria}>
-                  <h2 className="text-sm md:text-base font-bold text-txt-dim uppercase tracking-wider mb-3 md:mb-4">
-                    {categoria}
-                  </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                    {appsDaCategoria.map(app => (
-                      <a
-                        key={app.id}
-                        href={app.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group nt-glass p-6 flex flex-col text-left transition-all transform hover:-translate-y-1 hover:border-hairline-hi"
-                      >
-                        <div className="bg-brand/15 p-3 rounded-xl mb-4 w-fit group-hover:scale-110 transition-transform text-brand-lite">
-                          <AppIcon name={app.icone} />
-                        </div>
-                        <h3 className="text-lg font-bold text-txt mb-1">{app.nome}</h3>
-                        {app.descricao && (
-                          <p className="text-txt-faint text-sm mb-4 flex-grow">{app.descricao}</p>
-                        )}
-                        <span className="text-brand-lite font-semibold text-sm flex items-center gap-1 mt-auto">
-                          Abrir <ExternalLink size={14} />
-                        </span>
-                      </a>
-                    ))}
-                  </div>
+            <div>
+              {/* Barra de abas — uma por categoria. Rola horizontalmente em
+                  telas estreitas em vez de quebrar linha. */}
+              <div
+                role="tablist"
+                aria-label="Categorias de aplicativos"
+                className="flex gap-2 overflow-x-auto pb-3 mb-6 md:mb-8 -mx-1 px-1 scrollbar-thin"
+              >
+                {abas.map(({ categoria, apps: appsDaAba }) => {
+                  const ativa = categoria === abaAtiva;
+                  return (
+                    <button
+                      key={categoria}
+                      role="tab"
+                      aria-selected={ativa}
+                      onClick={() => setAbaAtiva(categoria)}
+                      className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold border transition-all whitespace-nowrap ${
+                        ativa
+                          ? 'text-white border-transparent shadow-lg'
+                          : 'text-txt-dim border-hairline bg-surface hover:bg-surface-2 hover:text-txt'
+                      }`}
+                      style={ativa ? { background: 'linear-gradient(90deg, var(--brand-lite), var(--brand), var(--brand-deep))' } : undefined}
+                    >
+                      {categoria}
+                      <span className={`ml-2 text-xs ${ativa ? 'text-white/80' : 'text-txt-faint'}`}>
+                        {appsDaAba.length}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {grupoAtivo && (
+                <div
+                  role="tabpanel"
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
+                >
+                  {grupoAtivo.apps.map(app => (
+                    <a
+                      key={app.id}
+                      href={app.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group nt-glass p-6 flex flex-col text-left transition-all transform hover:-translate-y-1 hover:border-hairline-hi"
+                    >
+                      <div className="bg-brand/15 p-3 rounded-xl mb-4 w-fit group-hover:scale-110 transition-transform text-brand-lite">
+                        <AppIcon name={app.icone} />
+                      </div>
+                      <h3 className="text-lg font-bold text-txt mb-1">{app.nome}</h3>
+                      {app.descricao && (
+                        <p className="text-txt-faint text-sm mb-4 flex-grow">{app.descricao}</p>
+                      )}
+                      <span className="text-brand-lite font-semibold text-sm flex items-center gap-1 mt-auto">
+                        Abrir <ExternalLink size={14} />
+                      </span>
+                    </a>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>
