@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, Mail, Lock, Phone, Camera, LogOut, Save, ArrowLeft, KeyRound } from 'lucide-react';
+import { User, Mail, Phone, Camera, LogOut, Save, ArrowLeft } from 'lucide-react';
 // ThemeToggle removed: app forced to light mode
 import { useTheme } from '../context/ThemeContext';
 import Alert from '../components/Alert';
@@ -17,14 +17,10 @@ function Perfil() {
   const [email, setEmail] = useState('');
   const [celular, setCelular] = useState('');
   const [primeiroNome, setPrimeiroNome] = useState('');
-  const [senhaAtual, setSenhaAtual] = useState('');
-  const [novaSenha, setNovaSenha] = useState('');
-  const [confirmarSenha, setConfirmarSenha] = useState('');
   const [fotoURL, setFotoURL] = useState(null);
   const [novaFotoFile, setNovaFotoFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [alertInfo, setAlertInfo] = useState(null);
-  const [isPasswordProvider, setIsPasswordProvider] = useState(false);
 
   // Revogar blob URL ao desmontar ou trocar de foto, evitando memory leak
   useEffect(() => {
@@ -42,8 +38,6 @@ function Perfil() {
     setEmail(currentUser.email || userProfile?.email || '');
     setCelular(userProfile?.data?.celular || '');
     if (displayName) setPrimeiroNome(displayName.split(' ')[0]);
-
-    setIsPasswordProvider(currentUser.app_metadata?.provider === 'email');
 
     // Prioridade: foto do Auth (Microsoft) > foto salva no perfil (upload manual)
     const initialPhoto = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || userProfile?.foto_url || null;
@@ -100,31 +94,12 @@ function Perfil() {
       const { error: dbError } = await supabase.from('usuarios').update(usuarioUpdate).eq('id', currentUser.id);
       if (dbError) throw dbError;
 
-      if (novaSenha) {
-        if (!senhaAtual) throw new Error('senha-atual-vazia');
-        if (novaSenha !== confirmarSenha) throw new Error('senhas-nao-batem');
-        if (novaSenha.length < 6) throw new Error('senha-curta');
-
-        // Confirma a senha atual antes de trocar (equivalente à reautenticação do Firebase)
-        const { error: reauthError } = await supabase.auth.signInWithPassword({ email: currentUser.email, password: senhaAtual });
-        if (reauthError) throw new Error('senha-atual-incorreta');
-
-        const { error: pwError } = await supabase.auth.updateUser({ password: novaSenha });
-        if (pwError) throw pwError;
-        setSenhaAtual(''); setNovaSenha(''); setConfirmarSenha('');
-      }
-
       setAlertInfo({ message: 'Perfil atualizado!', type: 'success' });
       setNovaFotoFile(null);
 
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
-      let msg = "Erro ao atualizar.";
-      if (error.message === 'senha-atual-vazia') msg = "Digite a senha atual.";
-      if (error.message === 'senhas-nao-batem') msg = "As senhas não conferem.";
-      if (error.message === 'senha-curta') msg = "A senha deve ter pelo menos 6 caracteres.";
-      if (error.message === 'senha-atual-incorreta') msg = "Senha atual incorreta.";
-      setAlertInfo({ message: msg, type: 'error' });
+      setAlertInfo({ message: 'Erro ao atualizar.', type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -217,20 +192,6 @@ function Perfil() {
                     <div><label className="block text-sm font-medium text-txt-dim ml-1">Celular</label><input type="tel" value={celular} onChange={e=>setCelular(formatCelular(e.target.value))} className="w-full pl-4 py-2 bg-surface-2 border border-hairline rounded-lg placeholder-txt-faint text-txt backdrop-blur-sm transition-all hover:border-hairline-hi focus:ring-2 focus:ring-brand outline-none" placeholder="(00) 00000-0000" /></div>
                     <div className="md:col-span-2"><label className="block text-sm font-medium text-txt-dim ml-1">Email</label><input type="email" value={email} disabled className="w-full pl-4 py-2 bg-surface-2 border border-hairline rounded-lg text-txt-faint cursor-not-allowed" /></div>
                       </div>
-
-                    {/* Seção de Alterar Senha - Apenas para login com senha */}
-                    {isPasswordProvider && (
-                      <div className="md:col-span-2 pt-6 border-t border-hairline">
-                        <h3 className="text-sm font-bold text-txt mb-4 flex items-center gap-2"><KeyRound size={18} className="text-brand-lite" /> Alterar Senha</h3>
-                        <div className="grid gap-4">
-                          <div><label className="block text-xs font-medium text-txt-dim ml-1">Senha Atual</label><input type="password" value={senhaAtual} onChange={e=>setSenhaAtual(e.target.value)} className="w-full pl-4 py-2 bg-surface-2 border border-hairline rounded-lg placeholder-txt-faint text-txt backdrop-blur-sm transition-all hover:border-hairline-hi focus:ring-2 focus:ring-brand outline-none" placeholder="Senha atual" /></div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label className="block text-xs font-medium text-txt-dim ml-1">Nova Senha</label><input type="password" value={novaSenha} onChange={e=>setNovaSenha(e.target.value)} className="w-full pl-4 py-2 bg-surface-2 border border-hairline rounded-lg placeholder-txt-faint text-txt backdrop-blur-sm transition-all hover:border-hairline-hi focus:ring-2 focus:ring-brand outline-none" placeholder="Nova senha" /></div>
-                            <div><label className="block text-xs font-medium text-txt-dim ml-1">Confirmar Nova Senha</label><input type="password" value={confirmarSenha} onChange={e=>setConfirmarSenha(e.target.value)} className="w-full pl-4 py-2 bg-surface-2 border border-hairline rounded-lg placeholder-txt-faint text-txt backdrop-blur-sm transition-all hover:border-hairline-hi focus:ring-2 focus:ring-brand outline-none" placeholder="Confirmar senha" /></div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     <div className="flex flex-col sm:flex-row gap-4 pt-4">
                       <button type="submit" disabled={saving} className="nt-glow-btn flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-brand-lite via-brand to-brand-deep hover:brightness-110 text-white py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed">

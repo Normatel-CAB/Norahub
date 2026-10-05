@@ -6,7 +6,6 @@ import './index.css'
 import './pwa.css'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
-import RecaptchaLoader from './components/RecaptchaLoader'
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -73,17 +72,15 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <RecaptchaLoader>
-        <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-          <AuthProvider>
-            <BrowserRouter>
-              <RouteAwareErrorBoundary>
-                <App />
-              </RouteAwareErrorBoundary>
-            </BrowserRouter>
-          </AuthProvider>
-        </ThemeProvider>
-      </RecaptchaLoader>
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <AuthProvider>
+          <BrowserRouter>
+            <RouteAwareErrorBoundary>
+              <App />
+            </RouteAwareErrorBoundary>
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
     </React.StrictMode>
   );
 }

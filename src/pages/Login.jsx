@@ -1,13 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, LogIn, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 // ThemeToggle removed: app forced to light mode
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import Alert from '../components/Alert';
-import { useRecaptcha } from '../components/RecaptchaLoader';
 import { supabase } from '../services/supabase';
-import ActivityLogger from '../services/activityLogger';
 
 const AUTH_ERROR_MESSAGES = {
   'dominio-invalido': 'Acesso restrito a contas @normatel.com.br.',
@@ -20,9 +18,6 @@ function Login() {
   const isDark = theme === 'dark';
   const { currentUser, userProfile, loading: authLoading, authError, clearAuthError } = useAuth();
   const navigate = useNavigate();
-  const { executeRecaptcha } = useRecaptcha();
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [alertInfo, setAlertInfo] = useState(null);
 
@@ -43,45 +38,6 @@ function Login() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, currentUser?.id, navigate]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setAlertInfo(null);
-
-    if (!email.endsWith('@normatel.com.br')) {
-      setAlertInfo({ message: 'Use email corporativo.', type: 'error' });
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const recaptchaToken = await executeRecaptcha('login');
-      if (!recaptchaToken) {
-        console.warn('reCAPTCHA não disponível, continuando login');
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
-      if (error) throw error;
-
-      // AuthContext resolve o perfil/aprovação; aqui só logamos a atividade se deu certo
-      if (data?.user) {
-        ActivityLogger.userLogin(data.user.id, data.user.user_metadata?.full_name || email.split('@')[0]);
-      }
-    } catch (error) {
-      if (error.message?.includes('Invalid login credentials')) {
-        setAlertInfo({ message: 'E-mail ou senha incorretos.', type: 'error' });
-      } else if (error.message?.includes('rate limit') || error.status === 429) {
-        setAlertInfo({ message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.', type: 'error' });
-      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        setAlertInfo({ message: 'Sem conexão. Verifique sua internet e tente novamente.', type: 'error' });
-      } else {
-        setAlertInfo({ message: 'Não foi possível fazer login. Tente novamente.', type: 'error' });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleMicrosoftLogin = async () => {
     setLoading(true);
     setAlertInfo(null);
@@ -96,7 +52,7 @@ function Login() {
       if (error) throw error;
       // A partir daqui o navegador é redirecionado pra Microsoft — não há mais nada
       // a fazer aqui; a volta é tratada pelo AuthContext quando a sessão é restabelecida.
-    } catch (error) {
+    } catch {
       setAlertInfo({ message: 'Não foi possível fazer login com Microsoft. Tente novamente.', type: 'error' });
       setLoading(false);
     }
@@ -127,43 +83,13 @@ function Login() {
             <span>{loading ? 'Processando...' : 'Entrar com Microsoft'}</span>
           </button>
 
-          <div className="flex items-center gap-4 mb-6 sm:mb-8">
-            <div className="h-px bg-hairline flex-1"></div>
-            <span className="text-xs sm:text-sm text-txt-dim whitespace-nowrap font-medium">ou email corporativo</span>
-            <div className="h-px bg-hairline flex-1"></div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-            <div className="space-y-2">
-              <label className="block text-xs sm:text-sm font-semibold text-txt-dim ml-1">Email</label>
-              <div className="relative flex items-center">
-                <Mail size={18} className="absolute left-3 sm:left-4 text-txt-faint flex-shrink-0 pointer-events-none z-10" />
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-12 sm:pl-14 pr-4 py-2.5 sm:py-3.5 bg-white/5 border border-hairline rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent text-txt text-sm sm:text-base outline-none backdrop-blur-sm transition-all hover:bg-white/10" style={{paddingLeft: '2.75rem'}} placeholder="seu.nome@normatel.com.br" required />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs sm:text-sm font-semibold text-txt-dim ml-1">Senha</label>
-              <div className="relative flex items-center">
-                <Lock size={18} className="absolute left-3 sm:left-4 text-txt-faint flex-shrink-0 pointer-events-none z-10" />
-                <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} className="w-full pl-12 sm:pl-14 pr-4 py-2.5 sm:py-3.5 bg-white/5 border border-hairline rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent text-txt text-sm sm:text-base outline-none backdrop-blur-sm transition-all hover:bg-white/10" style={{paddingLeft: '2.75rem'}} placeholder="••••••" required />
-              </div>
-            </div>
-
-            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-brand-lite via-brand to-brand-deep text-white font-bold py-3 sm:py-4 rounded-xl hover:brightness-110 transition-all mt-6 sm:mt-8 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base">
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
-          </form>
+          <p className="text-txt-faint text-xs sm:text-sm text-center leading-relaxed">
+            O acesso é feito pela conta <strong className="text-txt-dim">@normatel.com.br</strong> da Microsoft.
+            Não existe senha separada do NoraHub.
+          </p>
 
           {/* ÁREA DE LINKS DESTACADA */}
           <div className="mt-8 sm:mt-10 space-y-4">
-            <Link
-              to="/esqueceu-senha"
-              className="block text-center text-xs sm:text-sm font-semibold text-brand-lite hover:text-brand-glow hover:underline transition-all"
-            >
-              Esqueceu sua senha?
-            </Link>
-
             <div className="relative flex py-3 items-center">
               <div className="flex-grow border-t border-hairline"></div>
               <span className="flex-shrink-0 mx-3 text-txt-faint text-xs uppercase tracking-widest font-bold">Novo aqui?</span>

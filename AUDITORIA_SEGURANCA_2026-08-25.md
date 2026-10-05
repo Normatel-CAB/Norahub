@@ -1,6 +1,16 @@
 # Auditoria de Segurança — NoraHub (Normatel)
 
-**Projeto Firebase:** `norahub-2655f`
+> ⚠️ **REGISTRO HISTÓRICO, ANTERIOR À MIGRAÇÃO.** Esta auditoria avaliou a arquitetura
+> Firebase (Firestore Rules, Cloud Functions, Storage Rules) que o NoraHub usava em
+> agosto de 2026. O sistema migrou para **Supabase + Vercel** e nada do que está
+> verificado abaixo vale para a arquitetura atual, porque os mecanismos de autorização
+> são outros. Os comandos, caminhos de arquivo e vereditos aqui **não** devem ser
+> seguidos como orientação. Para o estado atual, ver [SEGURANCA.md](SEGURANCA.md), que
+> inclui uma comparação dos controles que sobreviveram e dos que foram perdidos.
+>
+> Mantido como trilha de auditoria para fins de compliance.
+
+**Projeto Firebase:** `norahub-2655f` (descontinuado)
 **Data:** 25/08/2026
 **Escopo:** Firestore Rules, Storage Rules, Cloud Functions, segredos (repo + histórico Git), headers HTTP, CORS, fluxo de auth/admin.
 **Método:** leitura do código-fonte + testes reais contra a API REST do Firestore (sem autenticação), varredura do histórico do Git por segredos commitados.

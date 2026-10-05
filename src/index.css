@@ -1209,29 +1209,3 @@ select option {
   color: #111827;
 }
 
-/* ====================================
-   reCAPTCHA Badge - Ocultar mas manter crédito
-   ==================================== */
-.grecaptcha-badge {
-  visibility: hidden !important;
-  opacity: 0 !important;
-}
-
-/* Adicionar nota de crédito ao reCAPTCHA conforme termos de uso */
-.recaptcha-credit {
-  position: fixed;
-  bottom: 8px;
-  right: 8px;
-  font-size: 10px;
-  color: #999;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 4px 8px;
-  border-radius: 4px;
-  z-index: 1000;
-  pointer-events: none;
-}
-
-.dark .recaptcha-credit {
-  background: rgba(0, 0, 0, 0.8);
-  color: #aaa;
-}

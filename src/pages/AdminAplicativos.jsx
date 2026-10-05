@@ -17,6 +17,7 @@ function mapAppRow(row) {
     cargosPermitidos: row.cargos_permitidos,
     ativo: row.ativo,
     ordem: row.ordem,
+    abrirEmNovaAba: row.abrir_em_nova_aba === true,
   };
 }
 
@@ -45,7 +46,7 @@ const ICON_OPTIONS = [
 
 const EMPTY_FORM = {
   nome: '', descricao: '', url: '', categoria: '', icone: 'Grid3x3',
-  ordem: 0, ativo: true, cargosPermitidos: [],
+  ordem: 0, ativo: true, cargosPermitidos: [], abrirEmNovaAba: false,
 };
 
 // Sugestões de categoria (= abas em /aplicativos). O campo continua texto
@@ -159,6 +160,7 @@ function AdminAplicativos() {
         ordem: Number(form.ordem) || 0,
         ativo: !!form.ativo,
         cargos_permitidos: form.cargosPermitidos,
+        abrir_em_nova_aba: !!form.abrirEmNovaAba,
       };
       if (modal.editingId) {
         const { error } = await supabase.from('apps_normatel').update(row).eq('id', modal.editingId);
@@ -408,6 +410,21 @@ function AdminAplicativos() {
                 />
                 Ativo (aparece pra quem tem acesso)
               </label>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-txt-dim cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.abrirEmNovaAba}
+                    onChange={e => setForm(f => ({ ...f, abrirEmNovaAba: e.target.checked }))}
+                    className="accent-brand"
+                  />
+                  Abrir em nova aba (em vez de embutido no Norahub)
+                </label>
+                <p className="text-[11px] text-txt-faint mt-1 ml-6">
+                  Marque pra sistemas com login Microsoft/SSO, porque a tela de login deles não carrega dentro de um iframe.
+                </p>
+              </div>
             </div>
 
             <div className="flex gap-3 mt-6">

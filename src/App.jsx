@@ -5,7 +5,6 @@ import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
 import Capa from './pages/Capa';
 import Login from './pages/Login';
 import Cadastro from './pages/Cadastro';
-import EsqueceuSenha from './pages/EsqueceuSenha';
 import SelecaoProjeto from './pages/SelecaoProjeto';
 import PainelProjeto from './pages/PainelProjeto';
 import PrivateRoute from './components/PrivateRoute';
@@ -39,6 +38,7 @@ const AdminAnalytics         = lazy(() => import('./pages/AdminAnalytics'));
 const AdminDashboard         = lazy(() => import('./pages/AdminDashboard'));
 const AdminCargos            = lazy(() => import('./pages/AdminCargos'));
 const Aplicativos            = lazy(() => import('./pages/Aplicativos'));
+const VisualizadorApp        = lazy(() => import('./pages/VisualizadorApp'));
 const AdminAplicativos       = lazy(() => import('./pages/AdminAplicativos'));
 
 function RouteSpinner() {
@@ -78,7 +78,6 @@ function App() {
           <Route path="/"               element={<Capa />} />
           <Route path="/login"          element={<Login />} />
           <Route path="/cadastro"       element={<Cadastro />} />
-          <Route path="/esqueceu-senha" element={<EsqueceuSenha />} />
           <Route path="/tutoriais"      element={<Tutoriais />} />
 
           {/* ── Rotas autenticadas ─────────────────────────────────────────── */}
@@ -89,6 +88,7 @@ function App() {
           <Route path="/favoritos"              element={<PrivateRoute><MeusFavoritos /></PrivateRoute>} />
           <Route path="/meu-painel"             element={<PrivateRoute><MeuPainel /></PrivateRoute>} />
           <Route path="/aplicativos"             element={<PrivateRoute><Aplicativos /></PrivateRoute>} />
+          <Route path="/aplicativos/:id"         element={<PrivateRoute><VisualizadorApp /></PrivateRoute>} />
           <Route path="/perfil"                 element={<PrivateRoute><Perfil /></PrivateRoute>} />
           <Route path="/dashboard"              element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/gerenciamento-arquivos" element={<PrivateRoute><GerenciamentoArquivos /></PrivateRoute>} />

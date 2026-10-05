@@ -60,7 +60,6 @@ function Chatbot() {
       '/': 'Página inicial (Capa)',
       '/login': 'Página de login',
       '/cadastro': 'Página de cadastro',
-      '/esqueceu-senha': 'Recuperação de senha',
       '/tutoriais': 'Tutoriais',
       '/selecao-projeto': 'Seleção de projetos',
       '/painel-projeto': 'Painel do projeto (cards)',
@@ -369,7 +368,6 @@ ${chatbotConfig.aiSettings.customInstructions}
 • **/** - Página inicial (Capa/Home)
 • **/login** - Login no sistema
 • **/cadastro** - Cadastro de novos usuários
-• **/esqueceu-senha** - Recuperação de senha por email
 • **/tutoriais** - Tutoriais e ajuda do sistema
 
 **PÁGINAS DE PROJETOS** (protegidas):
